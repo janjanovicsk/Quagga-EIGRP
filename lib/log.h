@@ -53,7 +53,8 @@ typedef enum
   ZLOG_BABEL,
   ZLOG_OSPF6,
   ZLOG_ISIS,
-  ZLOG_MASC
+  ZLOG_MASC,
+  ZLOG_EIGRP,
 } zlog_proto_t;
 
 /* If maxlvl is set to ZLOG_DISABLED, then no messages will be sent

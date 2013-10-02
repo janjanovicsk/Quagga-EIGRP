@@ -1,0 +1,105 @@
+/* EIGRP VTY interface.
+ * Copyright (C) 2000 Toshiaki Takada
+ *
+ * This file is part of GNU Zebra.
+ *
+ * GNU Zebra is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2, or (at your option) any
+ * later version.
+ *
+ * GNU Zebra is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with GNU Zebra; see the file COPYING.  If not, write to the Free
+ * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ */
+
+#include <zebra.h>
+
+#include "memory.h"
+#include "thread.h"
+#include "prefix.h"
+#include "table.h"
+#include "vty.h"
+#include "command.h"
+#include "plist.h"
+#include "log.h"
+#include "zclient.h"
+
+#include "eigrpd/eigrp_vty.h"
+
+DEFUN (router_eigrp,
+       router_eigrp_cmd,
+       "router eigrp",
+       "Enable a routing process\n"
+       "Start EIGRP configuration\n")
+{
+  vty->node = EIGRP_NODE;
+  vty->index = eigrp_get ();
+
+  return CMD_SUCCESS;
+}
+
+static struct cmd_node eigrp_node =
+{
+  EIGRP_NODE,
+  "%s(config-router)# ",
+  1
+};
+
+/* Save EIGRP configuration */
+static int
+eigrp_config_write (struct vty *vty)
+{
+  int write = 0;
+
+  return write;
+}
+
+void
+eigrp_vty_init (void)
+{
+  install_node (&eigrp_node, eigrp_config_write);
+
+}
+
+void
+eigrp_vty_show_init (void)
+{
+
+}
+
+/* eigrpd's interface node. */
+static struct cmd_node eigrp_interface_node =
+{
+  INTERFACE_NODE,
+  "%s(config-if)# ",
+  1
+};
+
+static int
+eigrp_write_interface (struct vty *vty)
+{
+  int write=0;
+
+  return write;
+}
+
+static void
+eigrp_vty_if_init (void)
+{
+  install_node (&eigrp_interface_node, eigrp_write_interface);
+
+}
+
+
+static void
+eigrp_vty_zebra_init (void)
+{
+
+}
