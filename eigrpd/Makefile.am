@@ -10,12 +10,12 @@ libeigrp_la_LDFLAGS = -version-info 0:0:0
 sbin_PROGRAMS = eigrpd
 
 libeigrp_la_SOURCES = \
-	eigrpd.c eigrp_vty.c
+	eigrpd.c eigrp_vty.c eigrp_topology.c
 
 eigrpdheaderdir = $(pkgincludedir)/eigrpd
 
 eigrpdheader_HEADERS = \
-	eigrpd.h 
+	eigrpd.h eigrp_topology.h
 	
 noinst_HEADERS = \
 	eigrp_vty.h
