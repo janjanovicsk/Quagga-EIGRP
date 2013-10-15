@@ -31,7 +31,13 @@
 #include "log.h"
 #include "zclient.h"
 
+#include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_network.h"
 
 DEFUN (router_eigrp,
        router_eigrp_cmd,
@@ -59,13 +65,6 @@ eigrp_config_write (struct vty *vty)
   int write = 0;
 
   return write;
-}
-
-void
-eigrp_vty_init (void)
-{
-  install_node (&eigrp_node, eigrp_config_write);
-
 }
 
 void
@@ -101,5 +100,15 @@ eigrp_vty_if_init (void)
 static void
 eigrp_vty_zebra_init (void)
 {
+
+}
+
+/* Install EIGRP related vty commands. */
+void
+eigrp_vty_init (void)
+{
+  install_node (&eigrp_node, eigrp_config_write);
+
+  install_element (CONFIG_NODE, &router_eigrp_cmd);
 
 }

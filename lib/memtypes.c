@@ -257,9 +257,13 @@ struct memory_list memory_list_isis[] =
 
 struct memory_list memory_list_eigrp[] =
 {
-  { MTYPE_EIGRP_TOP,               "EIGRP top"                  },
+  { MTYPE_EIGRP_TOP,             "EIGRP top"                    },
+  { MTYPE_EIGRP_IF_INFO,         "EIGRP if info"                },
+  { MTYPE_EIGRP_IF_PARAMS,       "EIGRP if params"              },
+  { MTYPE_EIGRP_IF,              "EIGRP interface"              },
+  { MTYPE_EIGRP_FIFO,            "EIGRP FIFO queue"             },
   { MTYPE_EIGRP_TOPOLOGY,          "EIGRP Topology table"		},
-  { MTYPE_EIGRP_TOPOLOGY_NODE,     "EIGRP Topology table node"		},
+  { MTYPE_EIGRP_TOPOLOGY_NODE,     "EIGRP Topology table node"	},
   { MTYPE_EIGRP_TOPOLOGY_ENTRY,   "EIGRP Topology table entry"	},
   { -1, NULL },
 };

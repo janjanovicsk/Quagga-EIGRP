@@ -23,6 +23,8 @@
 #ifndef _ZEBRA_EIGRP_PACKET_H
 #define _ZEBRA_EIGRP_PACKET_H
 
+#define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
+
 struct eigrp_packet
 {
   struct eigrp_packet *next;
@@ -51,8 +53,10 @@ struct eigrp_header
 
 };
 
-
-
+/*Prototypes*/
+extern int eigrp_read (struct thread *);
+extern int eigrp_write (struct thread *);
+extern struct eigrp_fifo *eigrp_fifo_new (void);
 
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

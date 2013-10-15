@@ -38,6 +38,13 @@
 #include "sockopt.h"
 
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_network.h"
+
 
 static struct eigrp_master eigrp_master;
 
@@ -45,6 +52,122 @@ struct eigrp_master *eigrp_om;
 
 static void eigrp_finish_final (struct eigrp *);
 static void eigrp_delete (struct eigrp *);
+static int eigrp_network_match_iface(const struct connected *,
+                                     const struct prefix *);
+static struct eigrp *eigrp_new (void);
+static void eigrp_add (struct eigrp *);
+
+extern struct zclient *zclient;
+extern struct in_addr router_id_zebra;
+
+
+void
+eigrp_router_id_update (struct eigrp *eigrp)
+{
+  struct in_addr router_id, router_id_old;
+  struct interface *ifp;
+  struct listnode *node;
+
+  router_id_old = eigrp->router_id;
+
+  /* Select the router ID based on these priorities:
+       1. Statically assigned router ID is always the first choice.
+       2. If there is no statically assigned router ID, then try to stick
+          with the most recent value, since changing router ID's is very
+          disruptive.
+       3. Last choice: just go with whatever the zebra daemon recommends.
+  */
+  if (eigrp->router_id_static.s_addr != 0)
+    router_id = eigrp->router_id_static;
+  else if (eigrp->router_id.s_addr != 0)
+    router_id = eigrp->router_id;
+  else
+    router_id = router_id_zebra;
+
+  eigrp->router_id = router_id;
+
+
+  if (!IPV4_ADDR_SAME (&router_id_old, &router_id))
+    {
+      /* update eigrp_interface's */
+      for (ALL_LIST_ELEMENTS_RO (eigrp_om->iflist, node, ifp))
+        eigrp_if_update (eigrp, ifp);
+    }
+}
+
+/* Check whether interface matches given network
+ * returns: 1, true. 0, false
+ */
+static int
+eigrp_network_match_iface(const struct connected *co, const struct prefix *net)
+{
+  /* new approach: more elegant and conceptually clean */
+  return prefix_match(net, CONNECTED_PREFIX(co));
+}
+
+static void
+eigrp_network_run_interface (struct eigrp *eigrp, struct prefix *p, struct interface *ifp)
+{
+  struct listnode *cnode;
+  struct connected *co;
+
+  /* if interface prefix is match specified prefix,
+     then create socket and join multicast group. */
+  for (ALL_LIST_ELEMENTS_RO (ifp->connected, cnode, co))
+    {
+
+      if (CHECK_FLAG(co->flags,ZEBRA_IFA_SECONDARY))
+        continue;
+
+      if (p->family == co->address->family
+          && ! eigrp_if_table_lookup(ifp, co->address)
+          && eigrp_network_match_iface(co,p))
+        {
+           struct eigrp_interface *ei;
+
+            ei = eigrp_if_new (eigrp, ifp, co->address);
+            ei->connected = co;
+
+            ei->params = eigrp_lookup_if_params (ifp, ei->address->u.prefix4);
+
+            /* Relate eigrp interface to eigrp instance. */
+            ei->eigrp = eigrp;
+
+            /* update network type as interface flag */
+            /* If network type is specified previously,
+               skip network type setting. */
+            ei->type = IF_DEF_PARAMS (ifp)->type;
+
+            /* if router_id is not configured, dont bring up
+             * interfaces.
+             * ospf_router_id_update() will call ospf_if_update
+             * whenever r-id is configured instead.
+             */
+            if (if_is_operative (ifp))
+              eigrp_if_up (ei);
+          }
+    }
+}
+
+void
+eigrp_if_update (struct eigrp *eigrp, struct interface *ifp)
+{
+  struct route_node *rn;
+
+  if (!eigrp)
+    eigrp = eigrp_lookup ();
+
+  /* EIGRP must be on and Router-ID must be configured. */
+  if (!eigrp || eigrp->router_id.s_addr == 0)
+    return;
+
+  /* Run each network for this interface. */
+  for (rn = route_top (eigrp->networks); rn; rn = route_next (rn))
+    if (rn->info != NULL)
+      {
+        eigrp_network_run_interface (eigrp, &rn->p, ifp);
+      }
+}
 
 void
 eigrp_master_init ()
@@ -62,9 +185,31 @@ eigrp_master_init ()
 static struct eigrp *
 eigrp_new (void)
 {
-  int i;
 
   struct eigrp *new = XCALLOC (MTYPE_EIGRP_TOP, sizeof (struct eigrp));
+
+  new->eiflist = list_new ();
+  new->passive_interface_default = EIGRP_IF_ACTIVE;
+
+
+  if ((new->fd = eigrp_sock_init()) < 0)
+    {
+      zlog_err("eigrp_new: fatal error: eigrp_sock_init was unable to open "
+               "a socket");
+      exit(1);
+    }
+
+  new->maxsndbuflen = getsockopt_so_sendbuf (new->fd);
+
+  if ((new->ibuf = stream_new(EIGRP_MAX_PACKET_SIZE+1)) == NULL)
+      {
+        zlog_err("eigrp_new: fatal error: stream_new(%u) failed allocating ibuf",
+                 EIGRP_MAX_PACKET_SIZE+1);
+        exit(1);
+      }
+
+  new->t_read = thread_add_read (master, eigrp_read, new, new->fd);
+  new->oi_write_q = list_new ();
 
   return new;
 }
@@ -135,6 +280,15 @@ static void
 eigrp_finish_final (struct eigrp *eigrp)
 {
 
+  close (eigrp->fd);
+
+
+  if(zclient)
+    zclient_free(zclient);
+
+
+  list_free (eigrp->eiflist);
+  list_free (eigrp->oi_write_q);
   eigrp_delete (eigrp);
 
   XFREE (MTYPE_EIGRP_TOP,eigrp);

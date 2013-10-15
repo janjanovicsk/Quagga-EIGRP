@@ -28,5 +28,4 @@
 extern int eigrp_sock_init (void);
 
 
-
 #endif /* EIGRP_NETWORK_H_ */

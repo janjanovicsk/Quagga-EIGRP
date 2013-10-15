@@ -37,3 +37,34 @@
 #include "md5.h"
 
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_neighbor.h"
+
+
+int
+eigrp_write (struct thread *thread)
+{
+
+  return 0;
+}
+
+/* Starting point of packet process function. */
+int
+eigrp_read (struct thread *thread)
+{
+
+  return 0;
+}
+
+struct eigrp_fifo *
+eigrp_fifo_new (void)
+{
+  struct eigrp_fifo *new;
+
+  new = XCALLOC (MTYPE_EIGRP_FIFO, sizeof (struct eigrp_fifo));
+  return new;
+}
+

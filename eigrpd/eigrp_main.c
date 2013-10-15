@@ -41,6 +41,8 @@
 
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_interface.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p [] = 
@@ -157,6 +159,10 @@ main (int argc, char **argv)
   vty_init (master);
   memory_init ();
   
+  /*EIGRPd init*/
+  eigrp_if_init ();
+  eigrp_zebra_init ();
+
   sort_node ();
   
   /* Get configuration file. */

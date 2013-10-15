@@ -34,10 +34,9 @@
 
 extern struct zebra_privs_t eigrpd_privs;
 
-#include "eigrpd.h"
-#include "eigrp_packet.h"
-
-
+#include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_network.h"
 
 int
 eigrp_sock_init (void)
@@ -49,42 +48,43 @@ eigrp_sock_init (void)
     zlog_err ("eigrp_sock_init: could not raise privs, %s",
                safe_strerror (errno) );
 
-  ospf_sock = socket (AF_INET, SOCK_RAW, IPPROTO_OSPFIGP);
-  if (ospf_sock < 0)
+  eigrp_sock = socket (AF_INET, SOCK_RAW, IPPROTO_EIGRPIGP);
+  if (eigrp_sock < 0)
     {
       int save_errno = errno;
-      if ( ospfd_privs.change (ZPRIVS_LOWER) )
-        zlog_err ("ospf_sock_init: could not lower privs, %s",
+      if ( eigrpd_privs.change (ZPRIVS_LOWER) )
+        zlog_err ("eigrp_sock_init: could not lower privs, %s",
                    safe_strerror (errno) );
-      zlog_err ("ospf_read_sock_init: socket: %s", safe_strerror (save_errno));
+      zlog_err ("eigrp_read_sock_init: socket: %s", safe_strerror (save_errno));
       exit(1);
     }
 
 #ifdef IP_HDRINCL
   /* we will include IP header with packet */
-  ret = setsockopt (ospf_sock, IPPROTO_IP, IP_HDRINCL, &hincl, sizeof (hincl));
+  ret = setsockopt (eigrp_sock, IPPROTO_IP, IP_HDRINCL, &hincl, sizeof (hincl));
   if (ret < 0)
     {
       int save_errno = errno;
-      if ( ospfd_privs.change (ZPRIVS_LOWER) )
-        zlog_err ("ospf_sock_init: could not lower privs, %s",
+      if ( eigrpd_privs.change (ZPRIVS_LOWER) )
+        zlog_err ("eigrp_sock_init: could not lower privs, %s",
                    safe_strerror (errno) );
       zlog_warn ("Can't set IP_HDRINCL option for fd %d: %s",
-                 ospf_sock, safe_strerror(save_errno));
+                 eigrp_sock, safe_strerror(save_errno));
+
     }
 #elif defined (IPTOS_PREC_INTERNETCONTROL)
 #warning "IP_HDRINCL not available on this system"
 #warning "using IPTOS_PREC_INTERNETCONTROL"
-  ret = setsockopt_ipv4_tos(ospf_sock, IPTOS_PREC_INTERNETCONTROL);
+  ret = setsockopt_ipv4_tos(eigrp_sock, IPTOS_PREC_INTERNETCONTROL);
   if (ret < 0)
     {
       int save_errno = errno;
-      if ( ospfd_privs.change (ZPRIVS_LOWER) )
-        zlog_err ("ospf_sock_init: could not lower privs, %s",
+      if ( eigrpd_privs.change (ZPRIVS_LOWER) )
+        zlog_err ("eigrpd_sock_init: could not lower privs, %s",
                    safe_strerror (errno) );
       zlog_warn ("can't set sockopt IP_TOS %d to socket %d: %s",
-                 tos, ospf_sock, safe_strerror(save_errno));
-      close (ospf_sock);        /* Prevent sd leak. */
+                 tos, eigrp_sock, safe_strerror(save_errno));
+      close (eigrp_sock);        /* Prevent sd leak. */
       return ret;
     }
 #else /* !IPTOS_PREC_INTERNETCONTROL */
@@ -92,16 +92,47 @@ eigrp_sock_init (void)
   zlog_warn ("IP_HDRINCL option not available");
 #endif /* IP_HDRINCL */
 
-  ret = setsockopt_ifindex (AF_INET, ospf_sock, 1);
+  ret = setsockopt_ifindex (AF_INET, eigrp_sock, 1);
 
   if (ret < 0)
-     zlog_warn ("Can't set pktinfo option for fd %d", ospf_sock);
+     zlog_warn ("Can't set pktinfo option for fd %d", eigrp_sock);
 
-  if (ospfd_privs.change (ZPRIVS_LOWER))
+  if (eigrpd_privs.change (ZPRIVS_LOWER))
     {
-      zlog_err ("ospf_sock_init: could not lower privs, %s",
+      zlog_err ("eigrp_sock_init: could not lower privs, %s",
                safe_strerror (errno) );
     }
 
-  return ospf_sock;
+  return eigrp_sock;
+}
+
+void
+eigrp_adjust_sndbuflen (struct eigrp * eigrp, unsigned int buflen)
+{
+  int ret, newbuflen;
+  /* Check if any work has to be done at all. */
+  if (eigrp->maxsndbuflen >= buflen)
+    return;
+  if (eigrpd_privs.change (ZPRIVS_RAISE))
+    zlog_err ("%s: could not raise privs, %s", __func__,
+      safe_strerror (errno));
+  /* Now we try to set SO_SNDBUF to what our caller has requested
+   * (the MTU of a newly added interface). However, if the OS has
+   * truncated the actual buffer size to somewhat less size, try
+   * to detect it and update our records appropriately. The OS
+   * may allocate more buffer space, than requested, this isn't
+   * a error.
+   */
+  ret = setsockopt_so_sendbuf (eigrp->fd, buflen);
+  newbuflen = getsockopt_so_sendbuf (eigrp->fd);
+  if (ret < 0 || newbuflen < 0 || newbuflen < (int) buflen)
+    zlog_warn ("%s: tried to set SO_SNDBUF to %u, but got %d",
+      __func__, buflen, newbuflen);
+  if (newbuflen >= 0)
+    eigrp->maxsndbuflen = (unsigned int)newbuflen;
+  else
+    zlog_warn ("%s: failed to get SO_SNDBUF", __func__);
+  if (eigrpd_privs.change (ZPRIVS_LOWER))
+    zlog_err ("%s: could not lower privs, %s", __func__,
+      safe_strerror (errno));
 }

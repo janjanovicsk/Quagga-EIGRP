@@ -928,6 +928,8 @@ proto_redistnum(int afi, const char *s)
 	return ZEBRA_ROUTE_RIP;
       else if (strncmp (s, "o", 1) == 0)
 	return ZEBRA_ROUTE_OSPF;
+      else if (strncmp (s, "e", 1) == 0)
+        return ZEBRA_ROUTE_EIGRP;
       else if (strncmp (s, "i", 1) == 0)
 	return ZEBRA_ROUTE_ISIS;
       else if (strncmp (s, "bg", 2) == 0)

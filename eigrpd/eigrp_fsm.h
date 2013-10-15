@@ -1,6 +1,6 @@
 /*
- * Zebra connect library for EIGRPd
- * Copyright (C) 1997, 98, 99, 2000 Kunihiro Ishiguro, Toshiaki Takada
+ * EIGRP DUAL algorithm.
+ *   Copyright (C) 1999 Toshiaki Takada
  *
  * This file is part of GNU Zebra.
  *
@@ -15,16 +15,14 @@
  * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Zebra; see the file COPYING.  If not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * along with GNU Zebra; see the file COPYING.  If not, write to the Free
+ * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
  */
 
-#ifndef _ZEBRA_EIGRP_ZEBRA_H_
-#define _ZEBRA_EIGRP_ZEBRA_H_
+#ifndef _ZEBRA_EIGRP_FSM_H
+#define _ZEBRA_EIGRP_FSM_H
 
-#include "vty.h"
 
-extern void eigrp_zebra_init (void);
 
-#endif /* _ZEBRA_EIGRP_ZEBRA_H_ */
+#endif /* _ZEBRA_EIGRP_DUAL_H */

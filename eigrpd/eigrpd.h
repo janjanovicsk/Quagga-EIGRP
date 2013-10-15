@@ -34,12 +34,14 @@
 #define IPPROTO_EIGRPIGP         88
 #endif /* IPPROTO_EIGRPIGP */
 
-
 /* VTY port number. */
 #define EIGRP_VTY_PORT          2609
 
 /* Default configuration file name for eigrp. */
 #define EIGRP_DEFAULT_CONFIG   "eigrpd.conf"
+
+#define EIGRP_HELLO_INTERVAL_DEFAULT        5
+#define EIGRP_HOLD_INTERVAL_DEFAULT         15
 
 
 /* EIGRP master for system wide configuration and variables. */
@@ -65,7 +67,24 @@ struct eigrp_master
 
 struct eigrp
 {
+  /* EIGRP Router ID. */
+  struct in_addr router_id;             /* Configured automatically. */
+  struct in_addr router_id_static;      /* Configured manually. */
 
+  struct list *eiflist;                 /* eigrp interfaces */
+  u_char passive_interface_default;   /* passive-interface default */
+
+  int fd;
+  unsigned int maxsndbuflen;
+
+  struct stream *ibuf;
+  struct list *oi_write_q;
+
+  /*Threads*/
+  struct thread *t_write;
+  struct thread *t_read;
+
+  struct route_table *networks;         /* EIGRP config networks. */
 
 };
 
@@ -80,5 +99,7 @@ extern struct eigrp_master *eigrp_om;
  extern void eigrp_finish (struct eigrp *);
  extern struct eigrp *eigrp_get (void);
  extern struct eigrp *eigrp_lookup (void);
+ extern void eigrp_router_id_update (struct eigrp *);
+ extern void eigrp_if_update (struct eigrp *, struct interface *);
 
 #endif /* _ZEBRA_EIGRPD_H */
