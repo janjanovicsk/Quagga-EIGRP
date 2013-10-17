@@ -26,6 +26,7 @@
 /* Prototypes */
 
 extern int eigrp_sock_init (void);
+extern int eigrp_if_ipmulticast (struct eigrp *, struct prefix *, unsigned int);
 
 
 #endif /* EIGRP_NETWORK_H_ */

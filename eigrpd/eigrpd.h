@@ -34,6 +34,9 @@
 #define IPPROTO_EIGRPIGP         88
 #endif /* IPPROTO_EIGRPIGP */
 
+/* IP TTL for EIGRP protocol. */
+#define EIGRP_IP_TTL             1
+
 /* VTY port number. */
 #define EIGRP_VTY_PORT          2609
 
@@ -42,6 +45,8 @@
 
 #define EIGRP_HELLO_INTERVAL_DEFAULT        5
 #define EIGRP_HOLD_INTERVAL_DEFAULT         15
+
+#define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
 
 
 /* EIGRP master for system wide configuration and variables. */

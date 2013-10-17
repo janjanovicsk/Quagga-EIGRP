@@ -24,6 +24,33 @@
 #define _ZEBRA_EIGRP_PACKET_H
 
 #define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
+#define EIGRP_HEADER_SIZE         20U
+
+
+#define EIGRP_MSG_UPDATE        1  /* EIGRP Hello Message. */
+#define EIGRP_MSG_REQUEST       2  /* EIGRP Database Descriptoin Message. */
+#define EIGRP_MSG_QUERY         4  /* EIGRP Link State Request Message. */
+#define EIGRP_MSG_REPLY         4  /* EIGRP Link State Update Message. */
+#define EIGRP_MSG_HELLO         5  /* EIGRP Link State Acknoledgement Message. */
+#define EIGRP_MSG_PROBE         7  /* EIGRP Probe Message. */
+#define EIGRP_MSG_SIAQUERY     10  /* EIGRP SIAQUERY. */
+#define EIGRP_MSG_SIAREPLY     11  /* EIGRP SIAREPLY. */
+
+/*EIGRP TLV Type definitions*/
+#define TLV_PARAMETER_TYPE              Ox0001       /*K types*/
+#define TLV_AUTHENTICATION_TYPE         0x0002
+#define TLV_SEQUENCE_TYPE               0x0003
+#define TLV_SOFTWARE_VERSION_TYPE       0x0004
+#define TLV_MULTICAST_SEQUENCE_TYPE     0x0005
+#define TLV_PEER_INFORMATION_TYPE       0x0006
+#define TLV_PEER_TERMINATION_TYPE       0x0007
+#define TLV_PEER_TID_LIST_TYPE          0x0008
+
+#define EIGRP_HELLO_MIN_SIZE      12U   /* not including neighbors */
+
+
+
+#define EIGRP_HEADER_VERSION            2
 
 struct eigrp_packet
 {
@@ -51,12 +78,42 @@ struct eigrp_fifo
 struct eigrp_header
 {
 
+  u_char version;
+  u_char opcode;
+  u_int16_t checksum;
+  u_int32_t flags;
+  u_int32_t sequence;
+  u_int32_t ack;
+  u_int16_t routerID;
+  u_int16_t ASNumber;
+
+};
+
+struct TLV_Parameter_Type
+{
+
+    u_int16_t type;
+    u_int16_t length;
+    u_char K1;
+    u_char K2;
+    u_char K3;
+    u_char K4;
+    u_char K5;
+    u_char K6;
+    u_int16_t hold_time;
+
+
 };
 
 /*Prototypes*/
 extern int eigrp_read (struct thread *);
 extern int eigrp_write (struct thread *);
 extern struct eigrp_fifo *eigrp_fifo_new (void);
-
+extern struct eigrp_packet *eigrp_packet_new (size_t);
+extern void eigrp_hello_send (struct eigrp_interface *);
+extern struct eigrp_packet *eigrp_fifo_head(struct eigrp_fifo *);
+extern void eigrp_packet_delete (struct eigrp_interface *);
+extern struct eigrp_packet *eigrp_fifo_pop (struct eigrp_fifo *);
+extern void eigrp_packet_free (struct eigrp_packet *);
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

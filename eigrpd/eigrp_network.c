@@ -136,3 +136,34 @@ eigrp_adjust_sndbuflen (struct eigrp * eigrp, unsigned int buflen)
     zlog_err ("%s: could not lower privs, %s", __func__,
       safe_strerror (errno));
 }
+
+int
+eigrp_if_ipmulticast (struct eigrp *top, struct prefix *p, unsigned int ifindex)
+{
+  u_char val;
+  int ret, len;
+
+  val = 0;
+  len = sizeof (val);
+
+  /* Prevent receiving self-origined multicast packets. */
+  ret = setsockopt (top->fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void *)&val, len);
+  if (ret < 0)
+    zlog_warn ("can't setsockopt IP_MULTICAST_LOOP(0) for fd %d: %s",
+               top->fd, safe_strerror(errno));
+
+  /* Explicitly set multicast ttl to 1 -- endo. */
+  val = 1;
+  ret = setsockopt (top->fd, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&val, len);
+  if (ret < 0)
+    zlog_warn ("can't setsockopt IP_MULTICAST_TTL(1) for fd %d: %s",
+               top->fd, safe_strerror (errno));
+
+  ret = setsockopt_ipv4_multicast_if (top->fd, ifindex);
+  if (ret < 0)
+    zlog_warn("can't setsockopt IP_MULTICAST_IF(fd %d, addr %s, "
+              "ifindex %u): %s",
+              top->fd, inet_ntoa(p->u.prefix4), ifindex, safe_strerror(errno));
+
+  return ret;
+}
