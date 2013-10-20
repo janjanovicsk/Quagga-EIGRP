@@ -37,7 +37,7 @@
 #define EIGRP_MSG_SIAREPLY     11  /* EIGRP SIAREPLY. */
 
 /*EIGRP TLV Type definitions*/
-#define TLV_PARAMETER_TYPE              Ox0001       /*K types*/
+#define TLV_PARAMETER_TYPE              0x0001       /*K types*/
 #define TLV_AUTHENTICATION_TYPE         0x0002
 #define TLV_SEQUENCE_TYPE               0x0003
 #define TLV_SOFTWARE_VERSION_TYPE       0x0004
@@ -107,7 +107,6 @@ struct TLV_Parameter_Type
 
 /*Prototypes*/
 extern int eigrp_read (struct thread *);
-extern int eigrp_write (struct thread *);
 extern struct eigrp_fifo *eigrp_fifo_new (void);
 extern struct eigrp_packet *eigrp_packet_new (size_t);
 extern void eigrp_hello_send (struct eigrp_interface *);

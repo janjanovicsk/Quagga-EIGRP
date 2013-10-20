@@ -42,6 +42,8 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_network.h"
+
 
 
 static void eigrp_hello_send_sub (struct eigrp_interface *, in_addr_t);
@@ -97,7 +99,7 @@ eigrp_write (struct thread *thread)
   assert (ep->length >= EIGRP_HEADER_SIZE);
 
   if (ep->dst.s_addr == htonl (EIGRP_MULTICAST_ADDRESS))
-      ospf_if_ipmulticast (ospf, ei->address, ei->ifp->ifindex);
+      eigrp_if_ipmulticast (eigrp, ei->address, ei->ifp->ifindex);
 
   memset (&iph, 0, sizeof (struct ip));
   memset (&sa_dst, 0, sizeof (sa_dst));
@@ -159,11 +161,11 @@ eigrp_write (struct thread *thread)
   /* Sadly we can not rely on kernels to fragment packets because of either
    * IP_HDRINCL and/or multicast destination being set.
    */
-#ifdef WANT_OSPF_WRITE_FRAGMENT
-  if ( ep->length > maxdatasize )
-    ospf_write_frags (ospf->fd, op, &iph, &msg, maxdatasize,
-                      oi->ifp->mtu, flags, type);
-#endif /* WANT_OSPF_WRITE_FRAGMENT */
+//#ifdef WANT_OSPF_WRITE_FRAGMENT
+//  if ( ep->length > maxdatasize )
+//    ospf_write_frags (ospf->fd, op, &iph, &msg, maxdatasize,
+//                      oi->ifp->mtu, flags, type);
+//#endif /* WANT_OSPF_WRITE_FRAGMENT */
 
   /* send final fragment (could be first) */
   sockopt_iphdrincl_swab_htosys (&iph);
@@ -196,7 +198,7 @@ eigrp_write (struct thread *thread)
 //    }
 
   /* Now delete packet from queue. */
-  ospf_packet_delete (ei);
+  eigrp_packet_delete (ei);
 
   if (eigrp_fifo_head (ei->obuf) == NULL)
     {
@@ -303,7 +305,7 @@ eigrp_make_header (int type, struct eigrp_interface *ei, struct stream *s)
   eigrph->version = (u_char) EIGRP_HEADER_VERSION;
   eigrph->opcode = (u_char) type;
 
-  eigrph->routerID = ei->eigrp->router_id;
+  eigrph->routerID = ei->eigrp->router_id.s_addr;
 
   eigrph->checksum = 0;
 

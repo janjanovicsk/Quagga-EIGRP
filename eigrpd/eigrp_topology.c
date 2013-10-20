@@ -26,8 +26,13 @@
 #include "table.h"
 #include "memory.h"
 #include "log.h"
+#include "linklist.h"
 
 #include "eigrpd/eigrp_topology.h"
+
+static int eigrp_topology_node_cmp(struct eigrp_topology_node *, struct eigrp_topology_node *);
+static void eigrp_topology_node_del(struct eigrp_topology_node *);
+
 
 struct list *
 eigrp_topology_new ()
@@ -59,7 +64,7 @@ eigrp_topology_node_cmp(struct eigrp_topology_node *node1, struct eigrp_topology
 static void
 eigrp_topology_node_del(struct eigrp_topology_node *node)
 {
-	list_delete_all_nodes(node->records);
+	//list_delete_all_nodes(node->records);
 }
 
 struct eigrp_topology_node *
@@ -93,18 +98,17 @@ eigrp_topology_cleanup (struct list *topology)
 {
 	assert(topology);
 
-	eigrp_topology_delete_all(topology);
+	//eigrp_topology_delete_all(topology);
 
 }
 void
-eigrp_topology_node_add (struct list *topology , struct eigrp_topology_node *node)
+eigrp_topology_node_add (struct list *topology, struct eigrp_topology_node *node)
 {
 	listnode_add_sort(topology, node);
 }
-extern void eigrp_topology_entry_add (struct eigrp_topology_node *, struct eigrp_topology_entry *)
+
+void
+eigrp_topology_entry_add (struct eigrp_topology_node * node, struct eigrp_topology_entry *entry)
 {
 
 }
-extern void eigrp_topology_node_delete (struct list *, struct eigrp_topology_node *);
-extern void eigrp_topology_entry_delete (struct eigrp_topology_node *, struct eigrp_topology_entry *);
-extern void eigrp_topology_delete_all (struct list *);

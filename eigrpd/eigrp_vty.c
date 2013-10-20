@@ -51,6 +51,29 @@ DEFUN (router_eigrp,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_network,
+       eigrp_network_cmd,
+       "network A.B.C.D/M",
+       "Enable routing on an IP network\n"
+       "OSPF network prefix\n")
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+  int ret;
+
+  VTY_GET_IPV4_PREFIX ("network prefix", p, argv[0]);
+
+  ret = eigrp_network_set (eigrp, &p);
+
+  if (ret == 0)
+    {
+      vty_out (vty, "There is already same network statement.%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -111,4 +134,7 @@ eigrp_vty_init (void)
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
 
+  install_default(EIGRP_NODE);
+
+  install_element(EIGRP_NODE, &eigrp_network_cmd);
 }

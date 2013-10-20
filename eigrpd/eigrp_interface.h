@@ -23,7 +23,6 @@
 #ifndef _ZEBRA_EIGRP_INTERFACE_H_
 #define _ZEBRA_EIGRP_INTERFACE_H_
 
-#include "eigrp_packet.h"
 
 #define DECLARE_IF_PARAM(T, P) T P; u_char P##__config:1
 #define IF_EIGRP_IF_INFO(I) ((struct eigrp_if_info *)((I)->info))
@@ -35,6 +34,17 @@
 
 #define UNSET_IF_PARAM(S, P) ((S)->P##__config) = 0
 
+#define EIGRP_IF_PARAM_CONFIGURED(S, P) ((S) && (S)->P##__config)
+#define EIGRP_IF_PARAM(O, P) \
+        (EIGRP_IF_PARAM_CONFIGURED ((O)->params, P)?\
+                        (O)->params->P:IF_DEF_PARAMS((O)->ifp)->P)
+
+#define EIGRP_IF_PASSIVE_STATUS(O) \
+       (EIGRP_IF_PARAM_CONFIGURED((O)->params, passive_interface) ? \
+         (O)->params->passive_interface : \
+         (EIGRP_IF_PARAM_CONFIGURED(IF_DEF_PARAMS((O)->ifp), passive_interface) ? \
+           IF_DEF_PARAMS((O)->ifp)->passive_interface : \
+           (O)->eigrp->passive_interface_default))
 
 /*EIGRP interface structure*/
 struct eigrp_interface
@@ -54,6 +64,21 @@ struct eigrp_interface
       struct eigrp_if_params *params;
 
     u_char multicast_memberships;
+#define EI_MEMBER_FLAG(M) (1 << (M))
+#define EI_MEMBER_COUNT(O,M) (IF_EIGRP_IF_INFO(ei->ifp)->membership_counts[(M)])
+#define EI_MEMBER_CHECK(O,M) \
+    (CHECK_FLAG((O)->multicast_memberships, EI_MEMBER_FLAG(M)))
+#define EI_MEMBER_JOINED(O,M) \
+  do { \
+    SET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
+    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]++; \
+  } while (0)
+#define EI_MEMBER_LEFT(O,M) \
+  do { \
+    UNSET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
+    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]--; \
+  } while (0)
+
 
     /* EIGRP Network Type. */
     u_char type;
@@ -115,9 +140,10 @@ extern struct eigrp_interface * eigrp_if_new (struct eigrp *, struct interface *
                                               struct prefix *);
 extern struct eigrp_interface * eigrp_if_table_lookup (struct interface *ifp,
                                                        struct prefix *prefix);
-struct eigrp_if_params *eigrp_lookup_if_params (struct interface *ifp,
+extern struct eigrp_if_params *eigrp_lookup_if_params (struct interface *ifp,
                                                 struct in_addr addr);
-int eigrp_if_up (struct eigrp_interface *);
-void eigrp_if_stream_set (struct eigrp_interface *);
+extern int eigrp_if_up (struct eigrp_interface *);
+extern void eigrp_if_stream_set (struct eigrp_interface *);
+extern void eigrp_if_set_multicast(struct eigrp_interface *ei);
 
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */

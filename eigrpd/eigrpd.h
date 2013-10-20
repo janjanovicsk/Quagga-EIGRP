@@ -105,6 +105,5 @@ extern struct eigrp_master *eigrp_om;
  extern struct eigrp *eigrp_get (void);
  extern struct eigrp *eigrp_lookup (void);
  extern void eigrp_router_id_update (struct eigrp *);
- extern void eigrp_if_update (struct eigrp *, struct interface *);
 
 #endif /* _ZEBRA_EIGRPD_H */

@@ -38,7 +38,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_neighbor.h"
-
+#include "eigrpd/eigrp_network.h"
 
 static void
 eigrp_add_to_if (struct interface *ifp, struct eigrp_interface *ei)
@@ -129,6 +129,7 @@ eigrp_if_init ()
 {
   /* Initialize Zebra interface data structure. */
   if_init ();
+  assert(iflist);
   eigrp_om->iflist = iflist;
   if_add_hook (IF_NEW_HOOK, eigrp_if_new_hook);
   if_add_hook (IF_DELETE_HOOK, eigrp_if_delete_hook);
@@ -210,6 +211,12 @@ eigrp_if_up (struct eigrp_interface *ei)
       else
         zlog_warn ("%s: eigrp_lookup() returned NULL", __func__);
       eigrp_if_stream_set (ei);
+
+     // eigrp_hello_timer(ei);
+      /* Set multicast memberships appropriately for new state. */
+        eigrp_if_set_multicast(ei);
+
+      thread_add_event (master, eigrp_hello_timer, ei, (1));
       //OSPF_ISM_EVENT_SCHEDULE (oi, ISM_InterfaceUp);
 
   return 1;
@@ -221,4 +228,18 @@ eigrp_if_stream_set (struct eigrp_interface *ei)
   /* set output fifo queue. */
   if (ei->obuf == NULL)
     ei->obuf = eigrp_fifo_new ();
+}
+
+void
+eigrp_if_set_multicast(struct eigrp_interface *ei)
+{
+  if ((EIGRP_IF_PASSIVE_STATUS(ei) == EIGRP_IF_ACTIVE))
+    {
+      /* The interface should belong to the OSPF-all-routers group. */
+      if (!EI_MEMBER_CHECK(ei, MEMBER_ALLROUTERS) &&
+          (eigrp_if_add_allspfrouters(ei->eigrp, ei->address,
+                                     ei->ifp->ifindex) >= 0))
+          /* Set the flag only if the system call to join succeeded. */
+          EI_MEMBER_JOINED(ei, MEMBER_ALLROUTERS);
+    }
 }

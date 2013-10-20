@@ -52,8 +52,6 @@ struct eigrp_master *eigrp_om;
 
 static void eigrp_finish_final (struct eigrp *);
 static void eigrp_delete (struct eigrp *);
-static int eigrp_network_match_iface(const struct connected *,
-                                     const struct prefix *);
 static struct eigrp *eigrp_new (void);
 static void eigrp_add (struct eigrp *);
 
@@ -95,80 +93,6 @@ eigrp_router_id_update (struct eigrp *eigrp)
     }
 }
 
-/* Check whether interface matches given network
- * returns: 1, true. 0, false
- */
-static int
-eigrp_network_match_iface(const struct connected *co, const struct prefix *net)
-{
-  /* new approach: more elegant and conceptually clean */
-  return prefix_match(net, CONNECTED_PREFIX(co));
-}
-
-static void
-eigrp_network_run_interface (struct eigrp *eigrp, struct prefix *p, struct interface *ifp)
-{
-  struct listnode *cnode;
-  struct connected *co;
-
-  /* if interface prefix is match specified prefix,
-     then create socket and join multicast group. */
-  for (ALL_LIST_ELEMENTS_RO (ifp->connected, cnode, co))
-    {
-
-      if (CHECK_FLAG(co->flags,ZEBRA_IFA_SECONDARY))
-        continue;
-
-      if (p->family == co->address->family
-          && ! eigrp_if_table_lookup(ifp, co->address)
-          && eigrp_network_match_iface(co,p))
-        {
-           struct eigrp_interface *ei;
-
-            ei = eigrp_if_new (eigrp, ifp, co->address);
-            ei->connected = co;
-
-            ei->params = eigrp_lookup_if_params (ifp, ei->address->u.prefix4);
-
-            /* Relate eigrp interface to eigrp instance. */
-            ei->eigrp = eigrp;
-
-            /* update network type as interface flag */
-            /* If network type is specified previously,
-               skip network type setting. */
-            ei->type = IF_DEF_PARAMS (ifp)->type;
-
-            /* if router_id is not configured, dont bring up
-             * interfaces.
-             * ospf_router_id_update() will call ospf_if_update
-             * whenever r-id is configured instead.
-             */
-            if (if_is_operative (ifp))
-              eigrp_if_up (ei);
-          }
-    }
-}
-
-void
-eigrp_if_update (struct eigrp *eigrp, struct interface *ifp)
-{
-  struct route_node *rn;
-
-  if (!eigrp)
-    eigrp = eigrp_lookup ();
-
-  /* EIGRP must be on and Router-ID must be configured. */
-  if (!eigrp || eigrp->router_id.s_addr == 0)
-    return;
-
-  /* Run each network for this interface. */
-  for (rn = route_top (eigrp->networks); rn; rn = route_next (rn))
-    if (rn->info != NULL)
-      {
-        eigrp_network_run_interface (eigrp, &rn->p, ifp);
-      }
-}
-
 void
 eigrp_master_init ()
 {
@@ -191,6 +115,10 @@ eigrp_new (void)
   new->eiflist = list_new ();
   new->passive_interface_default = EIGRP_IF_ACTIVE;
 
+  new->networks = route_table_init();
+
+  new->router_id.s_addr = htonl (0);
+  new->router_id_static.s_addr = htonl (0);
 
   if ((new->fd = eigrp_sock_init()) < 0)
     {
