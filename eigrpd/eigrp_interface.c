@@ -129,7 +129,6 @@ eigrp_if_init ()
 {
   /* Initialize Zebra interface data structure. */
   if_init ();
-  assert(iflist);
   eigrp_om->iflist = iflist;
   if_add_hook (IF_NEW_HOOK, eigrp_if_new_hook);
   if_add_hook (IF_DELETE_HOOK, eigrp_if_delete_hook);
@@ -242,4 +241,32 @@ eigrp_if_set_multicast(struct eigrp_interface *ei)
           /* Set the flag only if the system call to join succeeded. */
           EI_MEMBER_JOINED(ei, MEMBER_ALLROUTERS);
     }
+}
+
+u_char
+eigrp_default_iftype(struct interface *ifp)
+{
+  if (if_is_pointopoint (ifp))
+    return EIGRP_IFTYPE_POINTOPOINT;
+  else if (if_is_loopback (ifp))
+    return EIGRP_IFTYPE_LOOPBACK;
+  else
+    return EIGRP_IFTYPE_BROADCAST;
+}
+
+void
+eigrp_if_free (struct eigrp_interface *ei)
+{
+ // ospf_if_down (oi);
+
+  route_table_finish (ei->nbrs);
+
+  //ospf_delete_from_if (oi->ifp, oi);
+
+  listnode_delete (ei->eigrp->eiflist, ei);
+
+  thread_cancel_event (master, ei);
+
+  memset (ei, 0, sizeof (*ei));
+  XFREE (MTYPE_EIGRP_IF, ei);
 }

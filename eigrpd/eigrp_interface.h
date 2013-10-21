@@ -145,5 +145,7 @@ extern struct eigrp_if_params *eigrp_lookup_if_params (struct interface *ifp,
 extern int eigrp_if_up (struct eigrp_interface *);
 extern void eigrp_if_stream_set (struct eigrp_interface *);
 extern void eigrp_if_set_multicast(struct eigrp_interface *ei);
+extern u_char eigrp_default_iftype(struct interface *);
+extern void eigrp_if_free (struct eigrp_interface *);
 
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */
