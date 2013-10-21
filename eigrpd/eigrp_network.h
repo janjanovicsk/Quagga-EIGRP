@@ -33,5 +33,6 @@ extern int eigrp_hello_timer (struct thread *);
 extern void eigrp_if_update (struct eigrp *, struct interface *);
 extern int eigrp_if_add_allspfrouters (struct eigrp *, struct prefix *,
                                        unsigned int);
+extern void eigrp_adjust_sndbuflen (struct eigrp *, unsigned int);
 
 #endif /* EIGRP_NETWORK_H_ */

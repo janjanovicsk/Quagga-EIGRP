@@ -40,6 +40,8 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 
+static void eigrp_delete_from_if (struct interface *, struct eigrp_interface *);
+
 static void
 eigrp_add_to_if (struct interface *ifp, struct eigrp_interface *ei)
 {
@@ -221,12 +223,45 @@ eigrp_if_up (struct eigrp_interface *ei)
   return 1;
 }
 
+int
+eigrp_if_down (struct eigrp_interface *ei)
+{
+  if (ei == NULL)
+    return 0;
+
+  thread_cancel(ei->t_hello);
+  /* Shutdown packet reception and sending */
+  eigrp_if_stream_unset (ei);
+
+  return 1;
+}
+
 void
 eigrp_if_stream_set (struct eigrp_interface *ei)
 {
   /* set output fifo queue. */
   if (ei->obuf == NULL)
     ei->obuf = eigrp_fifo_new ();
+}
+
+void
+eigrp_if_stream_unset (struct eigrp_interface *ei)
+{
+  struct eigrp *eigrp = ei->eigrp;
+
+  if (ei->obuf)
+    {
+     eigrp_fifo_free (ei->obuf);
+     ei->obuf = NULL;
+
+     if (ei->on_write_q)
+       {
+         listnode_delete (eigrp->oi_write_q, ei);
+         if (list_isempty(eigrp->oi_write_q))
+           thread_cancel (eigrp->t_write);
+         ei->on_write_q = 0;
+       }
+    }
 }
 
 void
@@ -257,11 +292,11 @@ eigrp_default_iftype(struct interface *ifp)
 void
 eigrp_if_free (struct eigrp_interface *ei)
 {
- // ospf_if_down (oi);
+  eigrp_if_down (ei);
 
   route_table_finish (ei->nbrs);
 
-  //ospf_delete_from_if (oi->ifp, oi);
+  eigrp_delete_from_if (ei->ifp, ei);
 
   listnode_delete (ei->eigrp->eiflist, ei);
 
@@ -269,4 +304,40 @@ eigrp_if_free (struct eigrp_interface *ei)
 
   memset (ei, 0, sizeof (*ei));
   XFREE (MTYPE_EIGRP_IF, ei);
+}
+
+static void
+eigrp_delete_from_if (struct interface *ifp, struct eigrp_interface *ei)
+{
+  struct route_node *rn;
+  struct prefix p;
+
+  p = *ei->address;
+  p.prefixlen = IPV4_MAX_PREFIXLEN;
+
+  rn = route_node_lookup (IF_OIFS (ei->ifp), &p);
+  assert (rn);
+  assert (rn->info);
+  rn->info = NULL;
+  route_unlock_node (rn);
+  route_unlock_node (rn);
+}
+
+/* Simulate down/up on the interface.  This is needed, for example, when
+   the MTU changes. */
+void
+eigrp_if_reset(struct interface *ifp)
+{
+  struct route_node *rn;
+
+  for (rn = route_top (IF_OIFS (ifp)); rn; rn = route_next (rn))
+    {
+      struct eigrp_interface *ei;
+
+      if ( (ei = rn->info) == NULL)
+        continue;
+
+      eigrp_if_down(ei);
+      eigrp_if_up(ei);
+    }
 }

@@ -46,9 +46,15 @@
 static int eigrp_interface_add (int , struct zclient *, zebra_size_t);
 static int eigrp_interface_delete (int , struct zclient *,
                                    zebra_size_t );
-static int
-eigrp_interface_address_add (int, struct zclient *,
-                            zebra_size_t);
+static int eigrp_interface_address_add (int, struct zclient *,
+                                        zebra_size_t);
+static int eigrp_interface_address_delete (int, struct zclient *,
+                                           zebra_size_t);
+static int eigrp_interface_state_up (int, struct zclient *,
+                                     zebra_size_t);
+static int eigrp_interface_state_down (int, struct zclient *,
+                                       zebra_size_t);
+static struct interface * zebra_interface_if_lookup (struct stream *);
 
 /* Zebra structure to hold current status. */
 struct zclient *zclient = NULL;
@@ -83,13 +89,13 @@ eigrp_zebra_init (void)
   zclient = zclient_new ();
 
   zclient_init (zclient, ZEBRA_ROUTE_EIGRP);
-  zclient->router_id_update = eigrp_router_id_update_zebra; /* Not implemented */
-  zclient->interface_add = eigrp_interface_add;/* Not implemented */
-  zclient->interface_delete = eigrp_interface_delete;/* Not implemented */
-//  zclient->interface_up = eigrp_interface_state_up;/* Not implemented */
-//  zclient->interface_down = eigrp_interface_state_down;/* Not implemented */
-  zclient->interface_address_add = eigrp_interface_address_add;/* Not implemented */
-//  zclient->interface_address_delete = ospf_interface_address_delete;/* Not implemented */
+  zclient->router_id_update = eigrp_router_id_update_zebra;
+  zclient->interface_add = eigrp_interface_add;
+  zclient->interface_delete = eigrp_interface_delete;
+  zclient->interface_up = eigrp_interface_state_up;
+  zclient->interface_down = eigrp_interface_state_down;
+  zclient->interface_address_add = eigrp_interface_address_add;
+  zclient->interface_address_delete = eigrp_interface_address_delete;
 //  zclient->ipv4_route_add = eigrp_zebra_read_ipv4;/* Not implemented */
 //  zclient->ipv4_route_delete = eigrp_zebra_read_ipv4;/* Not implemented */
 }
@@ -168,4 +174,149 @@ eigrp_interface_address_add (int command, struct zclient *zclient,
   eigrp_if_update (NULL, c->ifp);
 
   return 0;
+}
+
+static int
+eigrp_interface_address_delete (int command, struct zclient *zclient,
+                               zebra_size_t length)
+{
+  struct connected *c;
+  struct interface *ifp;
+  struct eigrp_interface *ei;
+  struct route_node *rn;
+  struct prefix p;
+
+  c = zebra_interface_address_read (command, zclient->ibuf);
+
+  if (c == NULL)
+    return 0;
+
+//  if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//    {
+//      char buf[128];
+//      prefix2str(c->address, buf, sizeof(buf));
+//      zlog_debug("Zebra: interface %s address delete %s", c->ifp->name, buf);
+//    }
+
+  ifp = c->ifp;
+  p = *c->address;
+  p.prefixlen = IPV4_MAX_PREFIXLEN;
+
+  rn = route_node_lookup (IF_OIFS (ifp), &p);
+  if (!rn)
+    {
+      connected_free (c);
+      return 0;
+    }
+
+  assert (rn->info);
+  ei = rn->info;
+
+  /* Call interface hook functions to clean up */
+  eigrp_if_free (ei);
+
+  connected_free (c);
+
+  return 0;
+}
+
+static int
+eigrp_interface_state_up (int command, struct zclient *zclient,
+                         zebra_size_t length)
+{
+  struct interface *ifp;
+  struct eigrp_interface *ei;
+  struct route_node *rn;
+
+  ifp = zebra_interface_if_lookup (zclient->ibuf);
+
+  if (ifp == NULL)
+    return 0;
+
+  /* Interface is already up. */
+  if (if_is_operative (ifp))
+    {
+      /* Temporarily keep ifp values. */
+      struct interface if_tmp;
+      memcpy (&if_tmp, ifp, sizeof (struct interface));
+
+      zebra_interface_if_set_value (zclient->ibuf, ifp);
+//
+//      if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//        zlog_debug ("Zebra: Interface[%s] state update.", ifp->name);
+
+//      if (if_tmp.bandwidth != ifp->bandwidth)
+//        {
+//          if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//            zlog_debug ("Zebra: Interface[%s] bandwidth change %d -> %d.",
+//                       ifp->name, if_tmp.bandwidth, ifp->bandwidth);
+//
+//          ospf_if_recalculate_output_cost (ifp);
+//        }
+
+      if (if_tmp.mtu != ifp->mtu)
+        {
+//          if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//            zlog_debug ("Zebra: Interface[%s] MTU change %u -> %u.",
+//                       ifp->name, if_tmp.mtu, ifp->mtu);
+
+          /* Must reset the interface (simulate down/up) when MTU changes. */
+          eigrp_if_reset(ifp);
+        }
+      return 0;
+    }
+
+  zebra_interface_if_set_value (zclient->ibuf, ifp);
+
+//  if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//    zlog_debug ("Zebra: Interface[%s] state change to up.", ifp->name);
+
+  for (rn = route_top (IF_OIFS (ifp)); rn; rn = route_next (rn))
+    {
+      if ((ei = rn->info) == NULL)
+        continue;
+
+      eigrp_if_up (ei);
+    }
+
+  return 0;
+}
+
+static int
+eigrp_interface_state_down (int command, struct zclient *zclient,
+                           zebra_size_t length)
+{
+  struct interface *ifp;
+  struct eigrp_interface *ei;
+  struct route_node *node;
+
+  ifp = zebra_interface_state_read (zclient->ibuf);
+
+  if (ifp == NULL)
+    return 0;
+
+//  if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+//    zlog_debug ("Zebra: Interface[%s] state change to down.", ifp->name);
+
+  for (node = route_top (IF_OIFS (ifp)); node; node = route_next (node))
+    {
+      if ((ei = node->info) == NULL)
+        continue;
+      eigrp_if_down (ei);
+    }
+
+  return 0;
+}
+
+static struct interface *
+zebra_interface_if_lookup (struct stream *s)
+{
+  char ifname_tmp[INTERFACE_NAMSIZ];
+
+  /* Read interface name. */
+  stream_get (ifname_tmp, s, INTERFACE_NAMSIZ);
+
+  /* And look it up. */
+  return if_lookup_by_name_len(ifname_tmp,
+                               strnlen(ifname_tmp, INTERFACE_NAMSIZ));
 }

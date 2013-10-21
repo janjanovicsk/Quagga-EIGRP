@@ -138,14 +138,19 @@ extern void eigrp_del_if_params (struct eigrp_if_params *);
 extern struct eigrp_if_params *eigrp_new_if_params (void);
 extern struct eigrp_interface * eigrp_if_new (struct eigrp *, struct interface *,
                                               struct prefix *);
-extern struct eigrp_interface * eigrp_if_table_lookup (struct interface *ifp,
-                                                       struct prefix *prefix);
-extern struct eigrp_if_params *eigrp_lookup_if_params (struct interface *ifp,
-                                                struct in_addr addr);
+extern struct eigrp_interface * eigrp_if_table_lookup (struct interface *,
+                                                       struct prefix *);
+extern struct eigrp_if_params *eigrp_lookup_if_params (struct interface *,
+                                                struct in_addr);
 extern int eigrp_if_up (struct eigrp_interface *);
 extern void eigrp_if_stream_set (struct eigrp_interface *);
-extern void eigrp_if_set_multicast(struct eigrp_interface *ei);
+extern void eigrp_if_set_multicast(struct eigrp_interface *);
 extern u_char eigrp_default_iftype(struct interface *);
 extern void eigrp_if_free (struct eigrp_interface *);
+extern int eigrp_if_down (struct eigrp_interface *);
+extern void eigrp_if_stream_unset (struct eigrp_interface *);
+
+/* Simulate down/up on the interface. */
+extern void eigrp_if_reset (struct interface *);
 
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */

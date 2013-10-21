@@ -26,7 +26,5 @@
 #ifndef _ZEBRA_EIGRP_NEIGHBOR_H
 #define _ZEBRA_EIGRP_NEIGHBOR_H
 
-void eigrp_adjust_sndbuflen (struct eigrp *, unsigned int);
-
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

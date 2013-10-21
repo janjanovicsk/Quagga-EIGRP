@@ -52,6 +52,8 @@ static int eigrp_make_hello (struct eigrp_interface *, struct stream *);
 static void eigrp_packet_add_top (struct eigrp_interface *, struct eigrp_packet *);
 static void eigrp_fifo_push_head (struct eigrp_fifo *fifo, struct eigrp_packet *ep);
 static int eigrp_write (struct thread *);
+static void eigrp_packet_checksum (struct eigrp_interface *,
+                                   struct stream *, u_int16_t);
 
 static int
 eigrp_write (struct thread *thread)
@@ -231,6 +233,24 @@ eigrp_fifo_new (void)
   return new;
 }
 
+/* Free eigrp packet fifo. */
+void
+eigrp_fifo_free (struct eigrp_fifo *fifo)
+{
+    struct eigrp_packet *ep;
+    struct eigrp_packet *next;
+
+    for (ep = fifo->head; ep; ep = next)
+      {
+        next = ep->next;
+        eigrp_packet_free (ep);
+      }
+    fifo->head = fifo->tail = NULL;
+    fifo->count = 0;
+
+  XFREE (MTYPE_EIGRP_FIFO, fifo);
+}
+
 struct eigrp_packet *
 eigrp_packet_new (size_t size)
 {
@@ -274,6 +294,9 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
   /* Prepare EIGRP Hello body. */
   length += eigrp_make_hello (ei, ep->s);
 
+  /* EIGRP Checksum */
+    eigrp_packet_checksum (ei, ep->s, length);
+
   /* Set packet length. */
   ep->length = length;
 
@@ -292,6 +315,20 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
       }
     if (ei->eigrp->t_write == NULL)
       ei->eigrp->t_write = thread_add_write (master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+}
+
+/* Calculate EIGRP checksum */
+static void
+eigrp_packet_checksum (struct eigrp_interface *ei,
+                  struct stream *s, u_int16_t length)
+{
+  struct eigrp_header *eigrph;
+
+  eigrph = (struct eigrp_header *) STREAM_DATA (s);
+
+  /* Calculate checksum. */
+    eigrph->checksum = in_cksum (eigrph, length);
+
 }
 
 /* Make EIGRP header. */
