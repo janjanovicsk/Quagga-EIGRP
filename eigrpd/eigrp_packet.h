@@ -87,11 +87,10 @@ struct eigrp_header
   u_int16_t routerID;
   u_int16_t ASNumber;
 
-};
+} __attribute__((packed));
 
 struct TLV_Parameter_Type
 {
-
     u_int16_t type;
     u_int16_t length;
     u_char K1;
@@ -101,9 +100,7 @@ struct TLV_Parameter_Type
     u_char K5;
     u_char K6;
     u_int16_t hold_time;
-
-
-};
+} __attribute__((packed));
 
 /*Prototypes*/
 extern int eigrp_read (struct thread *);

@@ -52,7 +52,7 @@ struct eigrp_master *eigrp_om;
 
 static void eigrp_finish_final (struct eigrp *);
 static void eigrp_delete (struct eigrp *);
-static struct eigrp *eigrp_new (void);
+static struct eigrp *eigrp_new (const char *);
 static void eigrp_add (struct eigrp *);
 
 extern struct zclient *zclient;
@@ -107,13 +107,14 @@ eigrp_master_init ()
 
 /* Allocate new eigrp structure. */
 static struct eigrp *
-eigrp_new (void)
+eigrp_new (const char *AS)
 {
 
   struct eigrp *new = XCALLOC (MTYPE_EIGRP_TOP, sizeof (struct eigrp));
 
   new->eiflist = list_new ();
   new->passive_interface_default = EIGRP_IF_ACTIVE;
+  new->AS = atoi(AS);
 
   new->networks = route_table_init();
 
@@ -155,14 +156,14 @@ eigrp_delete (struct eigrp *eigrp)
 }
 
 struct eigrp *
-eigrp_get (void)
+eigrp_get (const char *AS)
 {
   struct eigrp *eigrp;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
     {
-      eigrp = eigrp_new ();
+      eigrp = eigrp_new (AS);
       eigrp_add (eigrp);
     }
   return eigrp;

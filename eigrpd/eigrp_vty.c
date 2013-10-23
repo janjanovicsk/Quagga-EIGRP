@@ -41,12 +41,12 @@
 
 DEFUN (router_eigrp,
        router_eigrp_cmd,
-       "router eigrp",
+       "router eigrp <1-65535>",
        "Enable a routing process\n"
        "Start EIGRP configuration\n")
 {
   vty->node = EIGRP_NODE;
-  vty->index = eigrp_get ();
+  vty->index = eigrp_get (argv[0]);
 
   return CMD_SUCCESS;
 }

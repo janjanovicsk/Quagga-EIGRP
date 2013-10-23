@@ -342,11 +342,11 @@ eigrp_make_header (int type, struct eigrp_interface *ei, struct stream *s)
   eigrph->version = (u_char) EIGRP_HEADER_VERSION;
   eigrph->opcode = (u_char) type;
 
-  eigrph->routerID = ei->eigrp->router_id.s_addr;
+  eigrph->routerID = 0;
 
   eigrph->checksum = 0;
 
-  eigrph->ASNumber = 1;
+  eigrph->ASNumber = htons(ei->eigrp->AS);
   eigrph->ack = 0;
   eigrph->sequence =0;
   eigrph->flags = 0;

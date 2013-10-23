@@ -79,7 +79,9 @@ struct eigrp
   struct list *eiflist;                 /* eigrp interfaces */
   u_char passive_interface_default;   /* passive-interface default */
 
-  int fd;
+  int AS; /* Autonomous system number */
+
+  unsigned int fd;
   unsigned int maxsndbuflen;
 
   struct stream *ibuf;
@@ -102,7 +104,7 @@ extern struct eigrp_master *eigrp_om;
  extern void eigrp_master_init (void);
  extern void eigrp_terminate (void);
  extern void eigrp_finish (struct eigrp *);
- extern struct eigrp *eigrp_get (void);
+ extern struct eigrp *eigrp_get (const char *);
  extern struct eigrp *eigrp_lookup (void);
  extern void eigrp_router_id_update (struct eigrp *);
 
