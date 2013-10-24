@@ -27,17 +27,17 @@
 /* EIGRP Topology table node structure */
 struct eigrp_topology_node
 {
-	struct list *records;
-	struct in_addr *destination;
+        struct list *entries;
+        struct prefix_ipv4 *destination;
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_topology_entry
 {
-	struct prefix *data;
-	unsigned long distance;
-	struct in_addr *adv_router;
-	u_char flags;
+        struct prefix *data;
+        unsigned long distance;
+        struct in_addr *adv_router;
+        u_char flags;
 };
 
 /* EIGRP Topology table related functions. */
@@ -53,14 +53,15 @@ extern void eigrp_topology_entry_add (struct eigrp_topology_node *, struct eigrp
 extern void eigrp_topology_node_delete (struct list *, struct eigrp_topology_node *);
 extern void eigrp_topology_entry_delete (struct eigrp_topology_node *, struct eigrp_topology_entry *);
 extern void eigrp_topology_delete_all (struct list *);
+extern unsigned int eigrp_topology_table_isempty(struct list *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
 /*extern void ospf_lsdb_clean_stat (struct ospf_lsdb *lsdb);
 extern struct ospf_lsa *ospf_lsdb_lookup (struct ospf_lsdb *, struct ospf_lsa *);
 extern struct ospf_lsa *ospf_lsdb_lookup_by_id (struct ospf_lsdb *, u_char,
-					struct in_addr, struct in_addr);
+                                        struct in_addr, struct in_addr);
 extern struct ospf_lsa *ospf_lsdb_lookup_by_id_next (struct ospf_lsdb *, u_char,
-					     struct in_addr, struct in_addr,
-					     int);
+                                             struct in_addr, struct in_addr,
+                                             int);
 extern unsigned long ospf_lsdb_count_all (struct ospf_lsdb *);
 extern unsigned long ospf_lsdb_count (struct ospf_lsdb *, int);
 extern unsigned long ospf_lsdb_count_self (struct ospf_lsdb *, int);

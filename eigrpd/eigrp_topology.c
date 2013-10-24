@@ -32,83 +32,186 @@
 
 static int eigrp_topology_node_cmp(struct eigrp_topology_node *, struct eigrp_topology_node *);
 static void eigrp_topology_node_del(struct eigrp_topology_node *);
+static int eigrp_topology_entry_cmp(struct eigrp_topology_entry *, struct eigrp_topology_entry *);
 
+#include "eigrpd/eigrp_topology.h"
 
+/*
+ * Returns linkedlist used as topology table
+ * cmp - assigned function for comparing topology nodes
+ * del - assigned function executed before deleting topology node by list function
+ */
 struct list *
 eigrp_topology_new ()
 {
-	struct list* new = list_new();
-	eigrp_topology_init(new);
+        struct list* new = list_new();
+        new->cmp = (int (*)(void *, void *)) eigrp_topology_node_cmp;
+        new->del = (void (*) (void *)) eigrp_topology_node_del;
 
-	return new;
+        return new;
 
 }
 
-void
-eigrp_topology_init(struct list *topology)
-{
-	topology->cmp = (int (*)(void *, void *)) eigrp_topology_node_cmp;
-	topology->del = (void (*) (void *)) eigrp_topology_node_del;
-}
+/*
+ * Topology node comparison
+ */
 
 static int
 eigrp_topology_node_cmp(struct eigrp_topology_node *node1, struct eigrp_topology_node *node2)
 {
-	if (node1->destination->s_addr < node2->destination->s_addr)
-		return -1;
-	if (node1->destination->s_addr > node2->destination->s_addr)
-		return 1;
-	return 0;
+        if (node1->destination->prefix.s_addr < node2->destination->prefix.s_addr)      // parameter used in list_add_sort()
+                return -1;                                                                                                                              // actually set to destination
+        if (node1->destination->prefix.s_addr > node2->destination->prefix.s_addr)      // IPv4 address
+                return 1;
+        return 0;
 }
+
+/*
+ * Topology node delete
+ */
 
 static void
 eigrp_topology_node_del(struct eigrp_topology_node *node)
 {
-	//list_delete_all_nodes(node->records);
+        list_delete_all_node(node->entries);
+        list_free(node->entries);
 }
+
+/*
+ * Returns new created toplogy node
+ * cmp - assigned function for comparing topology entry
+ */
 
 struct eigrp_topology_node *
 eigrp_topology_node_new ()
 {
-	struct eigrp_topology_node *new;
+        struct eigrp_topology_node *new;
+        new = XCALLOC (MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
+        new->entries = list_new();
+        new->entries->cmp = (int (*)(void *, void *)) eigrp_topology_entry_cmp;
 
-	new = XCALLOC (MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
-
-	return new;
+        return new;
 }
+
+/*
+ * Topology entry comparison
+ */
+
+static int
+eigrp_topology_entry_cmp(struct eigrp_topology_entry *entry1, struct eigrp_topology_entry *entry2)
+{
+        if (entry1->distance < entry2->distance)                                // parameter used in list_add_sort()
+                return -1;                                                                                      // actually set to sort by distance
+        if (entry1->distance > entry2->distance)                                //
+                return 1;
+        return 0;
+}
+
+/*
+ * Returns new topology entry
+ */
 
 struct eigrp_topology_entry *
 eigrp_topology_entry_new ()
 {
-	struct eigrp_topology_entry *new;
+        struct eigrp_topology_entry *new;
 
-	new = XCALLOC (MTYPE_EIGRP_TOPOLOGY_ENTRY, sizeof(struct eigrp_topology_entry));
+        new = XCALLOC (MTYPE_EIGRP_TOPOLOGY_ENTRY, sizeof(struct eigrp_topology_entry));
 
-	return new;
+        return new;
 }
+
+/*
+ * Freeing topology table list
+ */
 
 void
 eigrp_topology_free (struct list *list)
 {
-	list_free(list);
+        list_free(list);
 }
+
+/*
+ * Deleting all topology nodes in table
+ */
 
 void
 eigrp_topology_cleanup (struct list *topology)
 {
-	assert(topology);
+        assert(topology);
 
-	//eigrp_topology_delete_all(topology);
+        eigrp_topology_delete_all(topology);
 
 }
+
+/*
+ * Adding topology node to topology table
+ */
+
 void
-eigrp_topology_node_add (struct list *topology, struct eigrp_topology_node *node)
+eigrp_topology_node_add (struct list *topology , struct eigrp_topology_node *node)
 {
-	listnode_add_sort(topology, node);
+        if(listnode_lookup(topology, node) != NULL)
+                listnode_add_sort(topology, node);
 }
 
-void
-eigrp_topology_entry_add (struct eigrp_topology_node * node, struct eigrp_topology_entry *entry)
-{
+/*
+ * Adding topology entry to topology node
+ */
 
+void
+eigrp_topology_entry_add (struct eigrp_topology_node *node, struct eigrp_topology_entry *entry)
+{
+        if(listnode_lookup(node->entries, entry) != NULL)
+                listnode_add_sort(node->entries, entry);
+}
+
+/*
+ * Deleting topology node from topology table
+ */
+
+void
+eigrp_topology_node_delete (struct list *topology, struct eigrp_topology_node *node)
+{
+        if(listnode_lookup(topology, node)!= NULL){
+                list_delete_all_node(node->entries);
+                list_free(node->entries);
+                listnode_delete(topology, node);
+        }
+}
+
+/*
+ * Deleting topology entry from topology node
+ */
+
+void
+eigrp_topology_entry_delete (struct eigrp_topology_node *node, struct eigrp_topology_entry *entry)
+{
+        if(listnode_lookup(node->entries, node)!= NULL){
+                        listnode_delete(node->entries, entry);
+                }
+}
+
+/*
+ * Deleting all nodes from topology table
+ */
+
+void
+eigrp_topology_delete_all (struct list *topology)
+{
+        list_delete_all_node(topology);
+}
+
+/*
+ * Return 0 if topology is not empty
+ * otherwise return 1
+ */
+
+unsigned int
+eigrp_topology_table_isempty(struct list *topology)
+{
+        if(topology->count)
+                return 1;
+        else
+                return 0;
 }
