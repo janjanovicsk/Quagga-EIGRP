@@ -25,11 +25,13 @@
 
 #define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
 #define EIGRP_HEADER_SIZE         20U
+#define EIGRP_HELLO_MIN_SIZE      12U   /* not including neighbors */
+
 
 
 #define EIGRP_MSG_UPDATE        1  /* EIGRP Hello Message. */
 #define EIGRP_MSG_REQUEST       2  /* EIGRP Database Descriptoin Message. */
-#define EIGRP_MSG_QUERY         4  /* EIGRP Link State Request Message. */
+#define EIGRP_MSG_QUERY         3  /* EIGRP Link State Request Message. */
 #define EIGRP_MSG_REPLY         4  /* EIGRP Link State Update Message. */
 #define EIGRP_MSG_HELLO         5  /* EIGRP Link State Acknoledgement Message. */
 #define EIGRP_MSG_PROBE         7  /* EIGRP Probe Message. */
@@ -46,9 +48,10 @@
 #define TLV_PEER_TERMINATION_TYPE       0x0007
 #define TLV_PEER_TID_LIST_TYPE          0x0008
 
-#define EIGRP_HELLO_MIN_SIZE      12U   /* not including neighbors */
 
-
+/* Return values of functions involved in packet verification */
+#define MSG_OK    0
+#define MSG_NG    1
 
 #define EIGRP_HEADER_VERSION            2
 
@@ -77,7 +80,6 @@ struct eigrp_fifo
 
 struct eigrp_header
 {
-
   u_char version;
   u_char opcode;
   u_int16_t checksum;

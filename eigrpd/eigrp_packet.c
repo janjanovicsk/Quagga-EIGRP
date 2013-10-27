@@ -43,6 +43,7 @@
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_dump.h"
 
 
 
@@ -54,6 +55,21 @@ static void eigrp_fifo_push_head (struct eigrp_fifo *fifo, struct eigrp_packet *
 static int eigrp_write (struct thread *);
 static void eigrp_packet_checksum (struct eigrp_interface *,
                                    struct stream *, u_int16_t);
+static struct stream *eigrp_recv_packet (int, struct interface **, struct stream *);
+static unsigned eigrp_packet_examin (struct eigrp_header *,
+                                            const unsigned);
+static int eigrp_verify_header (struct stream *, struct eigrp_interface *,
+                                struct ip *, struct eigrp_header *);
+static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
+
+
+/* Minimum (besides OSPF_HEADER_SIZE) lengths for OSPF packets of
+   particular types, offset is the "type" field of a packet. */
+static const u_int16_t eigrp_packet_minlen[] =
+{
+  0,
+  EIGRP_HELLO_MIN_SIZE
+};
 
 static int
 eigrp_write (struct thread *thread)
@@ -220,8 +236,318 @@ eigrp_write (struct thread *thread)
 int
 eigrp_read (struct thread *thread)
 {
+  int ret;
+  struct stream *ibuf;
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct ip *iph;
+  struct eigrp_header *eigrph;
+  u_int16_t length;
+  struct interface *ifp;
+
+  /* first of all get interface pointer. */
+  eigrp = THREAD_ARG (thread);
+
+  /* prepare for next packet. */
+  eigrp->t_read = thread_add_read (master, eigrp_read, eigrp, eigrp->fd);
+
+  stream_reset(eigrp->ibuf);
+  if (!(ibuf = eigrp_recv_packet (eigrp->fd, &ifp, eigrp->ibuf)))
+    return -1;
+  /* This raw packet is known to be at least as big as its IP header. */
+
+  /* Note that there should not be alignment problems with this assignment
+     because this is at the beginning of the stream data buffer. */
+  iph = (struct ip *) STREAM_DATA (ibuf);
+  /* Note that sockopt_iphdrincl_swab_systoh was called in ospf_recv_packet. */
+
+  if (ifp == NULL)
+    /* Handle cases where the platform does not support retrieving the ifindex,
+       and also platforms (such as Solaris 8) that claim to support ifindex
+       retrieval but do not. */
+    ifp = if_lookup_address (iph->ip_src);
+
+  if (ifp == NULL)
+    return 0;
+
+  /* IP Header dump. */
+//    if (IS_DEBUG_OSPF_PACKET(0, RECV))
+            eigrp_ip_header_dump (iph);
+
+  /* Self-originated packet should be discarded silently. */
+  if (eigrp_if_lookup_by_local_addr (eigrp, NULL, iph->ip_src))
+    {
+//      if (IS_DEBUG_OSPF_PACKET (0, RECV))
+//        {
+//          zlog_debug ("ospf_read[%s]: Dropping self-originated packet",
+//                     inet_ntoa (iph->ip_src));
+//        }
+      return 0;
+    }
+
+  /* Advance from IP header to EIGRP header (iph->ip_hl has been verified
+     by ospf_recv_packet() to be correct). */
+  stream_forward_getp (ibuf, iph->ip_hl * 4);
+
+  eigrph = (struct eigrp_header *) STREAM_PNT (ibuf);
+//  if (MSG_OK != eigrp_packet_examin (eigrph, stream_get_endp (ibuf) - stream_get_getp (ibuf)))
+//    return -1;
+  /* Now it is safe to access all fields of OSPF packet header. */
+
+  /* associate packet with eigrp interface */
+  ei = eigrp_if_lookup_recv_if (eigrp, iph->ip_src, ifp);
+
+  /* eigrp_verify_header() relies on a valid "ei" and thus can be called only
+     after the hecks below are passed. These checks
+     in turn access the fields of unverified "eigrph" structure for their own
+     purposes and must remain very accurate in doing this. */
+
+  /* If incoming interface is passive one, ignore it. */
+  if (ei && EIGRP_IF_PASSIVE_STATUS (ei) == EIGRP_IF_PASSIVE)
+    {
+      char buf[3][INET_ADDRSTRLEN];
+
+//      if (IS_DEBUG_OSPF_EVENT)
+//        zlog_debug ("ignoring packet from router %s sent to %s, "
+//                    "received on a passive interface, %s",
+//                    inet_ntop(AF_INET, &ospfh->router_id, buf[0], sizeof(buf[0])),
+//                    inet_ntop(AF_INET, &iph->ip_dst, buf[1], sizeof(buf[1])),
+//                    inet_ntop(AF_INET, &oi->address->u.prefix4,
+//                              buf[2], sizeof(buf[2])));
+
+      if (iph->ip_dst.s_addr == htonl(EIGRP_MULTICAST_ADDRESS))
+        {
+          /* Try to fix multicast membership.
+           * Some OS:es may have problems in this area,
+           * make sure it is removed.
+           */
+          EI_MEMBER_JOINED(ei, MEMBER_ALLROUTERS);
+          eigrp_if_set_multicast(ei);
+        }
+      return 0;
+  }
+
+  /* else it must be a local eigrp interface, check it was received on
+   * correct link
+   */
+  else if (ei->ifp != ifp)
+    {
+//      if (IS_DEBUG_OSPF_EVENT)
+//        zlog_warn ("Packet from [%s] received on wrong link %s",
+//                   inet_ntoa (iph->ip_src), ifp->name);
+      return 0;
+    }
+
+  /* Verify more EIGRP header fields. */
+  ret = eigrp_verify_header (ibuf, ei, iph, eigrph);
+  if (ret < 0)
+  {
+//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+//      zlog_debug ("ospf_read[%s]: Header check failed, "
+//                  "dropping.",
+//                  inet_ntoa (iph->ip_src));
+    return ret;
+  }
+
+      zlog_debug ("received from [%s] via [%s]",
+                 inet_ntoa (iph->ip_src), IF_NAME (ei));
+      zlog_debug (" src [%s],", inet_ntoa (iph->ip_src));
+      zlog_debug (" dst [%s]", inet_ntoa (iph->ip_dst));
+
+        zlog_debug ("-----------------------------------------------------");
+
+
+  stream_forward_getp (ibuf, EIGRP_HEADER_SIZE);
+
+  /* Read rest of the packet and call each sort of packet routine. */
+  switch (eigrph->opcode)
+    {
+    case EIGRP_MSG_HELLO:
+//      ospf_hello (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_PROBE:
+//      ospf_db_desc (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_QUERY:
+//      ospf_ls_req (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_REPLY:
+//      ospf_ls_upd (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_REQUEST:
+//      ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_SIAQUERY:
+//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+          break;
+    case EIGRP_MSG_SIAREPLY:
+//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+      break;
+    case EIGRP_MSG_UPDATE:
+//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+      break;
+    default:
+      zlog (NULL, LOG_WARNING,
+            "interface %s: EIGRP packet header type %d is illegal",
+            IF_NAME (ei), eigrph->opcode);
+      break;
+    }
 
   return 0;
+}
+
+static struct stream *
+eigrp_recv_packet (int fd, struct interface **ifp, struct stream *ibuf)
+{
+  int ret;
+  struct ip *iph;
+  u_int16_t ip_len;
+  unsigned int ifindex = 0;
+  struct iovec iov;
+  /* Header and data both require alignment. */
+  char buff [CMSG_SPACE(SOPT_SIZE_CMSG_IFINDEX_IPV4())];
+  struct msghdr msgh;
+
+  memset (&msgh, 0, sizeof (struct msghdr));
+  msgh.msg_iov = &iov;
+  msgh.msg_iovlen = 1;
+  msgh.msg_control = (caddr_t) buff;
+  msgh.msg_controllen = sizeof (buff);
+
+  ret = stream_recvmsg (ibuf, fd, &msgh, 0, EIGRP_MAX_PACKET_SIZE+1);
+  if (ret < 0)
+    {
+      zlog_warn("stream_recvmsg failed: %s", safe_strerror(errno));
+      return NULL;
+    }
+  if ((unsigned int)ret < sizeof(iph)) /* ret must be > 0 now */
+    {
+      zlog_warn("ospf_recv_packet: discarding runt packet of length %d "
+                "(ip header size is %u)",
+                ret, (u_int)sizeof(iph));
+      return NULL;
+    }
+
+  /* Note that there should not be alignment problems with this assignment
+     because this is at the beginning of the stream data buffer. */
+  iph = (struct ip *) STREAM_DATA(ibuf);
+  sockopt_iphdrincl_swab_systoh (iph);
+
+  ip_len = iph->ip_len;
+
+#if !defined(GNU_LINUX) && (OpenBSD < 200311) && (__FreeBSD_version < 1000000)
+  /*
+   * Kernel network code touches incoming IP header parameters,
+   * before protocol specific processing.
+   *
+   *   1) Convert byteorder to host representation.
+   *      --> ip_len, ip_id, ip_off
+   *
+   *   2) Adjust ip_len to strip IP header size!
+   *      --> If user process receives entire IP packet via RAW
+   *          socket, it must consider adding IP header size to
+   *          the "ip_len" field of "ip" structure.
+   *
+   * For more details, see <netinet/ip_input.c>.
+   */
+  ip_len = ip_len + (iph->ip_hl << 2);
+#endif
+
+#if defined(__DragonFly__)
+  /*
+   * in DragonFly's raw socket, ip_len/ip_off are read
+   * in network byte order.
+   * As OpenBSD < 200311 adjust ip_len to strip IP header size!
+   */
+  ip_len = ntohs(iph->ip_len) + (iph->ip_hl << 2);
+#endif
+
+  ifindex = getsockopt_ifindex (AF_INET, &msgh);
+
+  *ifp = if_lookup_by_index (ifindex);
+
+  if (ret != ip_len)
+    {
+      zlog_warn ("eigrp_recv_packet read length mismatch: ip_len is %d, "
+                 "but recvmsg returned %d", ip_len, ret);
+      return NULL;
+    }
+
+  return ibuf;
+}
+
+/* Verify a complete OSPF packet for proper sizing/alignment. */
+static unsigned
+eigrp_packet_examin (struct eigrp_header * eh, const unsigned bytesonwire)
+{
+  u_int16_t bytesdeclared, bytesauth;
+  unsigned ret;
+
+  /* Length, 1st approximation. */
+  if (bytesonwire < EIGRP_HEADER_SIZE)
+  {
+//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+//      zlog_debug ("%s: undersized (%u B) packet", __func__, bytesonwire);
+    return MSG_NG;
+  }
+  /* Now it is safe to access header fields. Performing length check, allow
+   * for possible extra bytes of crypto auth/padding, which are not counted
+   * in the OSPF header "length" field. */
+  if (eh->version != EIGRP_HEADER_VERSION)
+  {
+//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+//      zlog_debug ("%s: invalid (%u) protocol version", __func__, oh->version);
+    return MSG_NG;
+  }
+
+  /* Length, 2nd approximation. The type-specific constraint is checked
+     against declared length, not amount of bytes on wire. */
+
+
+  switch (eh->opcode)
+  {
+  case EIGRP_MSG_HELLO:
+    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+       by N>=0 router-IDs. */
+    break;
+  case EIGRP_MSG_PROBE:
+    /* RFC2328 A.3.3, packet header + OSPF_DB_DESC_MIN_SIZE bytes followed
+       by N>=0 header-only LSAs. */
+
+    break;
+  case EIGRP_MSG_QUERY:
+    /* RFC2328 A.3.4, packet header followed by N>=0 12-bytes request blocks. */
+    break;
+  case EIGRP_MSG_REPLY:
+    /* RFC2328 A.3.5, packet header + OSPF_LS_UPD_MIN_SIZE bytes followed
+       by N>=0 full LSAs (with N declared beforehand). */
+    break;
+  case EIGRP_MSG_REQUEST:
+    /* RFC2328 A.3.6, packet header followed by N>=0 header-only LSAs. */
+    break;
+  case EIGRP_MSG_SIAQUERY:
+    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+       by N>=0 router-IDs. */
+
+    break;
+  case EIGRP_MSG_SIAREPLY:
+    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+       by N>=0 router-IDs. */
+
+    break;
+  case EIGRP_MSG_UPDATE:
+    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+       by N>=0 router-IDs. */
+
+    break;
+  default:
+//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+//      zlog_debug ("%s: invalid packet type 0x%02x", __func__, eh->opcode);
+    return MSG_NG;
+  }
+//  if (ret != MSG_OK && IS_DEBUG_OSPF_PACKET (0, RECV))
+//    zlog_debug ("%s: malformed %s packet", __func__, LOOKUP (ospf_packet_type_str, eh->opcode));
+  return MSG_OK;
 }
 
 struct eigrp_fifo *
@@ -348,7 +674,7 @@ eigrp_make_header (int type, struct eigrp_interface *ei, struct stream *s)
 
   eigrph->ASNumber = htons(ei->eigrp->AS);
   eigrph->ack = 0;
-  eigrph->sequence =0;
+  eigrph->sequence = htonl(ei->eigrp->sequence_number);
   eigrph->flags = 0;
 
   stream_forward_endp (s, EIGRP_HEADER_SIZE);
@@ -452,5 +778,48 @@ eigrp_packet_free (struct eigrp_packet *ep)
   XFREE (MTYPE_EIGRP_PACKET, ep);
 
   ep = NULL;
+}
+
+/* EIGRP Header verification. */
+static int
+eigrp_verify_header (struct stream *ibuf, struct eigrp_interface *ei,
+                    struct ip *iph, struct eigrp_header *eigrph)
+{
+
+  /* Check network mask, Silently discarded. */
+  if (! eigrp_check_network_mask (ei, iph->ip_src))
+    {
+      zlog_warn ("interface %s: eigrp_read network address is not same [%s]",
+                 IF_NAME (ei), inet_ntoa (iph->ip_src));
+      return -1;
+    }
+//
+//  /* Check authentication. The function handles logging actions, where required. */
+//  if (! ospf_check_auth (oi, ospfh))
+//    return -1;
+
+  return 0;
+}
+
+/* Unbound socket will accept any Raw IP packets if proto is matched.
+   To prevent it, compare src IP address and i/f address with masking
+   i/f network mask. */
+static int
+eigrp_check_network_mask (struct eigrp_interface *ei, struct in_addr ip_src)
+{
+  struct in_addr mask, me, him;
+
+  if (ei->type == EIGRP_IFTYPE_POINTOPOINT)
+    return 1;
+
+  masklen2ip (ei->address->prefixlen, &mask);
+
+  me.s_addr = ei->address->u.prefix4.s_addr & mask.s_addr;
+  him.s_addr = ip_src.s_addr & mask.s_addr;
+
+ if (IPV4_ADDR_SAME (&me, &him))
+   return 1;
+
+ return 0;
 }
 

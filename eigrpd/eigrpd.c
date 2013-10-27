@@ -140,6 +140,8 @@ eigrp_new (const char *AS)
   new->t_read = thread_add_read (master, eigrp_read, new, new->fd);
   new->oi_write_q = list_new ();
 
+  new->sequence_number=0;
+
   return new;
 }
 

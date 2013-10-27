@@ -93,6 +93,9 @@ struct eigrp
 
   struct route_table *networks;         /* EIGRP config networks. */
 
+  /*Sequence number for EIGRP packet header*/
+  uint32_t sequence_number;
+
 };
 
 /* Extern variables. */

@@ -341,3 +341,60 @@ eigrp_if_reset(struct interface *ifp)
       eigrp_if_up(ei);
     }
 }
+
+struct eigrp_interface *
+eigrp_if_lookup_by_local_addr (struct eigrp *eigrp,
+                              struct interface *ifp, struct in_addr address)
+{
+  struct listnode *node;
+  struct eigrp_interface *ei;
+
+  for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+    {
+      if (ifp && ei->ifp != ifp)
+        continue;
+
+      if (IPV4_ADDR_SAME (&address, &ei->address->u.prefix4))
+        return ei;
+    }
+
+  return NULL;
+}
+
+/* determine receiving interface by ifp and source address */
+struct eigrp_interface *
+eigrp_if_lookup_recv_if (struct eigrp *eigrp, struct in_addr src,
+                        struct interface *ifp)
+{
+  struct route_node *rn;
+  struct prefix_ipv4 addr;
+  struct eigrp_interface *ei, *match;
+
+  addr.family = AF_INET;
+  addr.prefix = src;
+  addr.prefixlen = IPV4_MAX_BITLEN;
+
+  match = NULL;
+
+  for (rn = route_top (IF_OIFS (ifp)); rn; rn = route_next (rn))
+    {
+      ei = rn->info;
+
+      if (!ei) /* oi can be NULL for PtP aliases */
+        continue;
+
+      if (if_is_loopback (ei->ifp))
+        continue;
+
+      if (prefix_match (CONNECTED_PREFIX(ei->connected),
+                        (struct prefix *) &addr))
+        {
+          if ( (match == NULL) ||
+               (match->address->prefixlen < ei->address->prefixlen)
+             )
+            match = ei;
+        }
+    }
+
+  return match;
+}
