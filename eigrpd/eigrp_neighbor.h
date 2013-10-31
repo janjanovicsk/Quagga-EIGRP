@@ -27,4 +27,48 @@
 #define _ZEBRA_EIGRP_NEIGHBOR_H
 
 
+#define EIGRP_NEIGHBOR_DOWN           0
+#define EIGRP_NEIGHBOR_PENDING        1
+#define EIGRP_NEIGHBOR_UP             2
+#define EIGRP_NEIGHBOR_STATE_MAX      3
+
+/* Neighbor Data Structure */
+struct eigrp_neighbor
+{
+  /* This neighbor's parent eigrp interface. */
+  struct eigrp_interface *ei;
+
+  /* OSPF neighbor Information */
+  u_char state;                               /* neigbor status. */
+  u_int32_t sequence_number;                  /* Sequence Number. */
+  u_int32_t ack;                              /* Acknowledgement number*/
+
+  /* Neighbor Information from Hello. */
+  struct prefix address;                /* Neighbor Interface Address. */
+
+  struct in_addr src;                   /* Src address. */
+
+  u_char K1;
+  u_char K2;
+  u_char K3;
+  u_char K4;
+  u_char K5;
+  u_char K6;
+
+  /* Timer values. */
+  u_int16_t v_holddown;
+
+  /* Threads. */
+  struct thread *t_holddown;
+};
+
+
+/* Prototypes */
+extern struct eigrp_neighbor *eigrp_nbr_get (struct eigrp_interface *,
+                                              struct eigrp_header *,
+                                              struct ip *, struct prefix *);
+extern struct eigrp_neighbor *eigrp_nbr_new (struct eigrp_interface *);
+extern void eigrp_nbr_free (struct eigrp_neighbor *);
+extern void eigrp_nbr_delete (struct eigrp_neighbor *);
+
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

@@ -1,5 +1,5 @@
 /*
- * EIGRP FSM algorithm.
+ * EIGRP DUAL algorithm.
  *   Copyright (C) 1999 Toshiaki Takada
  *
  * This file is part of GNU Zebra.

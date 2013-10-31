@@ -94,7 +94,7 @@ struct eigrp_interface
     struct connected *connected;          /* Pointer to connected */
 
     /* Neighbor information. */
-      struct route_table *nbrs;             /* OSPF Neighbor List */
+      struct route_table *nbrs;             /* EIGRP Neighbor List */
 
     /* Threads. */
     struct thread *t_hello;               /* timer */

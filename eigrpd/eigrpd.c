@@ -217,7 +217,6 @@ eigrp_finish_final (struct eigrp *eigrp)
   if(zclient)
     zclient_free(zclient);
 
-
   list_free (eigrp->eiflist);
   list_free (eigrp->oi_write_q);
   eigrp_delete (eigrp);

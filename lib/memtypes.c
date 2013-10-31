@@ -262,10 +262,11 @@ struct memory_list memory_list_eigrp[] =
   { MTYPE_EIGRP_IF_PARAMS,       "EIGRP if params"              },
   { MTYPE_EIGRP_IF,              "EIGRP interface"              },
   { MTYPE_EIGRP_FIFO,            "EIGRP FIFO queue"             },
-  { MTYPE_EIGRP_TOPOLOGY,          "EIGRP Topology table"		},
-  { MTYPE_EIGRP_TOPOLOGY_NODE,     "EIGRP Topology table node"	},
-  { MTYPE_EIGRP_TOPOLOGY_ENTRY,   "EIGRP Topology table entry"	},
-  { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"             },
+  { MTYPE_EIGRP_TOPOLOGY,        "EIGRP Topology table"	        },
+  { MTYPE_EIGRP_TOPOLOGY_NODE,   "EIGRP Topology table node"	},
+  { MTYPE_EIGRP_TOPOLOGY_ENTRY,  "EIGRP Topology table entry"	},
+  { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"       },
+  { MTYPE_EIGRP_NEIGHBOR,        "EIGRP neighbor structure"     },
   { -1, NULL },
 };
 

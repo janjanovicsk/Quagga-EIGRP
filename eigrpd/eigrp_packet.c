@@ -349,12 +349,12 @@ eigrp_read (struct thread *thread)
     return ret;
   }
 
-      zlog_debug ("received from [%s] via [%s]",
-                 inet_ntoa (iph->ip_src), IF_NAME (ei));
-      zlog_debug (" src [%s],", inet_ntoa (iph->ip_src));
-      zlog_debug (" dst [%s]", inet_ntoa (iph->ip_dst));
-
-        zlog_debug ("-----------------------------------------------------");
+//      zlog_debug ("received from [%s] via [%s]",
+//                 inet_ntoa (iph->ip_src), IF_NAME (ei));
+//      zlog_debug (" src [%s],", inet_ntoa (iph->ip_src));
+//      zlog_debug (" dst [%s]", inet_ntoa (iph->ip_dst));
+//
+//        zlog_debug ("-----------------------------------------------------");
 
 
   stream_forward_getp (ibuf, EIGRP_HEADER_SIZE);
@@ -641,6 +641,13 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
       }
     if (ei->eigrp->t_write == NULL)
       ei->eigrp->t_write = thread_add_write (master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+}
+
+/*Send EIGRP Update packet*/
+void
+eigrp_update_send (struct eigrp_interface*ei)
+{
+
 }
 
 /* Calculate EIGRP checksum */

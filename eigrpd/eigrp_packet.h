@@ -104,12 +104,15 @@ struct TLV_Parameter_Type
     u_int16_t hold_time;
 } __attribute__((packed));
 
+
+
 /*Prototypes*/
 extern int eigrp_read (struct thread *);
 extern struct eigrp_fifo *eigrp_fifo_new (void);
 extern struct eigrp_packet *eigrp_packet_new (size_t);
 extern void eigrp_hello_send (struct eigrp_interface *);
-extern struct eigrp_packet *eigrp_fifo_head(struct eigrp_fifo *);
+extern void eigrp_update_send (struct eigrp_interface *);
+extern struct eigrp_packet *eigrp_fifo_head (struct eigrp_fifo *);
 extern void eigrp_packet_delete (struct eigrp_interface *);
 extern struct eigrp_packet *eigrp_fifo_pop (struct eigrp_fifo *);
 extern void eigrp_packet_free (struct eigrp_packet *);
