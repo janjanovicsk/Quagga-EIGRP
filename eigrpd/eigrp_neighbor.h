@@ -40,13 +40,13 @@ struct eigrp_neighbor
 
   /* OSPF neighbor Information */
   u_char state;                               /* neigbor status. */
-  u_int32_t sequence_number;                  /* Sequence Number. */
+  u_int32_t recv_sequence_number;             /* Last received sequence Number. */
   u_int32_t ack;                              /* Acknowledgement number*/
 
-  /* Neighbor Information from Hello. */
-  struct prefix address;                /* Neighbor Interface Address. */
+  /*If packet is unacknowledged, we try to send it again 16 times*/
+  u_char retrans_counter;
 
-  struct in_addr src;                   /* Src address. */
+  struct in_addr src;                   /* Neighbor Src address. */
 
   u_char K1;
   u_char K2;
@@ -60,6 +60,9 @@ struct eigrp_neighbor
 
   /* Threads. */
   struct thread *t_holddown;
+
+  struct eigrp_fifo retrans_queue;
+  struct thread *t_retrans_timer;
 };
 
 
@@ -70,5 +73,7 @@ extern struct eigrp_neighbor *eigrp_nbr_get (struct eigrp_interface *,
 extern struct eigrp_neighbor *eigrp_nbr_new (struct eigrp_interface *);
 extern void eigrp_nbr_free (struct eigrp_neighbor *);
 extern void eigrp_nbr_delete (struct eigrp_neighbor *);
+
+extern int holddown_timer_expired (struct thread *);
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

@@ -33,10 +33,10 @@
 #include "log.h"
 
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 
@@ -213,12 +213,10 @@ eigrp_if_up (struct eigrp_interface *ei)
         zlog_warn ("%s: eigrp_lookup() returned NULL", __func__);
       eigrp_if_stream_set (ei);
 
-     // eigrp_hello_timer(ei);
       /* Set multicast memberships appropriately for new state. */
         eigrp_if_set_multicast(ei);
 
       thread_add_event (master, eigrp_hello_timer, ei, (1));
-      //OSPF_ISM_EVENT_SCHEDULE (oi, ISM_InterfaceUp);
 
   return 1;
 }

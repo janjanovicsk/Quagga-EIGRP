@@ -32,12 +32,12 @@
 #include "log.h"
 
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_neighbor.h"
 
 static void
 eigrp_nbr_key (struct eigrp_interface *ei, struct eigrp_neighbor *nbr,
@@ -63,6 +63,8 @@ eigrp_nbr_new (struct eigrp_interface *ei)
   /* Set default values. */
   nbr->state = EIGRP_NEIGHBOR_DOWN;
 
+  nbr->retrans_queue = eigrp_fifo_new();
+
   return nbr;
 }
 
@@ -73,10 +75,9 @@ eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   struct eigrp_neighbor *nbr;
 
   nbr = eigrp_nbr_new (ei);
-  nbr->state = EIGRP_NEIGHBOR_DOWN;
+
   nbr->src = p->u.prefix4;
-  nbr->sequence_number = 0;
-  memcpy (&nbr->address, p, sizeof (struct prefix));
+  nbr->ack = 0;
 
 //  if (ei->type == OSPF_IFTYPE_NBMA)
 //    {
@@ -124,11 +125,11 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
       route_unlock_node (rn);
       nbr = rn->info;
 
-      if (ei->type == OSPF_IFTYPE_NBMA)
-        {
-          nbr->src = iph->ip_src;
-          memcpy (&nbr->address, p, sizeof (struct prefix));
-        }
+//      if (ei->type == OSPF_IFTYPE_NBMA)
+//        {
+//          nbr->src = iph->ip_src;
+//          memcpy (&nbr->address, p, sizeof (struct prefix));
+//        }
     }
   else
     {
@@ -187,4 +188,16 @@ eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 
   /* Free ospf_neighbor structure. */
   eigrp_nbr_free (nbr);
+}
+
+int
+holddown_timer_expired (struct thread *thread)
+{
+//  struct eigrp_neighbor *nbr;
+
+//  nbr = THREAD_ARG(thread);
+
+  zlog_debug("VYPRSAL HOLDDOWN TIMER u suseda \n");
+
+  return 0;
 }

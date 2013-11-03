@@ -28,13 +28,19 @@
 #include "log.h"
 #include "linklist.h"
 
+#include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_topology.h"
 
 static int eigrp_topology_node_cmp(struct eigrp_topology_node *, struct eigrp_topology_node *);
 static void eigrp_topology_node_del(struct eigrp_topology_node *);
 static int eigrp_topology_entry_cmp(struct eigrp_topology_entry *, struct eigrp_topology_entry *);
-
-#include "eigrpd/eigrp_topology.h"
 
 /*
  * Returns linkedlist used as topology table

@@ -72,6 +72,7 @@ struct eigrp_master
 
 struct eigrp
 {
+
   /* EIGRP Router ID. */
   struct in_addr router_id;             /* Configured automatically. */
   struct in_addr router_id_static;      /* Configured manually. */
@@ -84,6 +85,8 @@ struct eigrp
   unsigned int fd;
   unsigned int maxsndbuflen;
 
+  u_int32_t sequence_number;    /*Global EIGRP sequence number*/
+
   struct stream *ibuf;
   struct list *oi_write_q;
 
@@ -93,8 +96,7 @@ struct eigrp
 
   struct route_table *networks;         /* EIGRP config networks. */
 
-  /*Sequence number for EIGRP packet header*/
-  uint32_t sequence_number;
+  u_char k_values[5]; /*Array for K values configuration*/
 
 };
 

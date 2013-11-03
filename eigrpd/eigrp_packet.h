@@ -25,9 +25,12 @@
 
 #define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
 #define EIGRP_HEADER_SIZE         20U
-#define EIGRP_HELLO_MIN_SIZE      12U   /* not including neighbors */
+#define EIGRP_HELLO_MIN_SIZE      12U
 
-
+#define EIGRP_HEADER_FLAG_INIT          Ox00000001
+#define EIGRP_HEADER_FLAG_CR            Ox00000010
+#define EIGRP_HEADER_FLAG_RESET         Ox00000100
+#define EIGRP_HEADER_FLAG_EOT           Ox00001000
 
 #define EIGRP_MSG_UPDATE        1  /* EIGRP Hello Message. */
 #define EIGRP_MSG_REQUEST       2  /* EIGRP Database Descriptoin Message. */
@@ -47,6 +50,9 @@
 #define TLV_PEER_INFORMATION_TYPE       0x0006
 #define TLV_PEER_TERMINATION_TYPE       0x0007
 #define TLV_PEER_TID_LIST_TYPE          0x0008
+
+/*Packet requiring ack will be retransmitted again after this time*/
+#define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
 
 
 /* Return values of functions involved in packet verification */
@@ -117,6 +123,10 @@ extern void eigrp_packet_delete (struct eigrp_interface *);
 extern struct eigrp_packet *eigrp_fifo_pop (struct eigrp_fifo *);
 extern void eigrp_packet_free (struct eigrp_packet *);
 extern void eigrp_fifo_free (struct eigrp_fifo *);
+extern void eigrp_ack_send(struct eigrp_neighbor *);
+extern void eigrp_send_init_update (struct eigrp_neighbor *);
+
+extern int eigrp_unack_packet_retrans(struct thread *);
 
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

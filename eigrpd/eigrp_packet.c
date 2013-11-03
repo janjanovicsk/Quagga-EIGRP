@@ -37,18 +37,18 @@
 #include "md5.h"
 
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 
 
-
 static void eigrp_hello_send_sub (struct eigrp_interface *, in_addr_t);
-static void eigrp_make_header (int, struct eigrp_interface *, struct stream *);
+static void eigrp_make_header (int, struct eigrp_interface *, struct stream *,
+                               u_int32_t, u_int32_t, u_int32_t);
 static int eigrp_make_hello (struct eigrp_interface *, struct stream *);
 static void eigrp_packet_add_top (struct eigrp_interface *, struct eigrp_packet *);
 static void eigrp_fifo_push_head (struct eigrp_fifo *fifo, struct eigrp_packet *ep);
@@ -61,15 +61,108 @@ static unsigned eigrp_packet_examin (struct eigrp_header *,
 static int eigrp_verify_header (struct stream *, struct eigrp_interface *,
                                 struct ip *, struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
+static int eigrp_make_update(struct eigrp_interface *, struct stream *);
 
-
-/* Minimum (besides OSPF_HEADER_SIZE) lengths for OSPF packets of
-   particular types, offset is the "type" field of a packet. */
-static const u_int16_t eigrp_packet_minlen[] =
+/*EIGRP UPDATE read function*/
+static void
+eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
+            struct stream * s, struct eigrp_interface *ei, int size)
 {
-  0,
-  EIGRP_HELLO_MIN_SIZE
-};
+  struct eigrp_neighbor *nbr;
+  struct prefix p;
+
+  /* increment statistics. */
+  ei->update_in++;
+
+  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+
+  /* If Hello is myself, silently discard. */
+  if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
+    {
+
+      return;
+    }
+
+  /* get neighbour struct */
+  nbr = eigrp_nbr_get (ei, eigrph, iph, &p);
+
+  /* neighbour must be valid, eigrp_nbr_get creates if none existed */
+  assert (nbr);
+
+  /*If it is INIT update, remove it from retrans qeue*/
+
+}
+
+/*EIGRP hello read function*/
+static void
+eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
+            struct stream * s, struct eigrp_interface *ei, int size)
+{
+  struct TLV_Parameter_Type *hello;
+  struct eigrp_neighbor *nbr;
+  struct prefix p;
+
+  /* increment statistics. */
+  ei->hello_in++;
+
+  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+
+  /* If Hello is myself, silently discard. */
+  if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
+    {
+//      if (IS_DEBUG_OSPF_PACKET (ospfh->type - 1, RECV))
+//        {
+//          zlog_debug ("ospf_header[%s/%s]: selforiginated, "
+//                     "dropping.",
+//                     LOOKUP (ospf_packet_type_str, ospfh->type),
+//                     inet_ntoa (iph->ip_src));
+//        }
+      return;
+    }
+
+  /* get neighbor prefix. */
+  p.family = AF_INET;
+  p.u.prefix4 = iph->ip_src;
+
+//  if (IS_DEBUG_OSPF_EVENT)
+//    zlog_debug ("Packet %s [Hello:RECV]: Options %s",
+//               inet_ntoa (ospfh->router_id),
+//               ospf_options_dump (hello->options));
+
+  /* get neighbour struct */
+  nbr = eigrp_nbr_get (ei, eigrph, iph, &p);
+
+  /* neighbour must be valid, eigrp_nbr_get creates if none existed */
+  assert (nbr);
+
+  switch(nbr->state)
+    {
+      case EIGRP_NEIGHBOR_DOWN:
+        {
+          nbr->v_holddown = ntohs(hello->hold_time);
+          /*Start Hold Down Timer for neighbor*/
+          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+          break;
+        }
+      case EIGRP_NEIGHBOR_PENDING:
+        {
+          /*Reset Hold Down Timer for neighbor*/
+          thread_cancel(nbr->t_holddown);
+          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+
+          break;
+        }
+      case EIGRP_NEIGHBOR_UP:
+        {
+          /*Reset Hold Down Timer for neighbor*/
+          thread_cancel(nbr->t_holddown);
+          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+          break;
+        }
+    }
+
+
+}
 
 static int
 eigrp_write (struct thread *thread)
@@ -81,7 +174,7 @@ eigrp_write (struct thread *thread)
   struct ip iph;
   struct msghdr msg;
   struct iovec iov[2];
-  u_char type;
+
   int ret;
   int flags = 0;
   struct listnode *node;
@@ -259,6 +352,7 @@ eigrp_read (struct thread *thread)
   /* Note that there should not be alignment problems with this assignment
      because this is at the beginning of the stream data buffer. */
   iph = (struct ip *) STREAM_DATA (ibuf);
+
   /* Note that sockopt_iphdrincl_swab_systoh was called in ospf_recv_packet. */
 
   if (ifp == NULL)
@@ -272,7 +366,7 @@ eigrp_read (struct thread *thread)
 
   /* IP Header dump. */
 //    if (IS_DEBUG_OSPF_PACKET(0, RECV))
-            eigrp_ip_header_dump (iph);
+//            eigrp_ip_header_dump (iph);
 
   /* Self-originated packet should be discarded silently. */
   if (eigrp_if_lookup_by_local_addr (eigrp, NULL, iph->ip_src))
@@ -305,7 +399,7 @@ eigrp_read (struct thread *thread)
   /* If incoming interface is passive one, ignore it. */
   if (ei && EIGRP_IF_PASSIVE_STATUS (ei) == EIGRP_IF_PASSIVE)
     {
-      char buf[3][INET_ADDRSTRLEN];
+//      char buf[3][INET_ADDRSTRLEN];
 
 //      if (IS_DEBUG_OSPF_EVENT)
 //        zlog_debug ("ignoring packet from router %s sent to %s, "
@@ -363,7 +457,7 @@ eigrp_read (struct thread *thread)
   switch (eigrph->opcode)
     {
     case EIGRP_MSG_HELLO:
-//      ospf_hello (iph, ospfh, ibuf, oi, length);
+      eigrp_hello (iph, eigrph, ibuf, ei, length);
       break;
     case EIGRP_MSG_PROBE:
 //      ospf_db_desc (iph, ospfh, ibuf, oi, length);
@@ -384,7 +478,7 @@ eigrp_read (struct thread *thread)
 //          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
       break;
     case EIGRP_MSG_UPDATE:
-//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+            eigrp_update (iph, ospfh, ibuf, oi, length);
       break;
     default:
       zlog (NULL, LOG_WARNING,
@@ -480,8 +574,7 @@ eigrp_recv_packet (int fd, struct interface **ifp, struct stream *ibuf)
 static unsigned
 eigrp_packet_examin (struct eigrp_header * eh, const unsigned bytesonwire)
 {
-  u_int16_t bytesdeclared, bytesauth;
-  unsigned ret;
+//  unsigned ret;
 
   /* Length, 1st approximation. */
   if (bytesonwire < EIGRP_HEADER_SIZE)
@@ -499,10 +592,6 @@ eigrp_packet_examin (struct eigrp_header * eh, const unsigned bytesonwire)
 //      zlog_debug ("%s: invalid (%u) protocol version", __func__, oh->version);
     return MSG_NG;
   }
-
-  /* Length, 2nd approximation. The type-specific constraint is checked
-     against declared length, not amount of bytes on wire. */
-
 
   switch (eh->opcode)
   {
@@ -606,6 +695,38 @@ eigrp_hello_send (struct eigrp_interface *ei)
     }
 }
 
+void
+eigrp_ack_send(struct eigrp_neighbor *nbr)
+{
+  struct eigrp_packet *ep;
+
+  u_int16_t length = EIGRP_HEADER_SIZE;
+
+  ep = eigrp_packet_new (nbr->ei->ifp->mtu);
+  /* Prepare EIGRP common header. */
+    eigrp_make_header (EIGRP_MSG_HELLO, ei, ep->s, 0,0,nbr->recv_sequence_number);
+
+    /* EIGRP Checksum */
+    eigrp_packet_checksum (nbr->ei, ep->s, length);
+
+    ep->length = length;
+
+    ep->dst.s_addr = nbr->src;
+
+    /* Add packet to the top of the interface output queue*/
+      eigrp_packet_add_top (ei, ep);
+
+      /* Hook thread to write packet. */
+        if (nbr->ei->on_write_q == 0)
+          {
+            listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
+            nbr->ei->on_write_q = 1;
+          }
+        if (nbr->ei->eigrp->t_write == NULL)
+          nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+}
+
+
 static void
 eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
 {
@@ -615,7 +736,7 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
   ep = eigrp_packet_new (ei->ifp->mtu);
 
   /* Prepare EIGRP common header. */
-  eigrp_make_header (EIGRP_MSG_HELLO, ei, ep->s);
+  eigrp_make_header (EIGRP_MSG_HELLO, ei, ep->s, 0,0,0);
 
   /* Prepare EIGRP Hello body. */
   length += eigrp_make_hello (ei, ep->s);
@@ -628,9 +749,7 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
 
   ep->dst.s_addr = addr;
 
-  /* Add packet to the top of the interface output queue, so that they
-   * can't get delayed by things like long queues of LS Update packets
-   */
+  /* Add packet to the top of the interface output queue*/
   eigrp_packet_add_top (ei, ep);
 
   /* Hook thread to write packet. */
@@ -643,10 +762,56 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
       ei->eigrp->t_write = thread_add_write (master, eigrp_write, ei->eigrp, ei->eigrp->fd);
 }
 
-/*Send EIGRP Update packet*/
+/*send EIGRP Update packet*/
 void
-eigrp_update_send (struct eigrp_interface*ei)
+eigrp_send_init_update (struct eigrp_neighbor *nbr)
 {
+  struct eigrp_packet *ep;
+  u_int16_t length = EIGRP_HEADER_SIZE;
+
+  ep = eigrp_packet_new (nbr->ei->ifp->mtu);
+
+  /* Prepare EIGRP INIT UPDATE header */
+  eigrp_make_header (EIGRP_MSG_UPDATE, nbr->ei, ep->s,EIGRP_HEADER_FLAG_INIT_,nbr->ei->eigrp->sequence_number,nbr->recv_sequence_number);
+
+  /* EIGRP Checksum */
+  eigrp_packet_checksum (nbr->ei, ep->s, length);
+
+  ep->length = length;
+
+  ep->dst.s_addr = nbr->src;
+
+  /* Add packet to the top of the interface output queue*/
+  eigrp_packet_add_top (nbr->ei, ep);
+
+  /*Put packet to retransmission queue*/
+  eigrp_fifo_push_head(nbr->retrans_queue,ep);
+
+  /*Start retransmission timer*/
+  nbr->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
+
+  /*This ack number we awaits from neighbor*/
+  nbr->ack = nbr->ei->eigrp->sequence_number;
+
+  /*Increment sequence number counter*/
+  nbr->ei->eigrp->sequence_number++;
+
+  /* Hook thread to write packet. */
+    if (nbr->ei->on_write_q == 0)
+      {
+        listnode_add (nbr->ei->eigrp->oi_write_q, ei);
+        nbr->ei->on_write_q = 1;
+      }
+    if (nbr->ei->eigrp->t_write == NULL)
+      nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+}
+
+static int
+eigrp_make_update(struct eigrp_interface *ei, struct stream *s)
+{
+  u_int16_t length = 0;
+
+  return length;
 
 }
 
@@ -666,7 +831,9 @@ eigrp_packet_checksum (struct eigrp_interface *ei,
 
 /* Make EIGRP header. */
 static void
-eigrp_make_header (int type, struct eigrp_interface *ei, struct stream *s)
+eigrp_make_header (int type, struct eigrp_interface *ei,
+                   struct stream *s, u_int32_t flags, u_int32_t sequence,
+                   u_int32_t ack)
 {
   struct eigrp_header *eigrph;
 
@@ -680,9 +847,9 @@ eigrp_make_header (int type, struct eigrp_interface *ei, struct stream *s)
   eigrph->checksum = 0;
 
   eigrph->ASNumber = htons(ei->eigrp->AS);
-  eigrph->ack = 0;
-  eigrph->sequence = htonl(ei->eigrp->sequence_number);
-  eigrph->flags = 0;
+  eigrph->ack = ack;
+  eigrph->sequence = sequence;
+  eigrph->flags = flags;
 
   stream_forward_endp (s, EIGRP_HEADER_SIZE);
 }
@@ -696,13 +863,13 @@ eigrp_make_hello (struct eigrp_interface *ei, struct stream *s)
 
   stream_putw(s,TLV_PARAMETER_TYPE);
   stream_putw(s,EIGRP_HELLO_MIN_SIZE);
-  stream_putc(s,(u_char)1); /* K1 */
-  stream_putc(s,(u_char)0); /* K2 */
-  stream_putc(s,(u_char)1); /* K3 */
-  stream_putc(s,(u_char)0); /* K4 */
-  stream_putc(s,(u_char)0); /* K5 */
-  stream_putc(s,(u_char)0); /* K6 */
-  stream_putw(s,15);
+  stream_putc(s,ei->eigrp->k_values[0]); /* K1 */
+  stream_putc(s,ei->eigrp->k_values[1]); /* K2 */
+  stream_putc(s,ei->eigrp->k_values[2]); /* K3 */
+  stream_putc(s,ei->eigrp->k_values[3]); /* K4 */
+  stream_putc(s,ei->eigrp->k_values[4]); /* K5 */
+  stream_putc(s,ei->eigrp->k_values[5]); /* K6 */
+  stream_putw(s,ei->params->v_wait);
 
   return length;
 }
@@ -828,5 +995,12 @@ eigrp_check_network_mask (struct eigrp_interface *ei, struct in_addr ip_src)
    return 1;
 
  return 0;
+}
+
+int
+eigrp_unack_packet_retrans(struct thread *thread)
+{
+
+  return 0;
 }
 

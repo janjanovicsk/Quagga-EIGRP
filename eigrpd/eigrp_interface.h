@@ -98,16 +98,19 @@ struct eigrp_interface
 
     /* Threads. */
     struct thread *t_hello;               /* timer */
-    struct thread *t_wait;                /* timer */
 
     int on_write_q;
+
+    /* Statistics fields. */
+      u_int32_t hello_in;           /* Hello message input count. */
+      u_int32_t update_in;           /* Update message input count. */
 };
 
 struct eigrp_if_params
 {
   DECLARE_IF_PARAM (u_char, passive_interface);      /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
   DECLARE_IF_PARAM (u_int32_t, v_hello);             /* Hello Interval */
-  DECLARE_IF_PARAM (u_int32_t, v_wait);              /* Router Dead Interval */
+  DECLARE_IF_PARAM (u_int16_t, v_wait);              /* Router Hold Time Interval */
   DECLARE_IF_PARAM (u_char, type);                   /* type of interface */
 
 #define EIGRP_IF_ACTIVE                  0

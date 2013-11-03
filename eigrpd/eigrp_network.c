@@ -36,10 +36,10 @@
 extern struct zebra_privs_t eigrpd_privs;
 
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 

@@ -140,7 +140,13 @@ eigrp_new (const char *AS)
   new->t_read = thread_add_read (master, eigrp_read, new, new->fd);
   new->oi_write_q = list_new ();
 
-  new->sequence_number=0;
+  /*Configure default K Values for EIGRP Process*/
+  new->k_values[0] = 1;
+  new->k_values[1] = 0;
+  new->k_values[2] = 1;
+  new->k_values[3] = 0;
+  new->k_values[4] = 0;
+  new->k_values[5] = 0;
 
   return new;
 }
