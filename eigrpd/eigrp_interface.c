@@ -32,12 +32,13 @@
 #include "stream.h"
 #include "log.h"
 
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
-#include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 
 static void eigrp_delete_from_if (struct interface *, struct eigrp_interface *);

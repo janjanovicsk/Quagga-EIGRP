@@ -35,12 +35,13 @@
 #include "plist.h"
 #include "log.h"
 
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
-#include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_network.h"
 
 static int eigrp_interface_add (int , struct zclient *, zebra_size_t);

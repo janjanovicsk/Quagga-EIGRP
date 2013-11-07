@@ -24,22 +24,6 @@
 #define _ZEBRA_EIGRP_TOPOLOGY_H
 
 
-/* EIGRP Topology table node structure */
-struct eigrp_topology_node
-{
-        struct list *entries;
-        struct prefix_ipv4 *destination;
-};
-
-/* EIGRP Topology table record structure */
-struct eigrp_topology_entry
-{
-        struct prefix *data;
-        unsigned long distance;
-        struct in_addr *adv_router;
-        u_char flags;
-};
-
 /* EIGRP Topology table related functions. */
 extern struct list *eigrp_topology_new (void);
 extern void eigrp_topology_init(struct list*);

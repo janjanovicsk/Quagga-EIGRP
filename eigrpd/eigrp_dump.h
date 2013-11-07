@@ -24,9 +24,6 @@
 #ifndef _ZEBRA_EIGRPD_DUMP_H_
 #define _ZEBRA_EIGRPD_DUMP_H_
 
-#define EIGRP_IF_STRING_MAXLEN  40
-#define IF_NAME(I)      eigrp_if_name_string ((I))
-
 extern const char *eigrp_if_name_string (struct eigrp_interface *);
 extern void eigrp_ip_header_dump (struct ip *);
 

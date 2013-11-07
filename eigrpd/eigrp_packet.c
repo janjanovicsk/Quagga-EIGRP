@@ -36,14 +36,15 @@
 #include "checksum.h"
 #include "md5.h"
 
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
-#include "eigrpd/eigrp_neighbor.h"
-#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_network.h"
 
 
 static void eigrp_hello_send_sub (struct eigrp_interface *, in_addr_t);
@@ -63,6 +64,8 @@ static int eigrp_verify_header (struct stream *, struct eigrp_interface *,
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 static int eigrp_make_update(struct eigrp_interface *, struct stream *);
 
+static void eigrp_fifo_push_tail (struct eigrp_fifo *, struct eigrp_packet *);
+
 /*EIGRP UPDATE read function*/
 static void
 eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
@@ -74,12 +77,9 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
   /* increment statistics. */
   ei->update_in++;
 
-  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
-
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
-
       return;
     }
 
@@ -102,10 +102,9 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
   struct eigrp_neighbor *nbr;
   struct prefix p;
 
-  /* increment statistics. */
-  ei->hello_in++;
-
-  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+  /* get neighbor prefix. */
+  p.family = AF_INET;
+  p.u.prefix4 = iph->ip_src;
 
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
@@ -120,48 +119,59 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
       return;
     }
 
-  /* get neighbor prefix. */
-  p.family = AF_INET;
-  p.u.prefix4 = iph->ip_src;
-
-//  if (IS_DEBUG_OSPF_EVENT)
-//    zlog_debug ("Packet %s [Hello:RECV]: Options %s",
-//               inet_ntoa (ospfh->router_id),
-//               ospf_options_dump (hello->options));
-
   /* get neighbour struct */
   nbr = eigrp_nbr_get (ei, eigrph, iph, &p);
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert (nbr);
 
-  switch(nbr->state)
+  /*If received packet is hello with Parameter TLV*/
+  if(eigrph->ack == 0)
     {
-      case EIGRP_NEIGHBOR_DOWN:
-        {
-          nbr->v_holddown = ntohs(hello->hold_time);
-          /*Start Hold Down Timer for neighbor*/
-          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
-          break;
-        }
-      case EIGRP_NEIGHBOR_PENDING:
-        {
-          /*Reset Hold Down Timer for neighbor*/
-          thread_cancel(nbr->t_holddown);
-          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+      /* increment statistics. */
+      ei->hello_in++;
 
-          break;
-        }
-      case EIGRP_NEIGHBOR_UP:
+      hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+
+      switch(nbr->state)
         {
-          /*Reset Hold Down Timer for neighbor*/
-          thread_cancel(nbr->t_holddown);
-          nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
-          break;
+          case EIGRP_NEIGHBOR_DOWN:
+            {
+              nbr->v_holddown = ntohs(hello->hold_time);
+              /*Start Hold Down Timer for neighbor*/
+              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+              break;
+            }
+          case EIGRP_NEIGHBOR_PENDING:
+            {
+              /*Reset Hold Down Timer for neighbor*/
+              thread_cancel(nbr->t_holddown);
+              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+
+              break;
+            }
+          case EIGRP_NEIGHBOR_UP:
+            {
+              /*Reset Hold Down Timer for neighbor*/
+              thread_cancel(nbr->t_holddown);
+              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+              break;
+            }
         }
+    } /*If packet is only ack*/
+  else
+    {
+      struct eigrp_packet *ep;
+      struct eigrp_header *verify;
+
+
+
     }
 
-
+//  if (IS_DEBUG_OSPF_EVENT)
+//    zlog_debug ("Packet %s [Hello:RECV]: Options %s",
+//               inet_ntoa (ospfh->router_id),
+//               ospf_options_dump (hello->options));
 }
 
 static int
@@ -478,7 +488,7 @@ eigrp_read (struct thread *thread)
 //          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
       break;
     case EIGRP_MSG_UPDATE:
-            eigrp_update (iph, ospfh, ibuf, oi, length);
+            eigrp_update (iph, eigrph, ibuf, ei, length);
       break;
     default:
       zlog (NULL, LOG_WARNING,
@@ -704,17 +714,17 @@ eigrp_ack_send(struct eigrp_neighbor *nbr)
 
   ep = eigrp_packet_new (nbr->ei->ifp->mtu);
   /* Prepare EIGRP common header. */
-    eigrp_make_header (EIGRP_MSG_HELLO, ei, ep->s, 0,0,nbr->recv_sequence_number);
+    eigrp_make_header (EIGRP_MSG_HELLO, nbr->ei, ep->s, 0,0,nbr->recv_sequence_number);
 
     /* EIGRP Checksum */
     eigrp_packet_checksum (nbr->ei, ep->s, length);
 
     ep->length = length;
 
-    ep->dst.s_addr = nbr->src;
+    ep->dst.s_addr = nbr->src.s_addr;
 
     /* Add packet to the top of the interface output queue*/
-      eigrp_packet_add_top (ei, ep);
+      eigrp_packet_add_top (nbr->ei, ep);
 
       /* Hook thread to write packet. */
         if (nbr->ei->on_write_q == 0)
@@ -772,14 +782,14 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
   ep = eigrp_packet_new (nbr->ei->ifp->mtu);
 
   /* Prepare EIGRP INIT UPDATE header */
-  eigrp_make_header (EIGRP_MSG_UPDATE, nbr->ei, ep->s,EIGRP_HEADER_FLAG_INIT_,nbr->ei->eigrp->sequence_number,nbr->recv_sequence_number);
+  eigrp_make_header (EIGRP_MSG_UPDATE, nbr->ei, ep->s,EIGRP_HEADER_FLAG_INIT,nbr->ei->eigrp->sequence_number,nbr->recv_sequence_number);
 
   /* EIGRP Checksum */
   eigrp_packet_checksum (nbr->ei, ep->s, length);
 
   ep->length = length;
 
-  ep->dst.s_addr = nbr->src;
+  ep->dst.s_addr = nbr->src.s_addr;
 
   /* Add packet to the top of the interface output queue*/
   eigrp_packet_add_top (nbr->ei, ep);
@@ -790,7 +800,7 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
   /*Start retransmission timer*/
   nbr->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
 
-  /*This ack number we awaits from neighbor*/
+  /*This ack number we await from neighbor*/
   nbr->ack = nbr->ei->eigrp->sequence_number;
 
   /*Increment sequence number counter*/
@@ -799,7 +809,7 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
   /* Hook thread to write packet. */
     if (nbr->ei->on_write_q == 0)
       {
-        listnode_add (nbr->ei->eigrp->oi_write_q, ei);
+        listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
         nbr->ei->on_write_q = 1;
       }
     if (nbr->ei->eigrp->t_write == NULL)
@@ -812,7 +822,6 @@ eigrp_make_update(struct eigrp_interface *ei, struct stream *s)
   u_int16_t length = 0;
 
   return length;
-
 }
 
 /* Calculate EIGRP checksum */
@@ -826,7 +835,6 @@ eigrp_packet_checksum (struct eigrp_interface *ei,
 
   /* Calculate checksum. */
     eigrph->checksum = in_cksum (eigrph, length);
-
 }
 
 /* Make EIGRP header. */
@@ -895,10 +903,12 @@ static void
 eigrp_fifo_push_head (struct eigrp_fifo *fifo, struct eigrp_packet *ep)
 {
   ep->next = fifo->head;
+  ep->previous = NULL;
 
   if (fifo->tail == NULL)
     fifo->tail = ep;
 
+  fifo->head->previous = ep;
   fifo->head = ep;
 
   fifo->count++;
@@ -931,14 +941,16 @@ eigrp_fifo_pop (struct eigrp_fifo *fifo)
   ep = fifo->head;
 
   if (ep)
-    {
-      fifo->head = ep->next;
+  {
+    fifo->head = ep->next;
 
-      if (fifo->head == NULL)
-        fifo->tail = NULL;
+    if (fifo->head == NULL)
+      fifo->tail = NULL;
+    else
+      fifo->head->previous = NULL;
 
-      fifo->count--;
-    }
+    fifo->count--;
+  }
 
   return ep;
 }
@@ -1004,3 +1016,25 @@ eigrp_unack_packet_retrans(struct thread *thread)
   return 0;
 }
 
+/* Get packet from tail of fifo. */
+struct eigrp_packet *
+eigrp_fifo_pop_tail (struct eigrp_fifo *fifo)
+{
+  struct eigrp_packet *ep;
+
+  ep = fifo->tail;
+
+  if(ep)
+    {
+      fifo->tail = ep->previous;
+
+      if(fifo->tail == NULL)
+        fifo->head = NULL;
+      else
+        fifo->tail->next = NULL;
+
+      fifo->count--;
+    }
+
+  return ep;
+}

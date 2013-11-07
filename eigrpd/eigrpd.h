@@ -48,58 +48,6 @@
 
 #define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
 
-
-/* EIGRP master for system wide configuration and variables. */
-struct eigrp_master
-{
-  /* EIGRP instance. */
-  struct list *eigrp;
-
-  /* EIGRP thread master. */
-  struct thread_master *master;
-
-  /* Zebra interface list. */
-  struct list *iflist;
-
-  /* EIGRP start time. */
-  time_t start_time;
-
-  /* Various EIGRP global configuration. */
-    u_char options;
-
-#define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
-};
-
-struct eigrp
-{
-
-  /* EIGRP Router ID. */
-  struct in_addr router_id;             /* Configured automatically. */
-  struct in_addr router_id_static;      /* Configured manually. */
-
-  struct list *eiflist;                 /* eigrp interfaces */
-  u_char passive_interface_default;   /* passive-interface default */
-
-  int AS; /* Autonomous system number */
-
-  unsigned int fd;
-  unsigned int maxsndbuflen;
-
-  u_int32_t sequence_number;    /*Global EIGRP sequence number*/
-
-  struct stream *ibuf;
-  struct list *oi_write_q;
-
-  /*Threads*/
-  struct thread *t_write;
-  struct thread *t_read;
-
-  struct route_table *networks;         /* EIGRP config networks. */
-
-  u_char k_values[5]; /*Array for K values configuration*/
-
-};
-
 /* Extern variables. */
 extern struct zclient *zclient;
 extern struct thread_master *master;

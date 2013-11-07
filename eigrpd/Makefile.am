@@ -10,17 +10,17 @@ libeigrp_la_LDFLAGS = -version-info 0:0:0
 sbin_PROGRAMS = eigrpd
 
 libeigrp_la_SOURCES = \
-	eigrpd.c eigrp_vty.c eigrp_topology.c eigrp_zebra.c eigrp_neighbor.c eigrp_packet.c \
-	eigrp_network.c eigrp_fsm.c eigrp_interface.c eigrp_dump.c
+	eigrpd.c eigrp_zebra.c eigrp_interface.c eigrp_neighbor.c eigrp_dump.c eigrp_vty.c \
+	eigrp_network.c eigrp_packet.c eigrp_topology.c eigrp_fsm.c 
 
 eigrpdheaderdir = $(pkgincludedir)/eigrpd
 
 eigrpdheader_HEADERS = \
-	eigrpd.h eigrp_topology.h eigrp_dump.h
+	eigrp_topology.h eigrp_dump.h eigrpd.h
 	
 noinst_HEADERS = \
-	eigrp_vty.h eigrp_neighbor.h eigrp_network.h eigrp_packet.h \
-	eigrp_zebra.h eigrp_interface.h 
+	eigrp_structures.h eigrp_macros.h eigrp_interface.h eigrp_neighbor.h eigrp_network.h eigrp_packet.h \
+	eigrp_zebra.h eigrp_vty.h 
 	
 eigrpd_SOURCES = eigrp_main.c
 
