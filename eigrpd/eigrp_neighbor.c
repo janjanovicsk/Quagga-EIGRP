@@ -196,11 +196,13 @@ eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 int
 holddown_timer_expired (struct thread *thread)
 {
-//  struct eigrp_neighbor *nbr;
+  struct eigrp_neighbor *nbr;
 
-//  nbr = THREAD_ARG(thread);
+  nbr = THREAD_ARG(thread);
 
   zlog_debug("VYPRSAL HOLDDOWN TIMER u suseda \n");
+  nbr->state = EIGRP_NEIGHBOR_DOWN;
+  thread_cancel(nbr->t_holddown);
 
   return 0;
 }

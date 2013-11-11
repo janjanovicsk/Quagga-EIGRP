@@ -44,6 +44,8 @@ static void eigrp_topology_node_del(struct eigrp_topology_node *);
 static int eigrp_topology_entry_cmp(struct eigrp_topology_entry *, struct eigrp_topology_entry *);
 
 /*
+ * asdf;laksdjf;lajsdf;kasdjf;asdjf;
+ * asdfaskdjfa;sdkjf;adlskj
  * Returns linkedlist used as topology table
  * cmp - assigned function for comparing topology nodes
  * del - assigned function executed before deleting topology node by list function

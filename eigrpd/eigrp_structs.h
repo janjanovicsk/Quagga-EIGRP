@@ -8,6 +8,7 @@
 #ifndef _ZEBRA_EIGRP_STRUCTS_H_
 #define _ZEBRA_EIGRP_STRUCTS_H_
 
+#include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_macros.h"
 
 /* EIGRP master for system wide configuration and variables. */
@@ -81,31 +82,9 @@ struct eigrp_interface
       struct eigrp_if_params *params;
 
     u_char multicast_memberships;
-#define EI_MEMBER_FLAG(M) (1 << (M))
-#define EI_MEMBER_COUNT(O,M) (IF_EIGRP_IF_INFO(ei->ifp)->membership_counts[(M)])
-#define EI_MEMBER_CHECK(O,M) \
-    (CHECK_FLAG((O)->multicast_memberships, EI_MEMBER_FLAG(M)))
-#define EI_MEMBER_JOINED(O,M) \
-  do { \
-    SET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
-    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]++; \
-  } while (0)
-#define EI_MEMBER_LEFT(O,M) \
-  do { \
-    UNSET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
-    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]--; \
-  } while (0)
-
 
     /* EIGRP Network Type. */
     u_char type;
- #define EIGRP_IFTYPE_NONE                0
- #define EIGRP_IFTYPE_POINTOPOINT         1
- #define EIGRP_IFTYPE_BROADCAST           2
- #define EIGRP_IFTYPE_NBMA                3
- #define EIGRP_IFTYPE_POINTOMULTIPOINT    4
- #define EIGRP_IFTYPE_LOOPBACK            5
- #define EIGRP_IFTYPE_MAX                 6
 
     struct prefix *address;             /* Interface prefix */
     struct connected *connected;          /* Pointer to connected */
@@ -129,9 +108,6 @@ struct eigrp_if_params
   DECLARE_IF_PARAM (u_int32_t, v_hello);             /* Hello Interval */
   DECLARE_IF_PARAM (u_int16_t, v_wait);              /* Router Hold Time Interval */
   DECLARE_IF_PARAM (u_char, type);                   /* type of interface */
-
-#define EIGRP_IF_ACTIVE                  0
-#define EIGRP_IF_PASSIVE                 1
 
 };
 
@@ -211,15 +187,6 @@ struct eigrp_fifo
   struct eigrp_packet *tail;
 };
 
-struct eigrp_header_fifo
-{
-  unsigned long count;
-
-  struct eigrp_header *head;
-
-  struct eigrp_header *tail;
-};
-
 struct eigrp_header
 {
   u_char version;
@@ -244,6 +211,50 @@ struct TLV_Parameter_Type
     u_char K5;
     u_char K6;
     u_int16_t hold_time;
+} __attribute__((packed));
+
+struct TLV_Authentication_Type
+{
+
+} __attribute__((packed));
+
+struct TLV_Sequence_Type
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_char addr_length;
+  in_addr_t address;
+} __attribute__((packed));
+
+struct TLV_Software_Type
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_char vender_major;
+  u_char vender_minor;
+  u_char eigrp_major;
+  u_char eigrp_minor;
+} __attribute__((packed));
+
+struct TLV_IPv4_Internal_type
+{
+  u_int16_t type;
+  u_int16_t length;
+  in_addr_t forward;
+
+  /*Metrics*/
+  u_int32_t delay;
+  u_int32_t bandwith;
+  u_int16_t MTUH;
+  u_char    MTUL;
+  u_char hop_count;
+  u_char reliability;
+  u_char load;
+  u_char tag;
+  u_char flags;
+
+  u_char prefix_length;
+  in_addr_t dest_addr;
 } __attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------

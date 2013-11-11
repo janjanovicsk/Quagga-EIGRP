@@ -204,6 +204,26 @@ eigrp_if_add_allspfrouters (struct eigrp *top, struct prefix *p,
 }
 
 int
+eigrp_if_drop_allspfrouters (struct eigrp *top, struct prefix *p,
+                            unsigned int ifindex)
+{
+  int ret;
+
+  ret = setsockopt_ipv4_multicast (top->fd, IP_DROP_MEMBERSHIP,
+                                   htonl (EIGRP_MULTICAST_ADDRESS),
+                                   ifindex);
+  if (ret < 0)
+    zlog_warn ("can't setsockopt IP_DROP_MEMBERSHIP (fd %d, addr %s, "
+               "ifindex %u, AllSPFRouters): %s",
+               top->fd, inet_ntoa(p->u.prefix4), ifindex, safe_strerror(errno));
+  else
+    zlog_debug ("interface %s [%u] leave EIGRP Multicast group.",
+                inet_ntoa (p->u.prefix4), ifindex);
+
+  return ret;
+}
+
+int
 eigrp_network_set (struct eigrp *eigrp, struct prefix_ipv4 *p)
 {
   struct route_node *rn;
@@ -221,8 +241,8 @@ eigrp_network_set (struct eigrp *eigrp, struct prefix_ipv4 *p)
   rn->info = (void *)1;
 
   /* Schedule Router ID Update. */
-    if (eigrp->router_id.s_addr == 0)
-      eigrp_router_id_update (eigrp);
+//    if (eigrp->router_id.s_addr == 0)
+//      eigrp_router_id_update (eigrp);
 
   /* Run network config now. */
   /* Get target interface. */
@@ -280,8 +300,7 @@ eigrp_network_run_interface (struct eigrp *eigrp, struct prefix *p, struct inter
              * ospf_router_id_update() will call ospf_if_update
              * whenever r-id is configured instead.
              */
-            if ((eigrp->router_id.s_addr != 0)
-                            && if_is_operative (ifp))
+            if (if_is_operative (ifp))
               eigrp_if_up (ei);
           }
     }
@@ -303,7 +322,7 @@ eigrp_hello_timer (struct thread *thread)
   eigrp_hello_send (ei);
 
   /* Hello timer set. */
-  thread_add_timer (master, eigrp_hello_timer, ei, EIGRP_IF_PARAM (ei, v_hello));
+  ei->t_hello = thread_add_timer (master, eigrp_hello_timer, ei, EIGRP_IF_PARAM (ei, v_hello));
 
   return 0;
 }
@@ -326,5 +345,45 @@ eigrp_if_update (struct eigrp *eigrp, struct interface *ifp)
       {
         eigrp_network_run_interface (eigrp, &rn->p, ifp);
       }
+}
+
+int
+eigrp_network_unset (struct eigrp *eigrp, struct prefix_ipv4 *p)
+{
+  struct route_node *rn;
+  struct listnode *node, *nnode;
+  struct eigrp_interface *ei;
+
+  rn = route_node_lookup (eigrp->networks, (struct prefix *)p);
+  if (rn == NULL)
+    return 0;
+
+  rn->info = NULL;
+  route_unlock_node (rn);       /* initial reference */
+
+  /* Find interfaces that not configured already.  */
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      int found = 0;
+      struct connected *co = ei->connected;
+
+      for (rn = route_top (eigrp->networks); rn; rn = route_next (rn))
+        {
+          if (rn->info == NULL)
+            continue;
+
+          if (eigrp_network_match_iface(co,&rn->p))
+            {
+              found = 1;
+              route_unlock_node (rn);
+              break;
+            }
+        }
+
+      if (found == 0)
+        eigrp_if_free (ei);
+    }
+
+  return 1;
 }
 

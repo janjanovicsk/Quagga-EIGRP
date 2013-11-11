@@ -26,11 +26,6 @@
 #ifndef _ZEBRA_EIGRP_NEIGHBOR_H
 #define _ZEBRA_EIGRP_NEIGHBOR_H
 
-#define EIGRP_NEIGHBOR_DOWN           0
-#define EIGRP_NEIGHBOR_PENDING        1
-#define EIGRP_NEIGHBOR_UP             2
-#define EIGRP_NEIGHBOR_STATE_MAX      3
-
 /* Prototypes */
 extern struct eigrp_neighbor *eigrp_nbr_get (struct eigrp_interface *,
                                               struct eigrp_header *,

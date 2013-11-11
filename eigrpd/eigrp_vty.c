@@ -75,6 +75,29 @@ DEFUN (eigrp_network,
   return CMD_SUCCESS;
 }
 
+DEFUN (no_eigrp_network,
+       no_eigrp_network_cmd,
+       "no network A.B.C.D/M",
+       "Disable routing on an IP network\n"
+       "OSPF network prefix\n")
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+  int ret;
+
+  VTY_GET_IPV4_PREFIX ("network prefix", p, argv[0]);
+
+  ret = eigrp_network_unset (eigrp, &p);
+
+  if (ret == 0)
+    {
+      vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -138,6 +161,7 @@ eigrp_vty_init (void)
   install_default(EIGRP_NODE);
 
   install_element(EIGRP_NODE, &eigrp_network_cmd);
+  install_element(EIGRP_NODE, &no_eigrp_network_cmd);
 
 
 }

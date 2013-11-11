@@ -19,7 +19,7 @@ eigrpdheader_HEADERS = \
 	eigrp_topology.h eigrp_dump.h eigrpd.h
 	
 noinst_HEADERS = \
-	eigrp_structures.h eigrp_macros.h eigrp_interface.h eigrp_neighbor.h eigrp_network.h eigrp_packet.h \
+	eigrp_const.h eigrp_structs.h eigrp_macros.h eigrp_interface.h eigrp_neighbor.h eigrp_network.h eigrp_packet.h \
 	eigrp_zebra.h eigrp_vty.h 
 	
 eigrpd_SOURCES = eigrp_main.c

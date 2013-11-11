@@ -23,47 +23,6 @@
 #ifndef _ZEBRA_EIGRP_PACKET_H
 #define _ZEBRA_EIGRP_PACKET_H
 
-#define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
-#define EIGRP_HEADER_SIZE         20U
-#define EIGRP_HELLO_MIN_SIZE      12U
-
-#define EIGRP_HEADER_FLAG_INIT          0x00000001
-#define EIGRP_HEADER_FLAG_CR            0x00000002
-#define EIGRP_HEADER_FLAG_RESET         0x00000004
-#define EIGRP_HEADER_FLAG_EOT           0x00000008
-
-#define EIGRP_MSG_UPDATE        1  /* EIGRP Hello Message. */
-#define EIGRP_MSG_REQUEST       2  /* EIGRP Database Descriptoin Message. */
-#define EIGRP_MSG_QUERY         3  /* EIGRP Link State Request Message. */
-#define EIGRP_MSG_REPLY         4  /* EIGRP Link State Update Message. */
-#define EIGRP_MSG_HELLO         5  /* EIGRP Link State Acknoledgement Message. */
-#define EIGRP_MSG_PROBE         7  /* EIGRP Probe Message. */
-#define EIGRP_MSG_SIAQUERY     10  /* EIGRP SIAQUERY. */
-#define EIGRP_MSG_SIAREPLY     11  /* EIGRP SIAREPLY. */
-
-/*EIGRP TLV Type definitions*/
-#define TLV_PARAMETER_TYPE              0x0001       /*K types*/
-#define TLV_AUTHENTICATION_TYPE         0x0002
-#define TLV_SEQUENCE_TYPE               0x0003
-#define TLV_SOFTWARE_VERSION_TYPE       0x0004
-#define TLV_MULTICAST_SEQUENCE_TYPE     0x0005
-#define TLV_PEER_INFORMATION_TYPE       0x0006
-#define TLV_PEER_TERMINATION_TYPE       0x0007
-#define TLV_PEER_TID_LIST_TYPE          0x0008
-
-/*Packet requiring ack will be retransmitted again after this time*/
-#define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
-
-#define EIGRP_IP_PACKET_LENGTH_HELLO    60
-#define EIGRP_IP_PACKET_LENGTH_ACK      40
-
-
-/* Return values of functions involved in packet verification */
-#define MSG_OK    0
-#define MSG_NG    1
-
-#define EIGRP_HEADER_VERSION            2
-
 /*Prototypes*/
 extern int eigrp_read (struct thread *);
 extern struct eigrp_fifo *eigrp_fifo_new (void);

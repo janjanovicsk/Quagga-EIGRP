@@ -28,11 +28,14 @@
 extern int eigrp_sock_init (void);
 extern int eigrp_if_ipmulticast (struct eigrp *, struct prefix *, unsigned int);
 extern int eigrp_network_set (struct eigrp *, struct prefix_ipv4 *);
+extern int eigrp_network_unset (struct eigrp *eigrp, struct prefix_ipv4 *p);
 
 extern int eigrp_hello_timer (struct thread *);
 extern void eigrp_if_update (struct eigrp *, struct interface *);
 extern int eigrp_if_add_allspfrouters (struct eigrp *, struct prefix *,
                                        unsigned int);
+extern int eigrp_if_drop_allspfrouters (struct eigrp *top, struct prefix *p,
+                                        unsigned int ifindex);
 extern void eigrp_adjust_sndbuflen (struct eigrp *, unsigned int);
 
 #endif /* EIGRP_NETWORK_H_ */

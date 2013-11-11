@@ -150,10 +150,10 @@ eigrp_if_new_hook (struct interface *ifp)
   IF_DEF_PARAMS (ifp) = eigrp_new_if_params ();
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), v_hello);
-  IF_DEF_PARAMS (ifp)->v_hello = EIGRP_HELLO_INTERVAL_DEFAULT;
+  IF_DEF_PARAMS (ifp)->v_hello = (u_int32_t) EIGRP_HELLO_INTERVAL_DEFAULT;
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), v_wait);
-  IF_DEF_PARAMS (ifp)->v_wait = EIGRP_HOLD_INTERVAL_DEFAULT;
+  IF_DEF_PARAMS (ifp)->v_wait = (u_int16_t) EIGRP_HOLD_INTERVAL_DEFAULT;
 
   return rc;
 }
@@ -268,12 +268,27 @@ eigrp_if_set_multicast(struct eigrp_interface *ei)
 {
   if ((EIGRP_IF_PASSIVE_STATUS(ei) == EIGRP_IF_ACTIVE))
     {
-      /* The interface should belong to the OSPF-all-routers group. */
+      /* The interface should belong to the EIGRP-all-routers group. */
       if (!EI_MEMBER_CHECK(ei, MEMBER_ALLROUTERS) &&
           (eigrp_if_add_allspfrouters(ei->eigrp, ei->address,
                                      ei->ifp->ifindex) >= 0))
           /* Set the flag only if the system call to join succeeded. */
           EI_MEMBER_JOINED(ei, MEMBER_ALLROUTERS);
+    }
+  else
+    {
+      /* The interface should NOT belong to the EIGRP-all-routers group. */
+      if (EI_MEMBER_CHECK(ei, MEMBER_ALLROUTERS))
+        {
+          /* Only actually drop if this is the last reference */
+          if (EI_MEMBER_COUNT(ei, MEMBER_ALLROUTERS) == 1)
+            eigrp_if_drop_allspfrouters (ei->eigrp, ei->address,
+                                        ei->ifp->ifindex);
+          /* Unset the flag regardless of whether the system call to leave
+             the group succeeded, since it's much safer to assume that
+             we are not a member. */
+          EI_MEMBER_LEFT(ei,MEMBER_ALLROUTERS);
+        }
     }
 }
 

@@ -89,8 +89,26 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert (nbr);
 
-  /*If it is INIT update, remove it from retrans qeue*/
+  /*If it is INIT update*/
+  if(ntohl(eigrph->flags)==EIGRP_HEADER_FLAG_INIT)
+    {
+      struct eigrp_packet *ep;
+      struct eigrp_header *verify;
 
+      ep = eigrp_fifo_tail(nbr->retrans_queue);
+      if(ep != NULL)
+        {
+          stream_reset(ep->s);
+          verify = (struct eigrp_header *) STREAM_PNT(ep->s);
+          if(eigrph->ack == verify->sequence)
+            {
+
+            }
+        }
+          /*Send ACK to neighbor this sequence number as Ack*/
+          nbr->recv_sequence_number = ntohl(eigrph->sequence);
+          eigrp_send_init_update(nbr);
+    }
 }
 
 /*EIGRP hello read function*/
@@ -140,6 +158,8 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
               nbr->v_holddown = ntohs(hello->hold_time);
               /*Start Hold Down Timer for neighbor*/
               nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+              nbr->state = EIGRP_NEIGHBOR_PENDING;
+              zlog_info("Adjacent router found");
               break;
             }
           case EIGRP_NEIGHBOR_PENDING:
@@ -147,7 +167,6 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
               /*Reset Hold Down Timer for neighbor*/
               thread_cancel(nbr->t_holddown);
               nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
-
               break;
             }
           case EIGRP_NEIGHBOR_UP:
@@ -164,8 +183,17 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
       struct eigrp_packet *ep;
       struct eigrp_header *verify;
 
+      ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+      if(ep != NULL)
+        {
+          verify = (struct eigrp_header *) STREAM_PNT(ep->s);
+          if(eigrph->ack == verify->sequence)
+            {
 
 
+            }
+          return;
+        }
     }
 
 //  if (IS_DEBUG_OSPF_EVENT)
@@ -405,6 +433,8 @@ eigrp_read (struct thread *thread)
      after the hecks below are passed. These checks
      in turn access the fields of unverified "eigrph" structure for their own
      purposes and must remain very accurate in doing this. */
+  if(!ei)
+    return 0;
 
   /* If incoming interface is passive one, ignore it. */
   if (ei && EIGRP_IF_PASSIVE_STATUS (ei) == EIGRP_IF_PASSIVE)
@@ -460,7 +490,6 @@ eigrp_read (struct thread *thread)
 //
 //        zlog_debug ("-----------------------------------------------------");
 
-
   stream_forward_getp (ibuf, EIGRP_HEADER_SIZE);
 
   /* Read rest of the packet and call each sort of packet routine. */
@@ -488,7 +517,7 @@ eigrp_read (struct thread *thread)
 //          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
       break;
     case EIGRP_MSG_UPDATE:
-            eigrp_update (iph, eigrph, ibuf, ei, length);
+      eigrp_update (iph, eigrph, ibuf, ei, length);
       break;
     default:
       zlog (NULL, LOG_WARNING,
@@ -855,9 +884,9 @@ eigrp_make_header (int type, struct eigrp_interface *ei,
   eigrph->checksum = 0;
 
   eigrph->ASNumber = htons(ei->eigrp->AS);
-  eigrph->ack = ack;
-  eigrph->sequence = sequence;
-  eigrph->flags = flags;
+  eigrph->ack = htonl(ack);
+  eigrph->sequence = htonl(sequence);
+  eigrph->flags = htonl(flags);
 
   stream_forward_endp (s, EIGRP_HEADER_SIZE);
 }
@@ -877,7 +906,7 @@ eigrp_make_hello (struct eigrp_interface *ei, struct stream *s)
   stream_putc(s,ei->eigrp->k_values[3]); /* K4 */
   stream_putc(s,ei->eigrp->k_values[4]); /* K5 */
   stream_putc(s,ei->eigrp->k_values[5]); /* K6 */
-  stream_putw(s,ei->params->v_wait);
+  stream_putw(s,(u_int16_t)15);
 
   return length;
 }
@@ -908,7 +937,9 @@ eigrp_fifo_push_head (struct eigrp_fifo *fifo, struct eigrp_packet *ep)
   if (fifo->tail == NULL)
     fifo->tail = ep;
 
-  fifo->head->previous = ep;
+  if(fifo->count != 0)
+    fifo->head->previous = ep;
+
   fifo->head = ep;
 
   fifo->count++;
@@ -919,6 +950,13 @@ struct eigrp_packet *
 eigrp_fifo_head (struct eigrp_fifo *fifo)
 {
   return fifo->head;
+}
+
+/* Return last fifo entry. */
+struct eigrp_packet *
+eigrp_fifo_tail (struct eigrp_fifo *fifo)
+{
+  return fifo->tail;
 }
 
 void

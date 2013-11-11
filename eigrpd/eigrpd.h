@@ -28,26 +28,6 @@
 #include "filter.h"
 #include "log.h"
 
-
-/* Default protocol, port number. */
-#ifndef IPPROTO_EIGRPIGP
-#define IPPROTO_EIGRPIGP         88
-#endif /* IPPROTO_EIGRPIGP */
-
-/* IP TTL for EIGRP protocol. */
-#define EIGRP_IP_TTL             1
-
-/* VTY port number. */
-#define EIGRP_VTY_PORT          2609
-
-/* Default configuration file name for eigrp. */
-#define EIGRP_DEFAULT_CONFIG   "eigrpd.conf"
-
-#define EIGRP_HELLO_INTERVAL_DEFAULT        5
-#define EIGRP_HOLD_INTERVAL_DEFAULT         15
-
-#define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
-
 /* Extern variables. */
 extern struct zclient *zclient;
 extern struct thread_master *master;
