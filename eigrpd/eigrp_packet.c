@@ -62,9 +62,6 @@ static unsigned eigrp_packet_examin (struct eigrp_header *,
 static int eigrp_verify_header (struct stream *, struct eigrp_interface *,
                                 struct ip *, struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
-static int eigrp_make_update(struct eigrp_interface *, struct stream *);
-
-static void eigrp_fifo_push_tail (struct eigrp_fifo *, struct eigrp_packet *);
 
 /*EIGRP UPDATE read function*/
 static void
@@ -89,25 +86,36 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert (nbr);
 
+  nbr->recv_sequence_number = ntohl(eigrph->sequence);
+
   /*If it is INIT update*/
   if(ntohl(eigrph->flags)==EIGRP_HEADER_FLAG_INIT)
     {
-      struct eigrp_packet *ep;
-      struct eigrp_header *verify;
-
-      ep = eigrp_fifo_tail(nbr->retrans_queue);
-      if(ep != NULL)
+      if(ntohl(eigrph->ack!=0))
         {
-          stream_reset(ep->s);
-          verify = (struct eigrp_header *) STREAM_PNT(ep->s);
-          if(eigrph->ack == verify->sequence)
+          struct eigrp_packet *ep;
+          struct eigrp_header *verify;
+          if(ep != NULL)
             {
-
+              if(ntohl(eigrph->ack) == nbr->ack)
+                {
+                  ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+                  eigrp_packet_free (ep);
+                  if(nbr->retrans_queue->count>0)
+                    {
+                      eigrp_send_packet_reliably(nbr);
+                    }
+                }
+              return;
             }
         }
-          /*Send ACK to neighbor this sequence number as Ack*/
-          nbr->recv_sequence_number = ntohl(eigrph->sequence);
-          eigrp_send_init_update(nbr);
+      eigrp_send_init_update(nbr, EIGRP_HEADER_FLAG_INIT);
+
+    }   /*If it is END OF TABLE update*/
+  else if(ntohl(eigrph->flags)==EIGRP_HEADER_FLAG_EOT)
+    {
+      if(nbr->retrans_queue->count == 0)
+        eigrp_send_init_update(nbr, EIGRP_HEADER_FLAG_EOT);
     }
 }
 
@@ -181,16 +189,18 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
   else
     {
       struct eigrp_packet *ep;
-      struct eigrp_header *verify;
 
-      ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+      ep = eigrp_fifo_tail(nbr->retrans_queue);
       if(ep != NULL)
         {
-          verify = (struct eigrp_header *) STREAM_PNT(ep->s);
-          if(eigrph->ack == verify->sequence)
+          if(ntohl(eigrph->ack) == nbr->ack)
             {
-
-
+              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+              eigrp_packet_free (ep);
+              if(nbr->retrans_queue->count>0)
+                {
+                  eigrp_send_packet_reliably(nbr);
+                }
             }
           return;
         }
@@ -219,7 +229,6 @@ eigrp_write (struct thread *thread)
 #ifdef WANT_OSPF_WRITE_FRAGMENT
   static u_int16_t ipid = 0;
 #endif /* WANT_OSPF_WRITE_FRAGMENT */
-  u_int16_t maxdatasize;
 #define EIGRP_WRITE_IPHL_SHIFT 2
 
   eigrp->t_write = NULL;
@@ -234,13 +243,6 @@ eigrp_write (struct thread *thread)
   if (ipid == 0)
     ipid = (time(NULL) & 0xffff);
 #endif /* WANT_OSPF_WRITE_FRAGMENT */
-
-  /* convenience - max EIGRP data per packet,
-   * and reliability - not more data, than our
-   * socket can accept
-   */
-  maxdatasize = MIN (ei->ifp->mtu, eigrp->maxsndbuflen) -
-    sizeof (struct ip);
 
   /* Get one packet from queue. */
   ep = eigrp_fifo_head (ei->obuf);
@@ -281,13 +283,13 @@ eigrp_write (struct thread *thread)
   iph.ip_len = htons(iph.ip_len);
 #endif
 
-#ifdef WANT_OSPF_WRITE_FRAGMENT
-  /* XXX-MT: not thread-safe at all..
-   * XXX: this presumes this is only programme sending OSPF packets
-   * otherwise, no guarantee ipid will be unique
-   */
-  iph.ip_id = ++ipid;
-#endif /* WANT_OSPF_WRITE_FRAGMENT */
+//#ifdef WANT_OSPF_WRITE_FRAGMENT
+//  /* XXX-MT: not thread-safe at all..
+//   * XXX: this presumes this is only programme sending OSPF packets
+//   * otherwise, no guarantee ipid will be unique
+//   */
+//  iph.ip_id = ++ipid;
+//#endif /* WANT_OSPF_WRITE_FRAGMENT */
 
   iph.ip_off = 0;
 
@@ -712,6 +714,7 @@ eigrp_packet_new (size_t size)
 
   new = XCALLOC (MTYPE_EIGRP_PACKET, sizeof (struct eigrp_packet));
   new->s = stream_new (size);
+  new->retrans_counter = 0;
 
   return new;
 }
@@ -753,16 +756,16 @@ eigrp_ack_send(struct eigrp_neighbor *nbr)
     ep->dst.s_addr = nbr->src.s_addr;
 
     /* Add packet to the top of the interface output queue*/
-      eigrp_packet_add_top (nbr->ei, ep);
+    eigrp_packet_add_top (nbr->ei, ep);
 
-      /* Hook thread to write packet. */
-        if (nbr->ei->on_write_q == 0)
-          {
-            listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
-            nbr->ei->on_write_q = 1;
-          }
-        if (nbr->ei->eigrp->t_write == NULL)
-          nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+    /* Hook thread to write packet. */
+    if (nbr->ei->on_write_q == 0)
+      {
+        listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
+        nbr->ei->on_write_q = 1;
+      }
+    if (nbr->ei->eigrp->t_write == NULL)
+      nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
 }
 
 
@@ -803,7 +806,7 @@ eigrp_hello_send_sub (struct eigrp_interface *ei, in_addr_t addr)
 
 /*send EIGRP Update packet*/
 void
-eigrp_send_init_update (struct eigrp_neighbor *nbr)
+eigrp_send_init_update (struct eigrp_neighbor *nbr, u_int32_t flags)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_SIZE;
@@ -811,7 +814,7 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
   ep = eigrp_packet_new (nbr->ei->ifp->mtu);
 
   /* Prepare EIGRP INIT UPDATE header */
-  eigrp_make_header (EIGRP_MSG_UPDATE, nbr->ei, ep->s,EIGRP_HEADER_FLAG_INIT,nbr->ei->eigrp->sequence_number,nbr->recv_sequence_number);
+  eigrp_make_header (EIGRP_MSG_UPDATE, nbr->ei, ep->s,flags,nbr->ei->eigrp->sequence_number,nbr->recv_sequence_number);
 
   /* EIGRP Checksum */
   eigrp_packet_checksum (nbr->ei, ep->s, length);
@@ -820,37 +823,48 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
 
   ep->dst.s_addr = nbr->src.s_addr;
 
-  /* Add packet to the top of the interface output queue*/
-  eigrp_packet_add_top (nbr->ei, ep);
-
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue,ep);
 
-  /*Start retransmission timer*/
-  nbr->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
-
-  /*This ack number we await from neighbor*/
-  nbr->ack = nbr->ei->eigrp->sequence_number;
-
-  /*Increment sequence number counter*/
-  nbr->ei->eigrp->sequence_number++;
-
-  /* Hook thread to write packet. */
-    if (nbr->ei->on_write_q == 0)
-      {
-        listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
-        nbr->ei->on_write_q = 1;
-      }
-    if (nbr->ei->eigrp->t_write == NULL)
-      nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+  if(nbr->retrans_queue->count == 1)
+    {
+       eigrp_send_packet_reliably(nbr);
+    }
 }
 
-static int
-eigrp_make_update(struct eigrp_interface *ei, struct stream *s)
+void
+eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
 {
-  u_int16_t length = 0;
+  struct eigrp_packet *ep;
 
-  return length;
+  ep = eigrp_fifo_tail(nbr->retrans_queue);
+
+  if(ep)
+    {
+      struct eigrp_packet *duplicate;
+      duplicate = eigrp_packet_duplicate(ep,nbr);
+      /* Add packet to the top of the interface output queue*/
+      eigrp_packet_add_top (nbr->ei, duplicate);
+
+      /*Start retransmission timer*/
+      ep->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
+
+      /*This ack number we await from neighbor*/
+      nbr->ack = nbr->ei->eigrp->sequence_number;
+
+      /*Increment sequence number counter*/
+      nbr->ei->eigrp->sequence_number++;
+
+      /* Hook thread to write packet. */
+        if (nbr->ei->on_write_q == 0)
+          {
+            listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
+            nbr->ei->on_write_q = 1;
+          }
+        if (nbr->ei->eigrp->t_write == NULL)
+          nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+    }
+
 }
 
 /* Calculate EIGRP checksum */
@@ -999,6 +1013,9 @@ eigrp_packet_free (struct eigrp_packet *ep)
   if (ep->s)
     stream_free (ep->s);
 
+  if(ep->t_retrans_timer)
+    thread_cancel(ep->t_retrans_timer);
+
   XFREE (MTYPE_EIGRP_PACKET, ep);
 
   ep = NULL;
@@ -1050,6 +1067,37 @@ eigrp_check_network_mask (struct eigrp_interface *ei, struct in_addr ip_src)
 int
 eigrp_unack_packet_retrans(struct thread *thread)
 {
+  struct eigrp_neighbor *nbr;
+  nbr = (struct eigrp_neighbor *)THREAD_ARG(thread);
+
+  struct eigrp_packet *ep;
+  ep = eigrp_fifo_tail(nbr->retrans_queue);
+
+  if(ep)
+    {
+      struct eigrp_packet *duplicate;
+      duplicate = eigrp_packet_duplicate(ep,nbr);
+      /* Add packet to the top of the interface output queue*/
+      eigrp_packet_add_top (nbr->ei, duplicate);
+
+      /*Start retransmission timer*/
+      ep->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
+
+      /*This ack number we await from neighbor*/
+      nbr->ack = nbr->ei->eigrp->sequence_number;
+
+      /*Increment sequence number counter*/
+      nbr->ei->eigrp->sequence_number++;
+
+      /* Hook thread to write packet. */
+        if (nbr->ei->on_write_q == 0)
+          {
+            listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
+            nbr->ei->on_write_q = 1;
+          }
+        if (nbr->ei->eigrp->t_write == NULL)
+          nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+    }
 
   return 0;
 }
@@ -1075,4 +1123,18 @@ eigrp_fifo_pop_tail (struct eigrp_fifo *fifo)
     }
 
   return ep;
+}
+
+struct eigrp_packet *
+eigrp_packet_duplicate(struct eigrp_packet *old, struct eigrp_neighbor *nbr)
+{
+  struct eigrp_packet *new;
+
+  new = eigrp_packet_new(nbr->ei->ifp->mtu);
+  new->length = old->length;
+  new->retrans_counter = old->retrans_counter;
+  new->dst = old->dst;
+  stream_copy(new->s,old->s);
+
+  return new;
 }

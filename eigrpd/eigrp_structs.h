@@ -158,7 +158,6 @@ struct eigrp_neighbor
   struct thread *t_holddown;
 
   struct eigrp_fifo *retrans_queue;
-  struct thread *t_retrans_timer;
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
@@ -173,6 +172,12 @@ struct eigrp_packet
 
   /* IP destination address. */
   struct in_addr dst;
+
+  /*Packet retransmission thread*/
+  struct thread *t_retrans_timer;
+
+ /*Packet retransmission counter*/
+  u_char retrans_counter;
 
   /* EIGRP packet length. */
   u_int16_t length;
