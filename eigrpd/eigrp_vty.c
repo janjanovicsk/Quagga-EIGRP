@@ -79,7 +79,7 @@ DEFUN (no_eigrp_network,
        no_eigrp_network_cmd,
        "no network A.B.C.D/M",
        "Disable routing on an IP network\n"
-       "OSPF network prefix\n")
+       "EIGRP network prefix\n")
 {
   struct eigrp *eigrp = vty->index;
   struct prefix_ipv4 p;
