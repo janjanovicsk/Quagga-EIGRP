@@ -37,5 +37,21 @@
 
 //------------------------------------------------------------------------------------------------------------------------------------
 
+/*Macros for EIGRP interface multicast membership*/
+#define EI_MEMBER_FLAG(M) (1 << (M))
+#define EI_MEMBER_COUNT(O,M) (IF_EIGRP_IF_INFO(ei->ifp)->membership_counts[(M)])
+#define EI_MEMBER_CHECK(O,M) \
+    (CHECK_FLAG((O)->multicast_memberships, EI_MEMBER_FLAG(M)))
+#define EI_MEMBER_JOINED(O,M) \
+  do { \
+    SET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
+    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]++; \
+  } while (0)
+#define EI_MEMBER_LEFT(O,M) \
+  do { \
+    UNSET_FLAG ((O)->multicast_memberships, EI_MEMBER_FLAG(M)); \
+    IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]--; \
+  } while (0)
+
 
 #endif /* _ZEBRA_EIGRP_MACROS_H_ */
