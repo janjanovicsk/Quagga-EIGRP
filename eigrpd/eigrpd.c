@@ -45,6 +45,7 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
 
 
 static struct eigrp_master eigrp_master;
@@ -150,6 +151,8 @@ eigrp_new (const char *AS)
   new->k_values[4] = 0;
   new->k_values[5] = 0;
 
+  new->topology_table = eigrp_topology_new();
+
   return new;
 }
 
@@ -227,6 +230,10 @@ eigrp_finish_final (struct eigrp *eigrp)
 
   list_free (eigrp->eiflist);
   list_free (eigrp->oi_write_q);
+
+  eigrp_topology_cleanup(eigrp->topology_table);
+  eigrp_topology_free(eigrp->topology_table);
+
   eigrp_delete (eigrp);
 
   XFREE (MTYPE_EIGRP_TOP,eigrp);

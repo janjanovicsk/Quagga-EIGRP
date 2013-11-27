@@ -40,6 +40,7 @@
 #define TLV_PEER_INFORMATION_TYPE       0x0006
 #define TLV_PEER_TERMINATION_TYPE       0x0007
 #define TLV_PEER_TID_LIST_TYPE          0x0008
+#define TLV_INTERNAL_TYPE               0x0102
 
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */

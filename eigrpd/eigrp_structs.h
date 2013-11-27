@@ -58,7 +58,9 @@ struct eigrp
 
   struct route_table *networks;         /* EIGRP config networks. */
 
-  u_char k_values[5]; /*Array for K values configuration*/
+  u_char k_values[6]; /*Array for K values configuration*/
+
+  struct list *topology_table;
 
 };
 
@@ -228,7 +230,7 @@ struct TLV_Sequence_Type
   u_int16_t type;
   u_int16_t length;
   u_char addr_length;
-  in_addr_t address;
+  struct in_addr address;
 } __attribute__((packed));
 
 struct TLV_Software_Type
@@ -245,13 +247,12 @@ struct TLV_IPv4_Internal_type
 {
   u_int16_t type;
   u_int16_t length;
-  in_addr_t forward;
+  struct in_addr forward;
 
   /*Metrics*/
   u_int32_t delay;
   u_int32_t bandwith;
-  u_int16_t MTUH;
-  u_char    MTUL;
+  unsigned char mtu[3];
   u_char hop_count;
   u_char reliability;
   u_char load;
@@ -259,7 +260,7 @@ struct TLV_IPv4_Internal_type
   u_char flags;
 
   u_char prefix_length;
-  in_addr_t dest_addr;
+  unsigned char destination[4];
 } __attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
