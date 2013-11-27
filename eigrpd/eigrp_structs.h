@@ -268,16 +268,18 @@ struct TLV_IPv4_Internal_type
 struct eigrp_topology_node
 {
         struct list *entries;
-        struct prefix_ipv4 *destination;
+        struct prefix_ipv4 *destination;                //destination address
+        u_char state;                                   //route state
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_topology_entry
 {
         struct prefix *data;
-        unsigned long distance;
-        struct in_addr *adv_router;
-        u_char flags;
+        unsigned long reported_distance;                //distance reported by neighbor
+        unsigned long distance;                         //sum of reported distance and link cost to advertised neighbor
+        struct eigrp_neighbor *adv_router;              //ip address of advertising neighbor
+        u_char flags;                                   //used for marking successor and FS
 };
 
 
