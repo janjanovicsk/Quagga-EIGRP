@@ -39,6 +39,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_dump.h"
 
 DEFUN (router_eigrp,
        router_eigrp_cmd,
@@ -90,12 +91,163 @@ DEFUN (no_eigrp_network,
   ret = eigrp_network_unset (eigrp, &p);
 
   if (ret == 0)
-    {
-      vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
-      return CMD_WARNING;
-    }
+  {
+    vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
+    return CMD_WARNING;
+  }
 
   return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_interfaces,
+       show_ip_eigrp_interfaces_cmd,
+       "AS number <1-65535>",
+       "Show running system information\n"
+       "IP information\n"
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP interfaces\n")
+{
+  struct interface *ifp;
+  struct eigrp *eigrp;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+    vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_interface_header (vty);
+
+    if (argc == 0)
+      for (ALL_LIST_ELEMENTS_RO (iflist, node, ifp))
+        show_ip_eigrp_interface_sub (vty, eigrp, ifp);
+    else
+    {
+      if ((ifp = if_lookup_by_name (argv[0])) == NULL)
+        vty_out (vty, "No such interface name%s", VTY_NEWLINE);
+      else
+        show_ip_eigrp_interface_sub (vty, eigrp, ifp);
+    }
+
+    return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_neighbors,
+       show_ip_eigrp_neighbors_cmd,
+       "AS number <1-65535>",
+       "Show running system information\n"
+       "IP information\n"
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP neighbors\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+    vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_neighbour_header (vty);
+
+  for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+    show_ip_eigrp_neighbor_sub (vty, ei);
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_topology,
+       show_ip_eigrp_topology_cmd,
+       "AS number <1-65535>",
+       "Show running system information\n"
+       "IP information\n"
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP topology\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+	vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_topology_header (vty);
+
+  show_ip_eigrp_topology_sub (vty, ei);
+  return CMD_SUCCESS;
+}
+
+static void
+show_ip_eigrp_interface_header (struct vty *vty)
+{
+  vty_out (vty, "%s%-20s %s %s %s %s %s %s%s",
+           VTY_NEWLINE,
+           "Interface", "Peers", "Xmit Queue Un/Reliable", "Mean SRTT",
+           "Pacing Time Un/Reliable", "Multicast Flow Timer", "Pending Routes",
+           VTY_NEWLINE);
+}
+
+static void
+show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
+struct interface *ei)
+{
+  int is_up;
+  struct eigrp_neighbor *nbr;
+  struct route_node *rn;
+
+  vty_out (vty, "%-20s ", IF_NAME(ei));
+}
+
+static void
+show_ip_eigrp_neighbour_header (struct vty *vty)
+{
+  vty_out (vty, "%s%s %15s %-20s %3s %8s %s %s %s %s%s",
+           VTY_NEWLINE,
+           "H", "Neighbor ID", "Interface", "Hold (sec)", "Uptime",
+           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE);
+}
+
+static void
+show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_interface *ei)
+{
+  struct route_node *rn;
+  struct eigrp_neighbor *nbr;
+  char msgbuf[16];
+  char timebuf[EIGRP_TIME_DUMP_SIZE];
+
+  /*for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+    if ((nbr = rn->info))
+      if (nbr != ei->nbr_self)
+      {
+
+      }*/
+
+
+
+}
+
+static void
+show_ip_eigrp_topology_header (struct vty *vty)
+{
+	vty_out (vty, "%s%s%s",
+	           VTY_NEWLINE,
+	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
+	           "R - Reply, r - reply Status, s - sia Status",VTY_NEWLINE);
+}
+
+static void
+show_ip_eigrp_topology_sub (struct vty *vty)
+{
+
 }
 
 static struct cmd_node eigrp_node =

@@ -24,6 +24,8 @@
 #ifndef _ZEBRA_EIGRPD_DUMP_H_
 #define _ZEBRA_EIGRPD_DUMP_H_
 
+#define EIGRP_TIME_DUMP_SIZE	16
+
 extern const char *eigrp_if_name_string (struct eigrp_interface *);
 extern void eigrp_ip_header_dump (struct ip *);
 
