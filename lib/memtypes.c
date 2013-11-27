@@ -268,6 +268,7 @@ struct memory_list memory_list_eigrp[] =
   { MTYPE_EIGRP_TOPOLOGY_ENTRY,  "EIGRP Topology table entry"	},
   { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"       },
   { MTYPE_EIGRP_NEIGHBOR,        "EIGRP neighbor structure"     },
+  { MTYPE_EIGRP_IPV4_INT_TLV,    "EIGRP Internal IPv4 TLV "     },
   { -1, NULL },
 };
 

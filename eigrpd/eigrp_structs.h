@@ -58,7 +58,9 @@ struct eigrp
 
   struct route_table *networks;         /* EIGRP config networks. */
 
-  u_char k_values[5]; /*Array for K values configuration*/
+  u_char k_values[6]; /*Array for K values configuration*/
+
+  struct list *topology_table;
 
 };
 
@@ -228,7 +230,7 @@ struct TLV_Sequence_Type
   u_int16_t type;
   u_int16_t length;
   u_char addr_length;
-  in_addr_t address;
+  struct in_addr address;
 } __attribute__((packed));
 
 struct TLV_Software_Type
@@ -245,13 +247,12 @@ struct TLV_IPv4_Internal_type
 {
   u_int16_t type;
   u_int16_t length;
-  in_addr_t forward;
+  struct in_addr forward;
 
   /*Metrics*/
   u_int32_t delay;
   u_int32_t bandwith;
-  u_int16_t MTUH;
-  u_char    MTUL;
+  unsigned char mtu[3];
   u_char hop_count;
   u_char reliability;
   u_char load;
@@ -259,7 +260,7 @@ struct TLV_IPv4_Internal_type
   u_char flags;
 
   u_char prefix_length;
-  in_addr_t dest_addr;
+  unsigned char destination[4];
 } __attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
@@ -268,16 +269,18 @@ struct TLV_IPv4_Internal_type
 struct eigrp_topology_node
 {
         struct list *entries;
-        struct prefix_ipv4 *destination;
+        struct prefix_ipv4 *destination;                //destination address
+        u_char state;                                   //route state
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_topology_entry
 {
         struct prefix *data;
-        unsigned long distance;
-        struct in_addr *adv_router;
-        u_char flags;
+        unsigned long reported_distance;                //distance reported by neighbor
+        unsigned long distance;                         //sum of reported distance and link cost to advertised neighbor
+        struct eigrp_neighbor *adv_router;              //ip address of advertising neighbor
+        u_char flags;                                   //used for marking successor and FS
 };
 
 

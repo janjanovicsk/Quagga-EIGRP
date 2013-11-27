@@ -63,6 +63,27 @@ static int eigrp_verify_header (struct stream *, struct eigrp_interface *,
                                 struct ip *, struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 
+/*
+ * Converts a 24-bit integer represented as an unsigned char[3] *value
+ * in network byte order into uint32_t in host byte order
+ */
+static uint32_t u24_32 (const unsigned char *value)
+{
+  return (value[0] << 16) + (value[1] << 8) + value[2];
+}
+
+/*
+ * Converts an uint32_t value in host byte order into a 24-bit integer
+ * in network byte order represented by unsigned char[3] *result
+ */
+static unsigned char * u32_24 (uint32_t value, unsigned char *result)
+{
+  value = htonl(value & 0x00FFFFFF);
+  memcpy(result, (unsigned char *) &value + 1, 3);
+
+  return result;
+}
+
 /*EIGRP UPDATE read function*/
 static void
 eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
@@ -70,6 +91,7 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
 {
   struct eigrp_neighbor *nbr;
   struct prefix p;
+  u_int16_t type;
 
   /* increment statistics. */
   ei->update_in++;
@@ -91,24 +113,22 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
   /*If it is INIT update*/
   if(ntohl(eigrph->flags)==EIGRP_HEADER_FLAG_INIT)
     {
-      if(ntohl(eigrph->ack!=0))
+      struct eigrp_packet *ep;
+      ep = eigrp_fifo_tail(nbr->retrans_queue);
+      if(ep != NULL)
         {
-          struct eigrp_packet *ep;
-          struct eigrp_header *verify;
-          if(ep != NULL)
-            {
-              if(ntohl(eigrph->ack) == nbr->ack)
-                {
-                  ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-                  eigrp_packet_free (ep);
-                  if(nbr->retrans_queue->count>0)
-                    {
-                      eigrp_send_packet_reliably(nbr);
-                    }
-                }
-              return;
-            }
+          if(ntohl(eigrph->ack) == nbr->ack)
+          {
+            ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+            eigrp_packet_free (ep);
+            if(nbr->retrans_queue->count>0)
+              {
+                eigrp_send_packet_reliably(nbr);
+              }
+            return;
+          }
         }
+
       eigrp_send_init_update(nbr, EIGRP_HEADER_FLAG_INIT);
 
     }   /*If it is END OF TABLE update*/
@@ -116,7 +136,39 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
     {
       if(nbr->retrans_queue->count == 0)
         eigrp_send_init_update(nbr, EIGRP_HEADER_FLAG_EOT);
+
+      /*If there is initial topology information*/
+      while(s->endp > s->getp)
+        {
+          type = stream_getw(s);
+          if(type == TLV_INTERNAL_TYPE)
+            {
+              stream_set_getp(s,s->getp-sizeof(u_int16_t));
+              struct TLV_IPv4_Internal_type *tlv;
+              tlv = eigrp_read_ipv4_tlv(s);
+
+              zlog_debug("Type: %d",tlv->type);
+              zlog_debug("Length: %d",tlv->length);
+              zlog_debug("Forward addr: %s",inet_ntoa(tlv->forward));
+              zlog_debug("Delay: %d",tlv->delay);
+              zlog_debug("Bandwith: %d",tlv->bandwith);
+              zlog_debug("MTU: %d",u24_32(tlv->mtu));
+              zlog_debug("Hop count: %d",tlv->hop_count);
+              zlog_debug("Reliabity: %d",tlv->reliability);
+              zlog_debug("Load: %d",tlv->load);
+              zlog_debug("Internal Tag: %d",tlv->tag);
+              zlog_debug("Flags Field: %d",tlv->flags);
+              zlog_debug("Prefix_length: %d",tlv->prefix_length);
+              struct in_addr adr;
+              adr.s_addr = u24_32(tlv->destination);
+              zlog_debug("Dest_addr: %s",inet_ntoa(adr));
+              zlog_debug("");
+            }
+        }
+      nbr->state = EIGRP_NEIGHBOR_UP;
+      zlog_info("NEIGHBOR ADJACENCY BECAME FULL");
     }
+//  eigrp_ack_send(nbr);
 }
 
 /*EIGRP hello read function*/
@@ -1137,4 +1189,49 @@ eigrp_packet_duplicate(struct eigrp_packet *old, struct eigrp_neighbor *nbr)
   stream_copy(new->s,old->s);
 
   return new;
+}
+
+struct TLV_IPv4_Internal_type *
+eigrp_read_ipv4_tlv(struct stream *s)
+{
+  struct TLV_IPv4_Internal_type *tlv;
+
+  tlv = XCALLOC (MTYPE_EIGRP_IPV4_INT_TLV, sizeof (struct TLV_IPv4_Internal_type));
+
+  tlv->type = ntohs(stream_getw(s));
+  tlv->length = stream_getw(s);
+  tlv->forward.s_addr = stream_getl(s);
+  tlv->delay = stream_getl(s);
+  tlv->bandwith = stream_getl(s);
+  tlv->mtu[0] = stream_getc(s);
+  tlv->mtu[1] = stream_getc(s);
+  tlv->mtu[2] = stream_getc(s);
+  tlv->hop_count = stream_getc(s);
+  tlv->reliability = stream_getc(s);
+  tlv->load = stream_getc(s);
+  tlv->tag = stream_getc(s);
+  tlv->flags = stream_getc(s);
+
+  tlv->prefix_length = stream_getc(s);
+
+  if(tlv->prefix_length <= 8)
+    {
+
+    }
+  if(tlv->prefix_length <= 16)
+    {
+
+    }
+  if(tlv->prefix_length <= 24)
+    {
+      tlv->destination[0] = stream_getc(s);
+      tlv->destination[1] = stream_getc(s);
+      tlv->destination[2] = stream_getc(s);
+    }
+  if(tlv->prefix_length <= 32)
+    {
+
+    }
+
+  return tlv;
 }

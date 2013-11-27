@@ -110,7 +110,7 @@ static int
 eigrp_topology_entry_cmp(struct eigrp_topology_entry *entry1, struct eigrp_topology_entry *entry2)
 {
         if (entry1->distance < entry2->distance)                                // parameter used in list_add_sort()
-                return -1;                                                                                      // actually set to sort by distance
+                return -1;                                                      // actually set to sort by distance
         if (entry1->distance > entry2->distance)                                //
                 return 1;
         return 0;

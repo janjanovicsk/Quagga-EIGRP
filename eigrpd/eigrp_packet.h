@@ -40,6 +40,7 @@ extern void eigrp_send_init_update (struct eigrp_neighbor *, u_int32_t);
 extern void eigrp_send_packet_reliably(struct eigrp_neighbor *);
 extern struct eigrp_packet *eigrp_packet_duplicate(struct eigrp_packet *,
                                                    struct eigrp_neighbor *);
+extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv(struct stream *);
 
 
 extern int eigrp_unack_packet_retrans(struct thread *);
