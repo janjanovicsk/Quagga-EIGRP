@@ -39,6 +39,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_dump.h"
 
 DEFUN (router_eigrp,
        router_eigrp_cmd,
@@ -90,13 +91,101 @@ DEFUN (no_eigrp_network,
   ret = eigrp_network_unset (eigrp, &p);
 
   if (ret == 0)
-    {
-      vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
-      return CMD_WARNING;
-    }
+  {
+    vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
+    return CMD_WARNING;
+  }
 
   return CMD_SUCCESS;
 }
+
+DEFUN (show_ip_eigrp_interfaces,
+       show_ip_eigrp_interfaces_cmd,
+       "show ip eigrp interfaces",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP interfaces\n")
+{
+  struct interface *ifp;
+  struct eigrp *eigrp;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+    vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_interface_header (vty);
+
+    if (argc == 0)
+      for (ALL_LIST_ELEMENTS_RO (iflist, node, ifp))
+        show_ip_eigrp_interface_sub (vty, eigrp, ifp);
+    else
+    {
+      if ((ifp = if_lookup_by_name (argv[0])) == NULL)
+        vty_out (vty, "No such interface name%s", VTY_NEWLINE);
+      else
+        show_ip_eigrp_interface_sub (vty, eigrp, ifp);
+    }
+
+    return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_neighbors,
+       show_ip_eigrp_neighbors_cmd,
+       "show ip eigrp neighbors",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP neighbors\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+    vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_neighbor_header (vty);
+
+  for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+    show_ip_eigrp_neighbor_sub (vty, ei);
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_topology,
+       show_ip_eigrp_topology_cmd,
+       "show ip eigrp topology",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP topology\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct listnode *node;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+	vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_topology_header (vty);
+
+  show_ip_eigrp_topology_sub (vty);
+  return CMD_SUCCESS;
+}
+
 
 DEFUN (show_ip_eigrp_topology,
        show_ip_eigrp_topology_cmd,
@@ -128,7 +217,12 @@ eigrp_config_write (struct vty *vty)
 void
 eigrp_vty_show_init (void)
 {
-
+  install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_topology_cmd);
 }
 
 /* eigrpd's interface node. */
@@ -176,6 +270,7 @@ eigrp_vty_init (void)
 
   install_element(ENABLE_NODE,&show_ip_eigrp_topology_cmd);
   install_element(VIEW_NODE,&show_ip_eigrp_topology_cmd);
+
 
 
 }

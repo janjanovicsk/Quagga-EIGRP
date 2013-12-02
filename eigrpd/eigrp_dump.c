@@ -75,3 +75,71 @@ eigrp_if_name_string (struct eigrp_interface *ei)
   return buf;
 }
 
+void
+show_ip_eigrp_interface_header (struct vty *vty)
+{
+  vty_out (vty, "%s%-20s %5s %11s %12s %10s %7s %7s%s",
+           VTY_NEWLINE,
+           "Interface", "Peers", "Xmit Queue Un/Reliable", "Mean SRTT",
+           "Pacing Time Un/Reliable", "Multicast Flow Timer", "Pending Routes",
+           VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
+struct eigrp_interface *ei)
+{
+  int is_up;
+  struct eigrp_neighbor *nbr;
+  struct route_node *rn;
+
+  vty_out (vty, "%-20s ", IF_NAME(ei));
+  vty_out (vty, "%5d", route_table_count(ei->nbrs));
+  vty_out (vty, "%11s %12s %10s %7s %7s%s",0,0,0,0,0,VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_neighbor_header (struct vty *vty)
+{
+  vty_out (vty, "%s%s %15s %-20s %3s %8s %s %s %s %s%s",
+           VTY_NEWLINE,
+           "H", "Neighbor ID", "Interface", "Hold (sec)", "Uptime",
+           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_interface *ei)
+{
+  struct route_node *rn;
+  struct eigrp_neighbor *nbr;
+  char msgbuf[16];
+  char timebuf[EIGRP_TIME_DUMP_SIZE];
+
+  vty_out (vty, "%s %15s %-20s",0,0,IF_NAME(ei));
+  vty_out (vty,"%3s %8s %4s %3s %4s %3s%s",0,0,0,0,0,0,VTY_NEWLINE);
+  /*for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+    if ((nbr = rn->info))
+      if (nbr != ei->nbr_self)
+      {
+
+      }*/
+
+
+
+}
+
+void
+show_ip_eigrp_topology_header (struct vty *vty)
+{
+	vty_out (vty, "%s%s%s",
+	           VTY_NEWLINE,
+	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
+	           "R - Reply, r - reply Status, s - sia Status",VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_topology_sub (struct vty *vty)
+{
+
+}
+
