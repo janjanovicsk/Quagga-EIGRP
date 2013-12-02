@@ -157,6 +157,8 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
               tnode->destination->prefixlen = tlv->prefix_length;
               eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
 
+
+
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
         }

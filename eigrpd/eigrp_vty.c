@@ -98,6 +98,17 @@ DEFUN (no_eigrp_network,
   return CMD_SUCCESS;
 }
 
+DEFUN (show_ip_eigrp_topology,
+       show_ip_eigrp_topology_cmd,
+       "show ip eigrp topology",
+       "Disable routing on an IP network\n"
+       "EIGRP network prefix\n")
+{
+
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -162,6 +173,9 @@ eigrp_vty_init (void)
 
   install_element(EIGRP_NODE, &eigrp_network_cmd);
   install_element(EIGRP_NODE, &no_eigrp_network_cmd);
+
+  install_element(ENABLE_NODE,&show_ip_eigrp_topology_cmd);
+  install_element(VIEW_NODE,&show_ip_eigrp_topology_cmd);
 
 
 }
