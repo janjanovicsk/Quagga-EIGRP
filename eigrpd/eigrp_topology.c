@@ -224,3 +224,48 @@ eigrp_topology_table_isempty(struct list *topology)
         else
                 return 0;
 }
+
+struct eigrp_topology_node *
+eigrp_topology_table_lookup (struct list *topology_table, struct prefix_ipv4 * address)
+{
+  struct eigrp_topology_node *data;
+  struct listnode *node, *nnode;
+  for(ALL_LIST_ELEMENTS(topology_table, node, nnode, data))
+    {
+      if(data->destination->prefix.s_addr == address->prefix.s_addr &&
+          data->destination->prefixlen == address->prefixlen)
+        return data;
+    }
+
+  return NULL;
+}
+
+extern struct eigrp_topology_entry *
+eigrp_topology_get_successor(struct eigrp_topology_node *table_node)
+{
+  struct eigrp_topology_entry *data;
+  struct listnode *node, *nnode;
+  for(ALL_LIST_ELEMENTS(table_node->entries, node, nnode, data))
+    {
+      if((data->flags & EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG) == 1)
+        {
+          return data;
+        }
+    }
+  return NULL;
+}
+
+extern struct eigrp_topology_entry *
+eigrp_topology_get_fsuccessor(struct eigrp_topology_node *table_node)
+{
+  struct eigrp_topology_entry *data;
+  struct listnode *node, *nnode;
+  for(ALL_LIST_ELEMENTS(table_node->entries, node, nnode, data))
+    {
+      if((data->flags & EIGRP_TOPOLOGY_ENTRY_FSUCCESSOR_FLAG) == 1)
+        {
+          return data;
+        }
+    }
+  return NULL;
+}

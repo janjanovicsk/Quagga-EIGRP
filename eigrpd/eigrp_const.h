@@ -83,4 +83,45 @@
 #define EIGRP_IF_ACTIVE                  0
 #define EIGRP_IF_PASSIVE                 1
 
+/* EIGRP FSM and TT*/
+#define EIGRP_TOPOLOGY_NODE_ACTIVE           0
+#define EIGRP_TOPOLOGY_NODE_PASSIVE          1
+
+#define EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG     1
+#define EIGRP_TOPOLOGY_ENTRY_FSUCCESSOR_FLAG    2
+
+#define EIGRP_FSM_STATE_MAX                  5
+#define EIGRP_FSM_EVENT_MAX                  16
+
+#define EIGRP_FSM_STATE_PASSIVE              0
+#define EIGRP_FSM_STATE_ACTIVE_0             1
+#define EIGRP_FSM_STATE_ACTIVE_1             2
+#define EIGRP_FSM_STATE_ACTIVE_2             3
+#define EIGRP_FSM_STATE_ACTIVE_3             4
+
+#define EIGRP_FSM_EVENT_1                       0
+#define EIGRP_FSM_EVENT_2                       1
+#define EIGRP_FSM_EVENT_3                       2
+#define EIGRP_FSM_EVENT_4                       3
+#define EIGRP_FSM_EVENT_5                       4
+#define EIGRP_FSM_EVENT_6                       5
+#define EIGRP_FSM_EVENT_7                       6
+#define EIGRP_FSM_EVENT_8                       7
+#define EIGRP_FSM_EVENT_9                       8
+#define EIGRP_FSM_EVENT_10                      9
+#define EIGRP_FSM_EVENT_11                      10
+#define EIGRP_FSM_EVENT_12                      11
+#define EIGRP_FSM_EVENT_13                      12
+#define EIGRP_FSM_EVENT_14                      13
+#define EIGRP_FSM_EVENT_15                      14
+#define EIGRP_FSM_EVENT_16                      15
+
+#define EIGRP_FSM_QUERY                         0
+#define EIGRP_FSM_REPLY                         1
+#define EIGRP_FSM_IF_COST                       2
+#define EIGRP_FSM_IF_UP                         3
+#define EIGRP_FSM_IF_DOWN                       4
+#define EIGRP_FSM_SIA_QUERY                     5
+#define EIGRP_FSM_SIA_REPLY                     6
+
 #endif /* _ZEBRA_EIGRP_CONST_H_ */
