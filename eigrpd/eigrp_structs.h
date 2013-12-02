@@ -27,7 +27,7 @@ struct eigrp_master
   time_t start_time;
 
   /* Various EIGRP global configuration. */
-    u_char options;
+  u_char options;
 
 #define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
 };
@@ -36,18 +36,18 @@ struct eigrp
 {
 
   /* EIGRP Router ID. */
-  struct in_addr router_id;             /* Configured automatically. */
-  struct in_addr router_id_static;      /* Configured manually. */
+  struct in_addr router_id; /* Configured automatically. */
+  struct in_addr router_id_static; /* Configured manually. */
 
-  struct list *eiflist;                 /* eigrp interfaces */
-  u_char passive_interface_default;   /* passive-interface default */
+  struct list *eiflist; /* eigrp interfaces */
+  u_char passive_interface_default; /* passive-interface default */
 
   int AS; /* Autonomous system number */
 
   unsigned int fd;
   unsigned int maxsndbuflen;
 
-  u_int32_t sequence_number;    /*Global EIGRP sequence number*/
+  u_int32_t sequence_number; /*Global EIGRP sequence number*/
 
   struct stream *ibuf;
   struct list *oi_write_q;
@@ -56,7 +56,7 @@ struct eigrp
   struct thread *t_write;
   struct thread *t_read;
 
-  struct route_table *networks;         /* EIGRP config networks. */
+  struct route_table *networks; /* EIGRP config networks. */
 
   u_char k_values[6]; /*Array for K values configuration*/
 
@@ -70,53 +70,56 @@ struct eigrp
 struct eigrp_interface
 {
   /* This interface's parent eigrp instance. */
-    struct eigrp *eigrp;
+  struct eigrp *eigrp;
 
-    /* Interface data from zebra. */
-    struct interface *ifp;
+  /* Interface data from zebra. */
+  struct interface *ifp;
 
-    /* Packet send buffer. */
-    struct eigrp_fifo *obuf;               /* Output queue */
+  /* Packet send buffer. */
+  struct eigrp_fifo *obuf; /* Output queue */
 
-    /* To which multicast groups do we currently belong? */
+  /* To which multicast groups do we currently belong? */
 
-    /* Configured varables. */
-      struct eigrp_if_params *params;
+  /* Configured varables. */
+  struct eigrp_if_params *params;
 
-    u_char multicast_memberships;
+  u_char multicast_memberships;
 
-    /* EIGRP Network Type. */
-    u_char type;
+  /* EIGRP Network Type. */
+  u_char type;
 
-    struct prefix *address;             /* Interface prefix */
-    struct connected *connected;          /* Pointer to connected */
+  struct prefix *address; /* Interface prefix */
+  struct connected *connected; /* Pointer to connected */
 
-    /* Neighbor information. */
-      struct route_table *nbrs;             /* EIGRP Neighbor List */
+  /* Neighbor information. */
+  struct route_table *nbrs; /* EIGRP Neighbor List */
 
-    /* Threads. */
-    struct thread *t_hello;               /* timer */
+  /* Threads. */
+  struct thread *t_hello; /* timer */
 
-    int on_write_q;
+  int on_write_q;
 
-    /* Statistics fields. */
-      u_int32_t hello_in;           /* Hello message input count. */
-      u_int32_t update_in;           /* Update message input count. */
+  /* Statistics fields. */
+  u_int32_t hello_in; /* Hello message input count. */
+  u_int32_t update_in; /* Update message input count. */
 };
 
 struct eigrp_if_params
 {
-  DECLARE_IF_PARAM (u_char, passive_interface);      /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
-  DECLARE_IF_PARAM (u_int32_t, v_hello);             /* Hello Interval */
-  DECLARE_IF_PARAM (u_int16_t, v_wait);              /* Router Hold Time Interval */
-  DECLARE_IF_PARAM (u_char, type);                   /* type of interface */
+  DECLARE_IF_PARAM (u_char, passive_interface)
+  ; /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
+  DECLARE_IF_PARAM (u_int32_t, v_hello)
+  ; /* Hello Interval */
+  DECLARE_IF_PARAM (u_int16_t, v_wait)
+  ; /* Router Hold Time Interval */
+  DECLARE_IF_PARAM (u_char, type)
+  ; /* type of interface */
 
 };
 
 enum
 {
-  MEMBER_ALLROUTERS = 0,
-  MEMBER_MAX,
+  MEMBER_ALLROUTERS = 0, MEMBER_MAX,
 };
 
 struct eigrp_if_info
@@ -124,9 +127,8 @@ struct eigrp_if_info
   struct eigrp_if_params *def_params;
   struct route_table *params;
   struct route_table *eifs;
-  unsigned int membership_counts[MEMBER_MAX];   /* multicast group refcnts */
+  unsigned int membership_counts[MEMBER_MAX]; /* multicast group refcnts */
 };
-
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -137,14 +139,14 @@ struct eigrp_neighbor
   struct eigrp_interface *ei;
 
   /* OSPF neighbor Information */
-  u_char state;                               /* neigbor status. */
-  u_int32_t recv_sequence_number;             /* Last received sequence Number. */
-  u_int32_t ack;                              /* Acknowledgement number*/
+  u_char state; /* neigbor status. */
+  u_int32_t recv_sequence_number; /* Last received sequence Number. */
+  u_int32_t ack; /* Acknowledgement number*/
 
   /*If packet is unacknowledged, we try to send it again 16 times*/
   u_char retrans_counter;
 
-  struct in_addr src;                   /* Neighbor Src address. */
+  struct in_addr src; /* Neighbor Src address. */
 
   u_char K1;
   u_char K2;
@@ -178,7 +180,7 @@ struct eigrp_packet
   /*Packet retransmission thread*/
   struct thread *t_retrans_timer;
 
- /*Packet retransmission counter*/
+  /*Packet retransmission counter*/
   u_char retrans_counter;
 
   /* EIGRP packet length. */
@@ -205,25 +207,25 @@ struct eigrp_header
   u_int16_t routerID;
   u_int16_t ASNumber;
 
-} __attribute__((packed));
+}__attribute__((packed));
 
 struct TLV_Parameter_Type
 {
-    u_int16_t type;
-    u_int16_t length;
-    u_char K1;
-    u_char K2;
-    u_char K3;
-    u_char K4;
-    u_char K5;
-    u_char K6;
-    u_int16_t hold_time;
-} __attribute__((packed));
+  u_int16_t type;
+  u_int16_t length;
+  u_char K1;
+  u_char K2;
+  u_char K3;
+  u_char K4;
+  u_char K5;
+  u_char K6;
+  u_int16_t hold_time;
+}__attribute__((packed));
 
 struct TLV_Authentication_Type
 {
 
-} __attribute__((packed));
+}__attribute__((packed));
 
 struct TLV_Sequence_Type
 {
@@ -231,7 +233,7 @@ struct TLV_Sequence_Type
   u_int16_t length;
   u_char addr_length;
   struct in_addr address;
-} __attribute__((packed));
+}__attribute__((packed));
 
 struct TLV_Software_Type
 {
@@ -241,7 +243,7 @@ struct TLV_Software_Type
   u_char vender_minor;
   u_char eigrp_major;
   u_char eigrp_minor;
-} __attribute__((packed));
+}__attribute__((packed));
 
 struct TLV_IPv4_Internal_type
 {
@@ -261,26 +263,36 @@ struct TLV_IPv4_Internal_type
 
   u_char prefix_length;
   unsigned char destination[4];
-} __attribute__((packed));
+}__attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
 /* EIGRP Topology table node structure */
 struct eigrp_topology_node
 {
-        struct list *entries;
-        struct prefix_ipv4 *destination;                //destination address
-        u_char state;                                   //route state
+  struct list *entries;
+  struct prefix_ipv4 *destination; //destination address
+  u_char state; //route state
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_topology_entry
 {
-        struct prefix *data;
-        unsigned long reported_distance;                //distance reported by neighbor
-        unsigned long distance;                         //sum of reported distance and link cost to advertised neighbor
-        struct eigrp_neighbor *adv_router;              //ip address of advertising neighbor
-        u_char flags;                                   //used for marking successor and FS
+  struct prefix *data;
+  unsigned long reported_distance; //distance reported by neighbor
+  unsigned long distance; //sum of reported distance and link cost to advertised neighbor
+  struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
+  u_char flags; //used for marking successor and FS
+};
+
+//---------------------------------------------------------------------------------------------------------------------------------------------
+
+/* EIGRP Finite State Machine */
+struct eigrp_fsm_query_event
+{
+  struct eigrp_neighbor *adv_router;
+  int adv_cost;
+
 };
 
 
