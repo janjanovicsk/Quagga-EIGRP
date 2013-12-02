@@ -45,6 +45,7 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
 
 
 static void eigrp_hello_send_sub (struct eigrp_interface *, in_addr_t);
@@ -67,22 +68,22 @@ static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
  * Converts a 24-bit integer represented as an unsigned char[3] *value
  * in network byte order into uint32_t in host byte order
  */
-static uint32_t u24_32 (const unsigned char *value)
-{
-  return (value[0] << 16) + (value[1] << 8) + value[2];
-}
-
-/*
- * Converts an uint32_t value in host byte order into a 24-bit integer
- * in network byte order represented by unsigned char[3] *result
- */
-static unsigned char * u32_24 (uint32_t value, unsigned char *result)
-{
-  value = htonl(value & 0x00FFFFFF);
-  memcpy(result, (unsigned char *) &value + 1, 3);
-
-  return result;
-}
+//static uint32_t u24_32 (const unsigned char *value)
+//{
+//  return (value[0] << 16) + (value[1] << 8) + value[2];
+//}
+//
+///*
+// * Converts an uint32_t value in host byte order into a 24-bit integer
+// * in network byte order represented by unsigned char[3] *result
+// */
+//static unsigned char * u32_24 (uint32_t value, unsigned char *result)
+//{
+//  value = htonl(value & 0x00FFFFFF);
+//  memcpy(result, (unsigned char *) &value + 1, 3);
+//
+//  return result;
+//}
 
 /*EIGRP UPDATE read function*/
 static void
@@ -91,6 +92,9 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
 {
   struct eigrp_neighbor *nbr;
   struct prefix p;
+  struct TLV_IPv4_Internal_type *tlv;
+  struct eigrp_topology_node *tnode;
+  struct eigrp_topology_entry *tentry;
   u_int16_t type;
 
   /* increment statistics. */
@@ -144,29 +148,23 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
           if(type == TLV_INTERNAL_TYPE)
             {
               stream_set_getp(s,s->getp-sizeof(u_int16_t));
-              struct TLV_IPv4_Internal_type *tlv;
               tlv = eigrp_read_ipv4_tlv(s);
 
-              zlog_debug("Type: %d",tlv->type);
-              zlog_debug("Length: %d",tlv->length);
-              zlog_debug("Forward addr: %s",inet_ntoa(tlv->forward));
-              zlog_debug("Delay: %d",tlv->delay);
-              zlog_debug("Bandwith: %d",tlv->bandwith);
-              zlog_debug("MTU: %d",u24_32(tlv->mtu));
-              zlog_debug("Hop count: %d",tlv->hop_count);
-              zlog_debug("Reliabity: %d",tlv->reliability);
-              zlog_debug("Load: %d",tlv->load);
-              zlog_debug("Internal Tag: %d",tlv->tag);
-              zlog_debug("Flags Field: %d",tlv->flags);
-              zlog_debug("Prefix_length: %d",tlv->prefix_length);
-              struct in_addr adr;
-              adr.s_addr = u24_32(tlv->destination);
-              zlog_debug("Dest_addr: %s",inet_ntoa(adr));
-              zlog_debug("");
+              /*Here comes topology information save*/
+              tnode = eigrp_topology_node_new();
+              tnode->destination->family = AF_INET;
+              tnode->destination->prefix = tlv->destination;
+              tnode->destination->prefixlen = tlv->prefix_length;
+              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
+
+              XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
         }
-      nbr->state = EIGRP_NEIGHBOR_UP;
-      zlog_info("NEIGHBOR ADJACENCY BECAME FULL");
+      if(nbr->state != EIGRP_NEIGHBOR_UP)
+        {
+          nbr->state = EIGRP_NEIGHBOR_UP;
+          zlog_info("NEIGHBOR ADJACENCY BECAME FULL");
+        }
     }
 //  eigrp_ack_send(nbr);
 }
@@ -219,7 +217,7 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
               /*Start Hold Down Timer for neighbor*/
               nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
               nbr->state = EIGRP_NEIGHBOR_PENDING;
-              zlog_info("Adjacent router found");
+              zlog_info("Neighbor %s (%s) is up: new adjacency",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
               break;
             }
           case EIGRP_NEIGHBOR_PENDING:
@@ -1198,7 +1196,7 @@ eigrp_read_ipv4_tlv(struct stream *s)
 
   tlv = XCALLOC (MTYPE_EIGRP_IPV4_INT_TLV, sizeof (struct TLV_IPv4_Internal_type));
 
-  tlv->type = ntohs(stream_getw(s));
+  tlv->type = stream_getw(s);
   tlv->length = stream_getw(s);
   tlv->forward.s_addr = stream_getl(s);
   tlv->delay = stream_getl(s);
@@ -1214,22 +1212,33 @@ eigrp_read_ipv4_tlv(struct stream *s)
 
   tlv->prefix_length = stream_getc(s);
 
-  if(tlv->prefix_length <= 8)
+  if(tlv->prefix_length <= 8 )
     {
+      tlv->destination_part[0] = stream_getc(s);
+      tlv->destination.s_addr = (tlv->destination_part[0]);
 
     }
-  if(tlv->prefix_length <= 16)
+  if(tlv->prefix_length > 8 && tlv->prefix_length <= 16)
     {
+      tlv->destination_part[0] = stream_getc(s);
+      tlv->destination_part[1] = stream_getc(s);
+      tlv->destination.s_addr = ((tlv->destination_part[1] << 8) + tlv->destination_part[0]);
 
     }
-  if(tlv->prefix_length <= 24)
+  if(tlv->prefix_length > 16 && tlv->prefix_length <= 24)
     {
-      tlv->destination[0] = stream_getc(s);
-      tlv->destination[1] = stream_getc(s);
-      tlv->destination[2] = stream_getc(s);
+      tlv->destination_part[0] = stream_getc(s);
+      tlv->destination_part[1] = stream_getc(s);
+      tlv->destination_part[2] = stream_getc(s);
+      tlv->destination.s_addr = ((tlv->destination_part[2] << 16) + (tlv->destination_part[1] << 8) + tlv->destination_part[0]);
     }
-  if(tlv->prefix_length <= 32)
+  if(tlv->prefix_length > 24 && tlv->prefix_length <= 32)
     {
+      tlv->destination_part[0] = stream_getc(s);
+      tlv->destination_part[1] = stream_getc(s);
+      tlv->destination_part[2] = stream_getc(s);
+      tlv->destination_part[3] = stream_getc(s);
+      tlv->destination.s_addr = ((tlv->destination_part[3] << 24) + (tlv->destination_part[2] << 16) + (tlv->destination_part[1] << 8) + tlv->destination_part[0]);
 
     }
 
