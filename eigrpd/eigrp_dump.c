@@ -29,6 +29,7 @@
 #include "stream.h"
 #include "log.h"
 #include "sockopt.h"
+#include "table.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -39,6 +40,23 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
+
+static int
+eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
+{
+  struct route_node *rn;
+  struct eigrp_neighbor *nbr;
+  int sum;
+  sum = 0;
+
+  for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+    {
+      nbr = rn->info;
+      sum += nbr->retrans_queue->count;
+    }
+
+  return sum;
+}
 
 /* Expects header to be in host order */
 void
@@ -62,6 +80,19 @@ const char *
 eigrp_if_name_string (struct eigrp_interface *ei)
 {
   static char buf[EIGRP_IF_STRING_MAXLEN] = "";
+
+  if (!ei)
+    return "inactive";
+
+  snprintf (buf, EIGRP_IF_STRING_MAXLEN,
+            "%s", ei->ifp->name);
+  return buf;
+}
+
+const char *
+eigrp_if_ip_string (struct eigrp_interface *ei)
+{
+  static char buf[EIGRP_IF_STRING_MAXLEN] = "";
   u_int32_t ifaddr;
 
   if (!ei)
@@ -69,9 +100,82 @@ eigrp_if_name_string (struct eigrp_interface *ei)
 
   ifaddr = ntohl (ei->address->u.prefix4.s_addr);
   snprintf (buf, EIGRP_IF_STRING_MAXLEN,
-            "%s:%d.%d.%d.%d", ei->ifp->name,
+            "%d.%d.%d.%d",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
   return buf;
+}
+
+const char *
+eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
+{
+  static char buf[EIGRP_IF_STRING_MAXLEN] = "";
+  u_int32_t ifaddr;
+
+  ifaddr = ntohl (nbr->src.s_addr);
+  snprintf (buf, EIGRP_IF_STRING_MAXLEN,
+            "%d.%d.%d.%d",
+            (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
+            (ifaddr >> 8) & 0xff, ifaddr & 0xff);
+  return buf;
+}
+
+void
+show_ip_eigrp_interface_header (struct vty *vty)
+{
+  vty_out (vty, "%s%-20s %5s %-11s %12s %10s %7s %7s%s",
+           VTY_NEWLINE,
+           "Interface", "Peers", "Xmit Queue Un/Reliable", "Mean SRTT",
+           "Pacing Time Un/Reliable", "Multicast Flow Timer", "Pending Routes",
+           VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
+struct eigrp_interface *ei)
+{
+  int is_up;
+  struct eigrp_neighbor *nbr;
+  struct route_node *rn;
+
+  vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
+  vty_out (vty, "%5d", route_table_count(ei->nbrs));
+  vty_out (vty, "%d %c %d %12d %10d %7d %7d%s",0,'/',eigrp_neighbor_packet_queue_sum(ei),0,0,0,0,VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_neighbor_header (struct vty *vty)
+{
+  vty_out (vty, "%s%s %15s %-20s %3s %8s %s %s %s %s%s",
+           VTY_NEWLINE,
+           "H", "Address", "Interface", "Hold (sec)", "Uptime",
+           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
+{
+  struct route_node *rn;
+  char msgbuf[16];
+  char timebuf[EIGRP_TIME_DUMP_SIZE];
+
+  vty_out (vty, "%d %15s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
+  vty_out (vty,"%3d %8d %4d %3d %4d %3d%s",thread_timer_remain_second(nbr->t_holddown),0,0,EIGRP_PACKET_RETRANS_TIME,nbr->retrans_queue->count,nbr->recv_sequence_number,VTY_NEWLINE);
+
+}
+
+void
+show_ip_eigrp_topology_header (struct vty *vty)
+{
+	vty_out (vty, "%s%s%s",
+	           VTY_NEWLINE,
+	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
+	           "R - Reply, r - reply Status, s - sia Status",VTY_NEWLINE);
+}
+
+void
+show_ip_eigrp_topology_sub (struct vty *vty)
+{
+
 }
 

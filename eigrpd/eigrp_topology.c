@@ -96,6 +96,7 @@ eigrp_topology_node_new ()
 {
         struct eigrp_topology_node *new;
         new = XCALLOC (MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
+        new->destination = XCALLOC (MTYPE_PREFIX_IPV4, sizeof(struct prefix_ipv4));
         new->entries = list_new();
         new->entries->cmp = (int (*)(void *, void *)) eigrp_topology_entry_cmp;
 

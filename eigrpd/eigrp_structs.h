@@ -262,7 +262,9 @@ struct TLV_IPv4_Internal_type
   u_char flags;
 
   u_char prefix_length;
-  unsigned char destination[4];
+
+  unsigned char destination_part[4];
+  struct in_addr destination;
 }__attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
