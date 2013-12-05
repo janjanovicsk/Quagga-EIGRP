@@ -123,11 +123,12 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_interface_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-20s %5s %-11s %12s %10s %7s %7s%s",
+  vty_out (vty, "%s%-20s %-7s %-12s %-7s %-14s %-12s %-10s%s %-26s %-13s %-7s %-14s %-12s %-8s%s",
            VTY_NEWLINE,
-           "Interface", "Peers", "Xmit Queue Un/Reliable", "Mean SRTT",
-           "Pacing Time Un/Reliable", "Multicast Flow Timer", "Pending Routes",
-           VTY_NEWLINE);
+           "Interface", "Peers", "Xmit Queue", "Mean",
+           "Pacing Time", "Multicast", "Pending",
+           VTY_NEWLINE,"","Un/Reliable","SRTT","Un/Reliable","Flow Timer","Routes"
+           ,VTY_NEWLINE);
 }
 
 void
@@ -139,17 +140,19 @@ struct eigrp_interface *ei)
   struct route_node *rn;
 
   vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
-  vty_out (vty, "%5d", route_table_count(ei->nbrs));
-  vty_out (vty, "%d %c %d %12d %10d %7d %7d%s",0,'/',eigrp_neighbor_packet_queue_sum(ei),0,0,0,0,VTY_NEWLINE);
+  vty_out (vty, "%-7d", route_table_count(ei->nbrs));
+  vty_out (vty, "%d %c %-22d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
+  vty_out (vty, "%-11d %-25d %-22d %-16d%s",0,0,0,0,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_neighbor_header (struct vty *vty)
 {
-  vty_out (vty, "%s%s %15s %-20s %3s %8s %s %s %s %s%s",
+  vty_out (vty, "%s%-3s %17s %-20s %-12s %-8s %-11s %-5s %-7s %-9s%s",
            VTY_NEWLINE,
-           "H", "Address", "Interface", "Hold (sec)", "Uptime",
-           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE);
+           "H", "Address", "Interface", "Hold", "Uptime",
+           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE
+           ,"","(sec)","(ms)","Cnt,""Num", VTY_NEWLINE);
 }
 
 void
@@ -159,9 +162,11 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
   char msgbuf[16];
   char timebuf[EIGRP_TIME_DUMP_SIZE];
 
-  vty_out (vty, "%d %15s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
-  vty_out (vty,"%3d %8d %4d %3d %4d %3d%s",thread_timer_remain_second(nbr->t_holddown),0,0,EIGRP_PACKET_RETRANS_TIME,nbr->retrans_queue->count,nbr->recv_sequence_number,VTY_NEWLINE);
-
+  vty_out (vty, "%d %17s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
+  vty_out (vty,"%-12d",thread_timer_remain_second(nbr->t_holddown));
+  vty_out (vty,"%-8d %-11d %-5d",0,0,EIGRP_PACKET_RETRANS_TIME);
+  vty_out (vty,"%-7d",nbr->retrans_queue->count);
+  vty_out (vty,"%-9d%s",nbr->recv_sequence_number,VTY_NEWLINE);
 }
 
 void
