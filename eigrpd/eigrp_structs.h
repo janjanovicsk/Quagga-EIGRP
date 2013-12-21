@@ -274,6 +274,7 @@ struct eigrp_topology_node
   struct list *entries;
   struct prefix_ipv4 *destination; //destination address
   u_char state; //route state
+  u_char type; //connected or remote
 };
 
 /* EIGRP Topology table record structure */
@@ -296,5 +297,13 @@ struct eigrp_fsm_query_event
 
 };
 
+
+struct eigrp_fsm_cost_event
+{
+  struct eigrp_neighbor *adv_router;
+  int new_cost;
+  struct eigrp_interface *interface;
+
+};
 
 #endif /* _ZEBRA_EIGRP_STRUCTURES_H_ */
