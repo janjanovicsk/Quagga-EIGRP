@@ -210,12 +210,14 @@ holddown_timer_expired (struct thread *thread)
 int
 eigrp_neighborship_check(struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *param)
 {
-  if()
+  struct eigrp *eigrp = nbr->ei->eigrp;
+  if(eigrp->k_values[0]!=param->K1)
     {
       return -1;
 
     }
 
+  return 0;
 }
 
 

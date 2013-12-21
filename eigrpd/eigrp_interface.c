@@ -156,16 +156,16 @@ eigrp_if_new_hook (struct interface *ifp)
   IF_DEF_PARAMS (ifp)->v_wait = (u_int16_t) EIGRP_HOLD_INTERVAL_DEFAULT;
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), bandwidth);
-  IF_DEF_PARAMS (ifp)->v_wait = (u_int32_t) EIGRP_BANDWIDTH_DEFAULT;
+  IF_DEF_PARAMS (ifp)->bandwidth = (u_int32_t) EIGRP_BANDWIDTH_DEFAULT;
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), delay);
-  IF_DEF_PARAMS (ifp)->v_wait = (u_char) EIGRP_DELAY_DEFAULT;
+  IF_DEF_PARAMS (ifp)->delay = (u_int32_t) EIGRP_DELAY_DEFAULT;
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), reliability);
-  IF_DEF_PARAMS (ifp)->v_wait = (u_char) EIGRP_RELIABILITY_DEFAULT;
+  IF_DEF_PARAMS (ifp)->reliability = (u_char) EIGRP_RELIABILITY_DEFAULT;
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), load);
-  IF_DEF_PARAMS (ifp)->v_wait = (u_char) EIGRP_LOAD_DEFAULT_DEFAULT;
+  IF_DEF_PARAMS (ifp)->load = (u_char) EIGRP_LOAD_DEFAULT;
 
 
   return rc;

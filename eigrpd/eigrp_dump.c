@@ -40,6 +40,7 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_topology.h"
 
 static int
 eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
@@ -150,10 +151,8 @@ void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 struct eigrp_interface *ei)
 {
-
-
   vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
-  vty_out (vty, "%-7d", route_table_count(ei->nbrs));
+  vty_out (vty, "%-7lu", route_table_count(ei->nbrs));
   vty_out (vty, "%d %c %-10d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
   vty_out (vty, "%-8d %-15d %-13d %-8d%s",0,0,0,0,VTY_NEWLINE);
 }
@@ -174,9 +173,9 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 
 
   vty_out (vty, "%d %17s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
-  vty_out (vty,"%-12d",thread_timer_remain_second(nbr->t_holddown));
+  vty_out (vty,"%-12lu",thread_timer_remain_second(nbr->t_holddown));
   vty_out (vty,"%-8d %-11d %-5d",0,0,EIGRP_PACKET_RETRANS_TIME);
-  vty_out (vty,"%-7d",nbr->retrans_queue->count);
+  vty_out (vty,"%-7lu",nbr->retrans_queue->count);
   vty_out (vty,"%-9d%s",nbr->recv_sequence_number,VTY_NEWLINE);
 }
 
@@ -194,11 +193,11 @@ show_ip_eigrp_topology_sub (struct vty *vty, struct eigrp_topology_node *tn, str
 {
 
 
-  vty_out (vty, "%s%-2d ",VTY_NEWLINE,eigrp_topology_node (tn->state));
+  vty_out (vty, "%s%-2d ",VTY_NEWLINE,tn->state);
   vty_out (vty, "%15s, ",eigrp_topology_ip_string(tn));
   vty_out (vty, "%1d successors, ",0);
-  vty_out (vty, "FD is %10d",eigrp_topology_entry (te->distance));
-  vty_out (vty, "%-8s %9d","",eigrp_topology_node (tn->type));
+  vty_out (vty, "FD is %10lu",te->distance);
+  vty_out (vty, "%-8s %9d","",tn->type);
   vty_out (vty, "%20d %s",0,VTY_NEWLINE);
 }
 
