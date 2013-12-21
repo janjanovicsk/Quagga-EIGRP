@@ -202,6 +202,12 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert (nbr);
 
+  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+
+  /*Check for correct values to be able to become neighbors*/
+  if(!eigrp_neighborship_check(nbr,hello))
+    return;
+
   /*If received packet is hello with Parameter TLV*/
   if(eigrph->ack == 0)
     {

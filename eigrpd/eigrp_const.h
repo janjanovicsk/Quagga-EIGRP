@@ -51,7 +51,6 @@
 
 #define EIGRP_HEADER_VERSION            2
 
-
 /* Default protocol, port number. */
 #ifndef IPPROTO_EIGRPIGP
 #define IPPROTO_EIGRPIGP         88
@@ -68,6 +67,10 @@
 
 #define EIGRP_HELLO_INTERVAL_DEFAULT        5
 #define EIGRP_HOLD_INTERVAL_DEFAULT         15
+#define EIGRP_BANDWIDTH_DEFAULT             10000
+#define EIGRP_DELAY_DEFAULT                 1000
+#define EIGRP_RELIABILITY_DEFAULT           255
+#define EIGRP_LOAD_DEFAULT                  1
 
 #define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
 

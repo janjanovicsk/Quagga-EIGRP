@@ -106,15 +106,14 @@ struct eigrp_interface
 
 struct eigrp_if_params
 {
-  DECLARE_IF_PARAM (u_char, passive_interface)
-  ; /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
-  DECLARE_IF_PARAM (u_int32_t, v_hello)
-  ; /* Hello Interval */
-  DECLARE_IF_PARAM (u_int16_t, v_wait)
-  ; /* Router Hold Time Interval */
-  DECLARE_IF_PARAM (u_char, type)
-  ; /* type of interface */
-
+  DECLARE_IF_PARAM (u_char, passive_interface); /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
+  DECLARE_IF_PARAM (u_int32_t, v_hello); /* Hello Interval */
+  DECLARE_IF_PARAM (u_int16_t, v_wait); /* Router Hold Time Interval */
+  DECLARE_IF_PARAM (u_char, type); /* type of interface */
+  DECLARE_IF_PARAM (u_int32_t, bandwidth);
+  DECLARE_IF_PARAM (u_int32_t, delay);
+  DECLARE_IF_PARAM (u_char, reliability);
+  DECLARE_IF_PARAM (u_char, load);
 };
 
 enum
