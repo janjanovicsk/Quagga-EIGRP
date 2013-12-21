@@ -110,6 +110,8 @@ DEFUN (show_ip_eigrp_topology,
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
   struct listnode *node;
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -120,7 +122,8 @@ DEFUN (show_ip_eigrp_topology,
 
   show_ip_eigrp_topology_header (vty);
 
-  show_ip_eigrp_topology_sub (vty);
+  for (ALL_LIST_ELEMENTS_RO (tn->entries, node, ei))
+      show_ip_eigrp_topology_sub (vty, tn, te);
   return CMD_SUCCESS;
 }
 

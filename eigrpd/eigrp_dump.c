@@ -90,6 +90,21 @@ eigrp_if_name_string (struct eigrp_interface *ei)
 }
 
 const char *
+eigrp_topology_ip_string (struct eigrp_topology_node *tn)
+{
+  static char buf[EIGRP_IF_STRING_MAXLEN] = "";
+  u_int32_t ifaddr;
+
+  ifaddr = ntohl (tn->destination->prefix.s_addr);
+  snprintf (buf, EIGRP_IF_STRING_MAXLEN,
+            "%d.%d.%d.%d",
+            (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
+            (ifaddr >> 8) & 0xff, ifaddr & 0xff);
+  return buf;
+}
+
+
+const char *
 eigrp_if_ip_string (struct eigrp_interface *ei)
 {
   static char buf[EIGRP_IF_STRING_MAXLEN] = "";
@@ -135,32 +150,28 @@ void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 struct eigrp_interface *ei)
 {
-  int is_up;
-  struct eigrp_neighbor *nbr;
-  struct route_node *rn;
+
 
   vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
   vty_out (vty, "%-7d", route_table_count(ei->nbrs));
-  vty_out (vty, "%d %c %-22d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
-  vty_out (vty, "%-11d %-25d %-22d %-16d%s",0,0,0,0,VTY_NEWLINE);
+  vty_out (vty, "%d %c %-10d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
+  vty_out (vty, "%-8d %-15d %-13d %-8d%s",0,0,0,0,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_neighbor_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-3s %17s %-20s %-12s %-8s %-11s %-5s %-7s %-9s%s",
+  vty_out (vty, "%s%-3s %-17s %-20s %-6s %-8s %-6s %-5s %-5s %-5s%s %-41s %-6s %-8s %-6s %-4s %-6s %-5s %s",
            VTY_NEWLINE,
            "H", "Address", "Interface", "Hold", "Uptime",
-           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE
-           ,"","(sec)","(ms)","Cnt,""Num", VTY_NEWLINE);
+           "SRTT", "RTO", "Q", "Seq", VTY_NEWLINE
+           ,"","(sec)","","(ms)","","Cnt","Num", VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 {
-  struct route_node *rn;
-  char msgbuf[16];
-  char timebuf[EIGRP_TIME_DUMP_SIZE];
+
 
   vty_out (vty, "%d %17s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
   vty_out (vty,"%-12d",thread_timer_remain_second(nbr->t_holddown));
@@ -179,8 +190,15 @@ show_ip_eigrp_topology_header (struct vty *vty)
 }
 
 void
-show_ip_eigrp_topology_sub (struct vty *vty)
+show_ip_eigrp_topology_sub (struct vty *vty, struct eigrp_topology_node *tn, struct eigrp_topology_entry *te)
 {
 
+
+  vty_out (vty, "%s%-2d ",VTY_NEWLINE,eigrp_topology_node (tn->state));
+  vty_out (vty, "%15s, ",eigrp_topology_ip_string(tn));
+  vty_out (vty, "%1d successors, ",0);
+  vty_out (vty, "FD is %10d",eigrp_topology_entry (te->distance));
+  vty_out (vty, "%-8s %9d","",eigrp_topology_node (tn->type));
+  vty_out (vty, "%20d %s",0,VTY_NEWLINE);
 }
 
