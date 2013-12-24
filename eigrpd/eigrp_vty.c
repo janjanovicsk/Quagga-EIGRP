@@ -122,8 +122,9 @@ DEFUN (show_ip_eigrp_topology,
 
   show_ip_eigrp_topology_header (vty);
 
-  for (ALL_LIST_ELEMENTS_RO (tn->entries, node, ei))
-      show_ip_eigrp_topology_sub (vty, tn, te);
+  for (ALL_LIST_ELEMENTS_RO (eigrp->topology_table, node, tn))
+    return 0;
+//      show_ip_eigrp_topology_sub (vty, tn, te);
   return CMD_SUCCESS;
 }
 
@@ -182,7 +183,8 @@ DEFUN (show_ip_eigrp_neighbors,
       for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
         {
           nbr = rn->info;
-          show_ip_eigrp_neighbor_sub(vty,nbr);
+          if(nbr->state == EIGRP_NEIGHBOR_UP)
+            show_ip_eigrp_neighbor_sub(vty,nbr);
         }
     }
 

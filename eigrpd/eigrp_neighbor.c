@@ -202,7 +202,8 @@ holddown_timer_expired (struct thread *thread)
 
   zlog_info("Neighbor %s (%s) is down: holding time expired",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
   nbr->state = EIGRP_NEIGHBOR_DOWN;
-  thread_cancel(nbr->t_holddown);
+  if(nbr->t_holddown)
+    thread_cancel(nbr->t_holddown);
 
   return 0;
 }
@@ -217,7 +218,7 @@ eigrp_neighborship_check(struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *p
 
     }
 
-  return 0;
+  return 1;
 }
 
 
