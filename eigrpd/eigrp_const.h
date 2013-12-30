@@ -87,8 +87,10 @@
 #define EIGRP_IF_PASSIVE                 1
 
 /* EIGRP FSM and TT*/
-#define EIGRP_TOPOLOGY_NODE_ACTIVE           0
-#define EIGRP_TOPOLOGY_NODE_PASSIVE          1
+#define EIGRP_TOPOLOGY_NODE_ACTIVE           65 /*ASCII character 'A'*/
+#define EIGRP_TOPOLOGY_NODE_PASSIVE          80 /*ASCII character 'P'*/
+
+#define EIGRP_TOPOLOGY_TYPE_CONNECTED           0
 
 #define EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG     1
 #define EIGRP_TOPOLOGY_ENTRY_FSUCCESSOR_FLAG    2

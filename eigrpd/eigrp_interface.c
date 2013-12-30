@@ -40,6 +40,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
 
 static void eigrp_delete_from_if (struct interface *, struct eigrp_interface *);
 
@@ -64,6 +65,9 @@ struct eigrp_interface *
 eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 {
   struct eigrp_interface *ei;
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
+  char address[128];
 
   if ((ei = eigrp_if_table_lookup (ifp, p)) == NULL)
     {
@@ -84,6 +88,20 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 
   /* Initialize neighbor list. */
   ei->nbrs = route_table_init ();
+
+  /*Add interface network to topology table*/
+  tn = eigrp_topology_node_new();
+  prefix2str(p,address,sizeof(address));
+  str2prefix_ipv4(address,tn->destination);
+  apply_mask_ipv4(tn->destination);
+  tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+  tn->fdistance = 0;
+
+  te = eigrp_topology_entry_new();
+  te->type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
+  te->ei = ei;
+  eigrp_topology_entry_add(tn,te);
+  eigrp_topology_node_add(eigrp->topology_table,tn);
 
   return ei;
 }

@@ -148,15 +148,15 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
           if(type == TLV_INTERNAL_TYPE)
             {
               stream_set_getp(s,s->getp-sizeof(u_int16_t));
-              tlv = eigrp_read_ipv4_tlv(s);
 
+              tlv = eigrp_read_ipv4_tlv(s);
               /*Here comes topology information save*/
 
-              tnode = eigrp_topology_node_new();
-              tnode->destination->family = AF_INET;
-              tnode->destination->prefix = tlv->destination;
-              tnode->destination->prefixlen = tlv->prefix_length;
-              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
+//              tnode = eigrp_topology_node_new();
+//              tnode->destination->family = AF_INET;
+//              tnode->destination->prefix = tlv->destination;
+//              tnode->destination->prefixlen = tlv->prefix_length;
+//              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
 
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }

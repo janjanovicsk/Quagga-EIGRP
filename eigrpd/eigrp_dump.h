@@ -38,8 +38,8 @@ extern void show_ip_eigrp_topology_header (struct vty *);
 extern void show_ip_eigrp_interface_sub (struct vty *, struct eigrp *,
 					 struct eigrp_interface *);
 extern void show_ip_eigrp_neighbor_sub (struct vty *, struct eigrp_neighbor *);
-extern void show_ip_eigrp_topology_sub (struct vty *, struct eigrp_topology_node *,
-                            struct eigrp_topology_entry *);
+extern void show_ip_eigrp_topology_node (struct vty *, struct eigrp_topology_node *);
+extern void show_ip_eigrp_topology_entry (struct vty *, struct eigrp_topology_entry *);
 
 
 #endif /* _ZEBRA_EIGRPD_DUMP_H_ */

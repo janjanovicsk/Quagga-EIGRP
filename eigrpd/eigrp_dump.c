@@ -181,22 +181,26 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty)
 {
-	vty_out (vty, "%s%s%s",
+	vty_out (vty, "%s%s%s%s%s%s%s",
 	           VTY_NEWLINE,
 	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
-	           "R - Reply, r - reply Status, s - sia Status",VTY_NEWLINE);
+	           "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }
 
 void
-show_ip_eigrp_topology_sub (struct vty *vty, struct eigrp_topology_node *tn, struct eigrp_topology_entry *te)
+show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
 {
+    vty_out (vty, "%-3c",tn->state);
+    vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
+    vty_out (vty, "%d successors, ",1);
+    vty_out (vty, "FD is %d%s",234235, VTY_NEWLINE);
 
+}
 
-  vty_out (vty, "%s%-2d ",VTY_NEWLINE,tn->state);
-  vty_out (vty, "%15s, ",eigrp_topology_ip_string(tn));
-  vty_out (vty, "%1d successors, ",0);
-  vty_out (vty, "FD is %10lu",te->distance);
-  vty_out (vty, "%-8s %9d","",tn->type);
-  vty_out (vty, "%20d %s",0,VTY_NEWLINE);
+void
+show_ip_eigrp_topology_entry (struct vty *vty, struct eigrp_topology_entry *te)
+{
+  if (te->type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
+    vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
 }
 

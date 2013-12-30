@@ -273,8 +273,8 @@ struct eigrp_topology_node
 {
   struct list *entries;
   struct prefix_ipv4 *destination; //destination address
+  u_int32_t fdistance;
   u_char state; //route state
-  u_char type; //connected or remote
 };
 
 /* EIGRP Topology table record structure */
@@ -285,6 +285,9 @@ struct eigrp_topology_entry
   unsigned long distance; //sum of reported distance and link cost to advertised neighbor
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS
+
+  u_char type; //connected or remote
+  struct eigrp_interface *ei; /*pointer for case of connected entry*/
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
