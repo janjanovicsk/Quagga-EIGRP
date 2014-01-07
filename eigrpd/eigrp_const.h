@@ -118,10 +118,8 @@
 
 #define EIGRP_FSM_QUERY                         0
 #define EIGRP_FSM_REPLY                         1
-#define EIGRP_FSM_IF_COST                       2
-#define EIGRP_FSM_IF_UP                         3
-#define EIGRP_FSM_IF_DOWN                       4
-#define EIGRP_FSM_SIA_QUERY                     5
-#define EIGRP_FSM_SIA_REPLY                     6
+#define EIGRP_FSM_UPDATE                        2
+#define EIGRP_FSM_SIA_QUERY                     3
+#define EIGRP_FSM_SIA_REPLY                     4
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

@@ -267,6 +267,29 @@ struct TLV_IPv4_Internal_type
   struct in_addr destination;
 }__attribute__((packed));
 
+struct TLV_IPv4_External_type
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_int32_t next_hop;
+  u_int32_t originating_router;
+  u_int32_t originating_as;
+  u_int32_t administrative_tag;
+  u_int32_t external_metric;
+  u_int16_t reserved;
+  u_char external_protocol;
+  u_char external_flags;
+  u_int32_t scaled_delay;
+  u_int32_t scaled_badwidth;
+  unsigned char mtu[3];
+  u_char hop_count;
+  u_char reliability;
+  u_char load;
+  u_char route_tag;
+  u_char flags;
+  u_char prefix_length;
+};
+
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
 /* EIGRP Topology table node structure */
@@ -291,20 +314,12 @@ struct eigrp_topology_entry
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
 /* EIGRP Finite State Machine */
-struct eigrp_fsm_query_event
+
+struct eigrp_fsm_action_message
 {
+  u_char type;
   struct eigrp_neighbor *adv_router;
-  int adv_cost;
-
-};
-
-
-struct eigrp_fsm_cost_event
-{
-  struct eigrp_neighbor *adv_router;
-  int new_cost;
-  struct eigrp_interface *interface;
-
+  struct TLV_IPv4_External_type *data;
 };
 
 #endif /* _ZEBRA_EIGRP_STRUCTURES_H_ */
