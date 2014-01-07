@@ -30,6 +30,7 @@
 extern const char *eigrp_if_name_string (struct eigrp_interface *);
 extern const char *eigrp_if_ip_string (struct eigrp_interface *);
 extern const char *eigrp_neigh_ip_string (struct eigrp_neighbor *);
+extern const char *eigrp_topology_ip_string (struct eigrp_topology_node *);
 extern void eigrp_ip_header_dump (struct ip *);
 extern void show_ip_eigrp_interface_header (struct vty *);
 extern void show_ip_eigrp_neighbor_header (struct vty *);
@@ -37,7 +38,8 @@ extern void show_ip_eigrp_topology_header (struct vty *);
 extern void show_ip_eigrp_interface_sub (struct vty *, struct eigrp *,
 					 struct eigrp_interface *);
 extern void show_ip_eigrp_neighbor_sub (struct vty *, struct eigrp_neighbor *);
-extern void show_ip_eigrp_topology_sub (struct vty *);
+extern void show_ip_eigrp_topology_node (struct vty *, struct eigrp_topology_node *);
+extern void show_ip_eigrp_topology_entry (struct vty *, struct eigrp_topology_entry *);
 
 
 #endif /* _ZEBRA_EIGRPD_DUMP_H_ */

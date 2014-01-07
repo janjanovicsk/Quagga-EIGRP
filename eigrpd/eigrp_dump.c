@@ -40,6 +40,7 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_topology.h"
 
 static int
 eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
@@ -90,6 +91,21 @@ eigrp_if_name_string (struct eigrp_interface *ei)
 }
 
 const char *
+eigrp_topology_ip_string (struct eigrp_topology_node *tn)
+{
+  static char buf[EIGRP_IF_STRING_MAXLEN] = "";
+  u_int32_t ifaddr;
+
+  ifaddr = ntohl (tn->destination->prefix.s_addr);
+  snprintf (buf, EIGRP_IF_STRING_MAXLEN,
+            "%d.%d.%d.%d",
+            (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
+            (ifaddr >> 8) & 0xff, ifaddr & 0xff);
+  return buf;
+}
+
+
+const char *
 eigrp_if_ip_string (struct eigrp_interface *ei)
 {
   static char buf[EIGRP_IF_STRING_MAXLEN] = "";
@@ -123,59 +139,68 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_interface_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-20s %5s %-11s %12s %10s %7s %7s%s",
+  vty_out (vty, "%s%-20s %-7s %-12s %-7s %-14s %-12s %-10s%s %-26s %-13s %-7s %-14s %-12s %-8s%s",
            VTY_NEWLINE,
-           "Interface", "Peers", "Xmit Queue Un/Reliable", "Mean SRTT",
-           "Pacing Time Un/Reliable", "Multicast Flow Timer", "Pending Routes",
-           VTY_NEWLINE);
+           "Interface", "Peers", "Xmit Queue", "Mean",
+           "Pacing Time", "Multicast", "Pending",
+           VTY_NEWLINE,"","Un/Reliable","SRTT","Un/Reliable","Flow Timer","Routes"
+           ,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 struct eigrp_interface *ei)
 {
-  int is_up;
-  struct eigrp_neighbor *nbr;
-  struct route_node *rn;
-
   vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
-  vty_out (vty, "%5d", route_table_count(ei->nbrs));
-  vty_out (vty, "%d %c %d %12d %10d %7d %7d%s",0,'/',eigrp_neighbor_packet_queue_sum(ei),0,0,0,0,VTY_NEWLINE);
+  vty_out (vty, "%-7lu", route_table_count(ei->nbrs));
+  vty_out (vty, "%d %c %-10d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
+  vty_out (vty, "%-7d %-14d %-12d %d%s",0,0,0,0,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_neighbor_header (struct vty *vty)
 {
-  vty_out (vty, "%s%s %15s %-20s %3s %8s %s %s %s %s%s",
+  vty_out (vty, "%s%-3s %-17s %-20s %-6s %-8s %-6s %-5s %-5s %-5s%s %-41s %-6s %-8s %-6s %-4s %-6s %-5s %s",
            VTY_NEWLINE,
-           "H", "Address", "Interface", "Hold (sec)", "Uptime",
-           "SRTT (ms)", "RTO", "Q Cnt", "Seq Num", VTY_NEWLINE);
+           "H", "Address", "Interface", "Hold", "Uptime",
+           "SRTT", "RTO", "Q", "Seq", VTY_NEWLINE
+           ,"","(sec)","","(ms)","","Cnt","Num", VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 {
-  struct route_node *rn;
-  char msgbuf[16];
-  char timebuf[EIGRP_TIME_DUMP_SIZE];
 
-  vty_out (vty, "%d %15s %-20s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
-  vty_out (vty,"%3d %8d %4d %3d %4d %3d%s",thread_timer_remain_second(nbr->t_holddown),0,0,EIGRP_PACKET_RETRANS_TIME,nbr->retrans_queue->count,nbr->recv_sequence_number,VTY_NEWLINE);
-
+  vty_out (vty, "%-3d %-17s %-21s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
+  vty_out (vty,"%-7lu",thread_timer_remain_second(nbr->t_holddown));
+  vty_out (vty,"%-8d %-6d %-5d",0,0,EIGRP_PACKET_RETRANS_TIME);
+  vty_out (vty,"%-7lu",nbr->retrans_queue->count);
+  vty_out (vty,"%d%s",nbr->recv_sequence_number,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_topology_header (struct vty *vty)
 {
-	vty_out (vty, "%s%s%s",
+	vty_out (vty, "%s%s%s%s%s%s%s",
 	           VTY_NEWLINE,
 	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
-	           "R - Reply, r - reply Status, s - sia Status",VTY_NEWLINE);
+	           "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }
 
 void
-show_ip_eigrp_topology_sub (struct vty *vty)
+show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
 {
+    vty_out (vty, "%-3c",tn->state);
+    vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
+    vty_out (vty, "%d successors, ",1);
+    vty_out (vty, "FD is %d%s",234235, VTY_NEWLINE);
 
+}
+
+void
+show_ip_eigrp_topology_entry (struct vty *vty, struct eigrp_topology_entry *te)
+{
+  if (te->type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
+    vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
 }
 

@@ -148,15 +148,15 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
           if(type == TLV_INTERNAL_TYPE)
             {
               stream_set_getp(s,s->getp-sizeof(u_int16_t));
-              tlv = eigrp_read_ipv4_tlv(s);
 
+              tlv = eigrp_read_ipv4_tlv(s);
               /*Here comes topology information save*/
 
-              tnode = eigrp_topology_node_new();
-              tnode->destination->family = AF_INET;
-              tnode->destination->prefix = tlv->destination;
-              tnode->destination->prefixlen = tlv->prefix_length;
-              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
+//              tnode = eigrp_topology_node_new();
+//              tnode->destination->family = AF_INET;
+//              tnode->destination->prefix = tlv->destination;
+//              tnode->destination->prefixlen = tlv->prefix_length;
+//              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
 
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -186,13 +186,6 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
-//      if (IS_DEBUG_OSPF_PACKET (ospfh->type - 1, RECV))
-//        {
-//          zlog_debug ("ospf_header[%s/%s]: selforiginated, "
-//                     "dropping.",
-//                     LOOKUP (ospf_packet_type_str, ospfh->type),
-//                     inet_ntoa (iph->ip_src));
-//        }
       return;
     }
 
@@ -201,6 +194,8 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert (nbr);
+
+  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
 
   /*If received packet is hello with Parameter TLV*/
   if(eigrph->ack == 0)
@@ -215,24 +210,30 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
           case EIGRP_NEIGHBOR_DOWN:
             {
               nbr->v_holddown = ntohs(hello->hold_time);
-              /*Start Hold Down Timer for neighbor*/
-              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
-              nbr->state = EIGRP_NEIGHBOR_PENDING;
-              zlog_info("Neighbor %s (%s) is up: new adjacency",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
+              /*Check for correct values to be able to become neighbors*/
+               if(eigrp_neighborship_check(nbr,hello))
+                 {
+                  /*Start Hold Down Timer for neighbor*/
+                  THREAD_TIMER_ON(master,nbr->t_holddown,holddown_timer_expired,nbr,nbr->v_holddown);
+                  nbr->state = EIGRP_NEIGHBOR_PENDING;
+                  zlog_info("Neighbor %s (%s) is up: new adjacency",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
+                 }
+               else
+                 return;
               break;
             }
           case EIGRP_NEIGHBOR_PENDING:
             {
               /*Reset Hold Down Timer for neighbor*/
-              thread_cancel(nbr->t_holddown);
-              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+              THREAD_OFF(nbr->t_holddown);
+              THREAD_TIMER_ON(master,nbr->t_holddown,holddown_timer_expired,nbr,nbr->v_holddown);
               break;
             }
           case EIGRP_NEIGHBOR_UP:
             {
               /*Reset Hold Down Timer for neighbor*/
-              thread_cancel(nbr->t_holddown);
-              nbr->t_holddown = thread_add_timer(master,holddown_timer_expired,nbr,nbr->v_holddown);
+              THREAD_OFF(nbr->t_holddown);
+              THREAD_TIMER_ON(master,nbr->t_holddown,holddown_timer_expired,nbr,nbr->v_holddown);
               break;
             }
         }
@@ -898,7 +899,7 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
       eigrp_packet_add_top (nbr->ei, duplicate);
 
       /*Start retransmission timer*/
-      ep->t_retrans_timer = thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
+      THREAD_TIMER_ON(master,ep->t_retrans_timer, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
 
       /*This ack number we await from neighbor*/
       nbr->ack = nbr->ei->eigrp->sequence_number;

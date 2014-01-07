@@ -40,6 +40,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
 
 static void eigrp_delete_from_if (struct interface *, struct eigrp_interface *);
 
@@ -64,6 +65,9 @@ struct eigrp_interface *
 eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 {
   struct eigrp_interface *ei;
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
+  char address[128];
 
   if ((ei = eigrp_if_table_lookup (ifp, p)) == NULL)
     {
@@ -84,6 +88,20 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 
   /* Initialize neighbor list. */
   ei->nbrs = route_table_init ();
+
+  /*Add interface network to topology table*/
+  tn = eigrp_topology_node_new();
+  prefix2str(p,address,sizeof(address));
+  str2prefix_ipv4(address,tn->destination);
+  apply_mask_ipv4(tn->destination);
+  tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+  tn->fdistance = 0;
+
+  te = eigrp_topology_entry_new();
+  te->type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
+  te->ei = ei;
+  eigrp_topology_entry_add(tn,te);
+  eigrp_topology_node_add(eigrp->topology_table,tn);
 
   return ei;
 }
@@ -155,6 +173,19 @@ eigrp_if_new_hook (struct interface *ifp)
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), v_wait);
   IF_DEF_PARAMS (ifp)->v_wait = (u_int16_t) EIGRP_HOLD_INTERVAL_DEFAULT;
 
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), bandwidth);
+  IF_DEF_PARAMS (ifp)->bandwidth = (u_int32_t) EIGRP_BANDWIDTH_DEFAULT;
+
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), delay);
+  IF_DEF_PARAMS (ifp)->delay = (u_int32_t) EIGRP_DELAY_DEFAULT;
+
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), reliability);
+  IF_DEF_PARAMS (ifp)->reliability = (u_char) EIGRP_RELIABILITY_DEFAULT;
+
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), load);
+  IF_DEF_PARAMS (ifp)->load = (u_char) EIGRP_LOAD_DEFAULT;
+
+
   return rc;
 }
 
@@ -170,7 +201,10 @@ eigrp_new_if_params (void)
   UNSET_IF_PARAM (eip, passive_interface);
   UNSET_IF_PARAM (eip, v_hello);
   UNSET_IF_PARAM (eip, v_wait);
-
+  UNSET_IF_PARAM (eip, bandwidth);
+  UNSET_IF_PARAM (eip, delay);
+  UNSET_IF_PARAM (eip, reliability);
+  UNSET_IF_PARAM (eip, load);
   return eip;
 }
 
@@ -207,17 +241,20 @@ eigrp_if_up (struct eigrp_interface *ei)
   if (ei == NULL)
     return 0;
 
-      struct eigrp *eigrp= eigrp_lookup ();
-      if (eigrp != NULL)
-        eigrp_adjust_sndbuflen (eigrp, ei->ifp->mtu);
-      else
-        zlog_warn ("%s: eigrp_lookup() returned NULL", __func__);
-      eigrp_if_stream_set (ei);
+  struct eigrp *eigrp= eigrp_lookup ();
+  if (eigrp != NULL)
+    eigrp_adjust_sndbuflen (eigrp, ei->ifp->mtu);
+  else
+    zlog_warn ("%s: eigrp_lookup() returned NULL", __func__);
+  eigrp_if_stream_set (ei);
 
-      /* Set multicast memberships appropriately for new state. */
-        eigrp_if_set_multicast(ei);
+  /* Set multicast memberships appropriately for new state. */
+    eigrp_if_set_multicast(ei);
 
-      thread_add_event (master, eigrp_hello_timer, ei, (1));
+  thread_add_event (master, eigrp_hello_timer, ei, (1));
+
+  /*Add connected entry to topology table*/
+
 
   return 1;
 }

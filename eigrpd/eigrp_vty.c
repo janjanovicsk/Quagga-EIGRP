@@ -108,8 +108,9 @@ DEFUN (show_ip_eigrp_topology,
        "IP-EIGRP topology\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
-  struct listnode *node;
+  struct listnode *node, *nnode;
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -120,7 +121,14 @@ DEFUN (show_ip_eigrp_topology,
 
   show_ip_eigrp_topology_header (vty);
 
-  show_ip_eigrp_topology_sub (vty);
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
+    {
+      show_ip_eigrp_topology_node(vty,tn);
+      for (ALL_LIST_ELEMENTS (tn->entries, node, nnode, te))
+        {
+          show_ip_eigrp_topology_entry(vty,te);
+        }
+    }
   return CMD_SUCCESS;
 }
 
@@ -179,7 +187,8 @@ DEFUN (show_ip_eigrp_neighbors,
       for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
         {
           nbr = rn->info;
-          show_ip_eigrp_neighbor_sub(vty,nbr);
+          if(nbr->state == EIGRP_NEIGHBOR_UP)
+            show_ip_eigrp_neighbor_sub(vty,nbr);
         }
     }
 

@@ -106,15 +106,14 @@ struct eigrp_interface
 
 struct eigrp_if_params
 {
-  DECLARE_IF_PARAM (u_char, passive_interface)
-  ; /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
-  DECLARE_IF_PARAM (u_int32_t, v_hello)
-  ; /* Hello Interval */
-  DECLARE_IF_PARAM (u_int16_t, v_wait)
-  ; /* Router Hold Time Interval */
-  DECLARE_IF_PARAM (u_char, type)
-  ; /* type of interface */
-
+  DECLARE_IF_PARAM (u_char, passive_interface); /* EIGRP Interface is passive: no sending or receiving (no need to join multicast groups) */
+  DECLARE_IF_PARAM (u_int32_t, v_hello); /* Hello Interval */
+  DECLARE_IF_PARAM (u_int16_t, v_wait); /* Router Hold Time Interval */
+  DECLARE_IF_PARAM (u_char, type); /* type of interface */
+  DECLARE_IF_PARAM (u_int32_t, bandwidth);
+  DECLARE_IF_PARAM (u_int32_t, delay);
+  DECLARE_IF_PARAM (u_char, reliability);
+  DECLARE_IF_PARAM (u_char, load);
 };
 
 enum
@@ -297,8 +296,8 @@ struct eigrp_topology_node
 {
   struct list *entries;
   struct prefix_ipv4 *destination; //destination address
+  u_int32_t fdistance;
   u_char state; //route state
-  u_char type; //connected or remote
 };
 
 /* EIGRP Topology table record structure */
@@ -309,6 +308,9 @@ struct eigrp_topology_entry
   unsigned long distance; //sum of reported distance and link cost to advertised neighbor
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS
+
+  u_char type; //connected or remote
+  struct eigrp_interface *ei; /*pointer for case of connected entry*/
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------

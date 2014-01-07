@@ -161,7 +161,7 @@ eigrp_topology_cleanup (struct list *topology)
 void
 eigrp_topology_node_add (struct list *topology , struct eigrp_topology_node *node)
 {
-        if(listnode_lookup(topology, node) != NULL)
+        if(listnode_lookup(topology, node) == NULL)
                 listnode_add_sort(topology, node);
 }
 
@@ -172,7 +172,7 @@ eigrp_topology_node_add (struct list *topology , struct eigrp_topology_node *nod
 void
 eigrp_topology_entry_add (struct eigrp_topology_node *node, struct eigrp_topology_entry *entry)
 {
-        if(listnode_lookup(node->entries, entry) != NULL)
+        if(listnode_lookup(node->entries, entry) == NULL)
                 listnode_add_sort(node->entries, entry);
 }
 
@@ -237,7 +237,6 @@ eigrp_topology_table_lookup (struct list *topology_table, struct prefix_ipv4 * a
           data->destination->prefixlen == address->prefixlen)
         return data;
     }
-
   return NULL;
 }
 
