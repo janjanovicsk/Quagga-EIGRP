@@ -33,14 +33,18 @@ eigrp_get_fsm_event(struct eigrp_topology_node *node, struct eigrp_fsm_action_me
           {
               case EIGRP_FSM_QUERY:
                 {
-                  if(msg->adv_router != eigrp_topology_get_successor(node))
-                    {
-                      return EIGRP_FSM_EVENT_1;
-                    }
+//                  if(msg->adv_router != eigrp_topology_get_successor(node))
+//                    {
+//                      return EIGRP_FSM_EVENT_1;
+//                    }
                   break;
                 }
               case EIGRP_FSM_UPDATE:
+                {
+                break;
+                }
           }
+          break;
         }
     }
 
