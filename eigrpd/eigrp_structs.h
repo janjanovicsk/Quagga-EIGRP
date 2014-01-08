@@ -142,6 +142,9 @@ struct eigrp_neighbor
   u_int32_t recv_sequence_number; /* Last received sequence Number. */
   u_int32_t ack; /* Acknowledgement number*/
 
+  u_char update_init_completed;
+  u_int32_t init_sequence_number;
+
   /*If packet is unacknowledged, we try to send it again 16 times*/
   u_char retrans_counter;
 
@@ -244,13 +247,8 @@ struct TLV_Software_Type
   u_char eigrp_minor;
 }__attribute__((packed));
 
-struct TLV_IPv4_Internal_type
+struct eigrp_metrics
 {
-  u_int16_t type;
-  u_int16_t length;
-  struct in_addr forward;
-
-  /*Metrics*/
   u_int32_t delay;
   u_int32_t bandwith;
   unsigned char mtu[3];
@@ -259,6 +257,16 @@ struct TLV_IPv4_Internal_type
   u_char load;
   u_char tag;
   u_char flags;
+};
+
+struct TLV_IPv4_Internal_type
+{
+  u_int16_t type;
+  u_int16_t length;
+  struct in_addr forward;
+
+  /*Metrics*/
+  struct eigrp_metrics metric;
 
   u_char prefix_length;
 
@@ -270,24 +278,22 @@ struct TLV_IPv4_External_type
 {
   u_int16_t type;
   u_int16_t length;
-  u_int32_t next_hop;
-  u_int32_t originating_router;
+  struct in_addr next_hop;
+  struct in_addr originating_router;
   u_int32_t originating_as;
   u_int32_t administrative_tag;
   u_int32_t external_metric;
   u_int16_t reserved;
   u_char external_protocol;
   u_char external_flags;
-  u_int32_t scaled_delay;
-  u_int32_t scaled_badwidth;
-  unsigned char mtu[3];
-  u_char hop_count;
-  u_char reliability;
-  u_char load;
-  u_char route_tag;
-  u_char flags;
+
+  /*Metrics*/
+  struct eigrp_metrics metric;
+
   u_char prefix_length;
-};
+  unsigned char destination_part[4];
+  struct in_addr destination;
+}__attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -304,8 +310,12 @@ struct eigrp_topology_node
 struct eigrp_topology_entry
 {
   struct prefix *data;
-  unsigned long reported_distance; //distance reported by neighbor
-  unsigned long distance; //sum of reported distance and link cost to advertised neighbor
+
+  u_int32_t reported_distance; //distance reported by neighbor
+  u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
+
+  struct eigrp_metrics received_metric;
+
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS
 

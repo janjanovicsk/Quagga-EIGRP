@@ -387,3 +387,31 @@ eigrp_network_unset (struct eigrp *eigrp, struct prefix_ipv4 *p)
   return 1;
 }
 
+u_int32_t
+eigrp_calculate_metrics (struct eigrp_metrics *metric)
+{
+  struct eigrp *eigrp;
+  int final_metric;
+  final_metric=0;
+
+  eigrp = eigrp_lookup ();
+
+  // EIGRP Metric = 256*((K1*Bw) + (K2*Bw)/(256-Load) + K3*Delay)*(K5/(Reliability + K4)))
+
+  if(eigrp->k_values[0])
+    final_metric+=(eigrp->k_values[0]*(10000000/metric->bandwith));
+  if(eigrp->k_values[1])
+    final_metric+=((eigrp->k_values[1]*(10000000/metric->bandwith))/(256-metric->load));
+  if(eigrp->k_values[2])
+    final_metric+=(eigrp->k_values[2]*metric->delay);
+  if(eigrp->k_values[3]&& !eigrp->k_values[4])
+    final_metric*=eigrp->k_values[3];
+  if(!eigrp->k_values[3]&& eigrp->k_values[4])
+    final_metric*=(eigrp->k_values[4]/metric->reliability);
+  if(eigrp->k_values[3]&& eigrp->k_values[4])
+    final_metric*=((eigrp->k_values[4]/metric->reliability)+eigrp->k_values[3]);
+
+
+  return final_metric*256;
+}
+

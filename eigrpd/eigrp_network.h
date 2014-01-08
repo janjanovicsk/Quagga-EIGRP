@@ -38,4 +38,6 @@ extern int eigrp_if_drop_allspfrouters (struct eigrp *top, struct prefix *p,
                                         unsigned int ifindex);
 extern void eigrp_adjust_sndbuflen (struct eigrp *, unsigned int);
 
+extern u_int32_t eigrp_calculate_metrics (struct eigrp_metrics *);
+
 #endif /* EIGRP_NETWORK_H_ */

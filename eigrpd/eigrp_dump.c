@@ -193,7 +193,7 @@ show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
     vty_out (vty, "%-3c",tn->state);
     vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
     vty_out (vty, "%d successors, ",1);
-    vty_out (vty, "FD is %d%s",234235, VTY_NEWLINE);
+    vty_out (vty, "FD is %d%s",tn->fdistance, VTY_NEWLINE);
 
 }
 

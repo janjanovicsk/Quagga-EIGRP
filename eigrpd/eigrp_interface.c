@@ -65,9 +65,6 @@ struct eigrp_interface *
 eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 {
   struct eigrp_interface *ei;
-  struct eigrp_topology_node *tn;
-  struct eigrp_topology_entry *te;
-  char address[128];
 
   if ((ei = eigrp_if_table_lookup (ifp, p)) == NULL)
     {
@@ -88,20 +85,6 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 
   /* Initialize neighbor list. */
   ei->nbrs = route_table_init ();
-
-  /*Add interface network to topology table*/
-  tn = eigrp_topology_node_new();
-  prefix2str(p,address,sizeof(address));
-  str2prefix_ipv4(address,tn->destination);
-  apply_mask_ipv4(tn->destination);
-  tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
-  tn->fdistance = 0;
-
-  te = eigrp_topology_entry_new();
-  te->type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
-  te->ei = ei;
-  eigrp_topology_entry_add(tn,te);
-  eigrp_topology_node_add(eigrp->topology_table,tn);
 
   return ei;
 }
@@ -238,6 +221,11 @@ eigrp_lookup_if_params (struct interface *ifp, struct in_addr addr)
 int
 eigrp_if_up (struct eigrp_interface *ei)
 {
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
+  char address[128];
+  struct eigrp_metrics metric;
+
   if (ei == NULL)
     return 0;
 
@@ -253,8 +241,29 @@ eigrp_if_up (struct eigrp_interface *ei)
 
   thread_add_event (master, eigrp_hello_timer, ei, (1));
 
-  /*Add connected entry to topology table*/
+  /*Prepare metrics*/
+  metric.bandwith = EIGRP_IF_PARAM(ei,bandwidth);
+  metric.delay = EIGRP_IF_PARAM(ei,delay)/10;
+  metric.load =  EIGRP_IF_PARAM(ei,load);
+  metric.reliability =  EIGRP_IF_PARAM(ei,reliability);
 
+  /*Add connected entry to topology table*/
+  tn = eigrp_topology_node_new();
+
+  tn->destination->family = AF_INET;
+  tn->destination->prefix = ei->connected->address->u.prefix4;
+  tn->destination->prefixlen = ei->connected->address->prefixlen;
+  apply_mask_ipv4(tn->destination);
+
+  tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+  tn->fdistance = eigrp_calculate_metrics(&metric);
+
+  te = eigrp_topology_entry_new();
+  te->type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
+  te->ei = ei;
+  te->received_metric = metric;
+  eigrp_topology_entry_add(tn,te);
+  eigrp_topology_node_add(eigrp->topology_table,tn);
 
   return 1;
 }
@@ -265,7 +274,7 @@ eigrp_if_down (struct eigrp_interface *ei)
   if (ei == NULL)
     return 0;
 
-  thread_cancel(ei->t_hello);
+  THREAD_OFF(ei->t_hello);
   /* Shutdown packet reception and sending */
   eigrp_if_stream_unset (ei);
 
