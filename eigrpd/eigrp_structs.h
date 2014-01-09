@@ -315,6 +315,7 @@ struct eigrp_topology_entry
   u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
 
   struct eigrp_metrics received_metric;
+  struct eigrp_metrics actual_metric;
 
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS

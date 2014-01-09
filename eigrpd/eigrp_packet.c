@@ -95,11 +95,13 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
   struct TLV_IPv4_Internal_type *tlv;
   struct eigrp_topology_node *tnode;
   struct eigrp_topology_entry *tentry;
+  struct eigrp *eigrp;
   u_int16_t type;
 
   /* increment statistics. */
   ei->update_in++;
 
+  eigrp = eigrp_lookup();
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
@@ -174,7 +176,19 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
               tnode->destination->family = AF_INET;
               tnode->destination->prefix = tlv->destination;
               tnode->destination->prefixlen = tlv->prefix_length;
-              eigrp_topology_node_add(nbr->ei->eigrp->topology_table, tnode);
+              tnode->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+
+              tentry = eigrp_topology_entry_new();
+              tentry->adv_router = nbr;
+              tentry->type = EIGRP_TOPOLOGY_TYPE_REMOTE;
+              tentry->received_metric = tlv->metric;
+              tentry->actual_metric = tentry->received_metric;
+              tentry->reported_distance = eigrp_calculate_metrics(&tlv->metric);
+              tentry->distance = tentry->reported_distance;
+              tentry->ei = ei;
+
+              eigrp_topology_node_add(eigrp->topology_table, tnode);
+              eigrp_topology_entry_add(tnode,tentry);
 
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -183,6 +197,7 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
         {
           if(nbr->update_init_completed)
             {
+              nbr->update_init_completed=0;
               eigrp_send_update(nbr);
               return;
             }
@@ -191,7 +206,12 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
           zlog_info("Neighbor adjacency became full");
           return;
         }
+    }/*regular update*/
+  else
+    {
+
     }
+
   eigrp_ack_send(nbr);
 }
 

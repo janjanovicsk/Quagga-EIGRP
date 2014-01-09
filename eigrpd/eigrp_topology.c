@@ -162,7 +162,10 @@ void
 eigrp_topology_node_add (struct list *topology , struct eigrp_topology_node *node)
 {
         if(listnode_lookup(topology, node) == NULL)
-                listnode_add_sort(topology, node);
+          {
+            listnode_add(topology, node);
+          }
+
 }
 
 /*
@@ -173,7 +176,7 @@ void
 eigrp_topology_entry_add (struct eigrp_topology_node *node, struct eigrp_topology_entry *entry)
 {
         if(listnode_lookup(node->entries, entry) == NULL)
-                listnode_add_sort(node->entries, entry);
+                listnode_add(node->entries, entry);
 }
 
 /*

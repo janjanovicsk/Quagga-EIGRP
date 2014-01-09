@@ -202,5 +202,9 @@ show_ip_eigrp_topology_entry (struct vty *vty, struct eigrp_topology_entry *te)
 {
   if (te->type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
     vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
+  if (te->type == EIGRP_TOPOLOGY_TYPE_REMOTE)
+    {
+      vty_out (vty, "%-7s%s%s (%d/%d), %s%s"," ","via ",inet_ntoa(te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string(te->ei), VTY_NEWLINE);
+    }
 }
 

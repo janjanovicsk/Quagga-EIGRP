@@ -108,7 +108,7 @@ DEFUN (show_ip_eigrp_topology,
        "IP-EIGRP topology\n")
 {
   struct eigrp *eigrp;
-  struct listnode *node, *nnode;
+  struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_topology_node *tn;
   struct eigrp_topology_entry *te;
 
@@ -124,7 +124,7 @@ DEFUN (show_ip_eigrp_topology,
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
     {
       show_ip_eigrp_topology_node(vty,tn);
-      for (ALL_LIST_ELEMENTS (tn->entries, node, nnode, te))
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
           show_ip_eigrp_topology_entry(vty,te);
         }
