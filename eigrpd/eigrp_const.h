@@ -74,6 +74,8 @@
 
 #define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
 
+#define EIGRP_MAX_METRIC                   0xffffffff    /*8589934591*/
+
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
  #define EIGRP_IFTYPE_POINTOPOINT         1
@@ -86,25 +88,30 @@
 #define EIGRP_IF_ACTIVE                  0
 #define EIGRP_IF_PASSIVE                 1
 
-/* EIGRP FSM and TT*/
+/* EIGRP TT node state */
 #define EIGRP_TOPOLOGY_NODE_ACTIVE           65 /*ASCII character 'A'*/
 #define EIGRP_TOPOLOGY_NODE_PASSIVE          80 /*ASCII character 'P'*/
 
+/* EIGRP TT destination type */
 #define EIGRP_TOPOLOGY_TYPE_CONNECTED           0
 #define EIGRP_TOPOLOGY_TYPE_REMOTE              1
 
+/*EIGRP TT entry flags*/
 #define EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG     1
 #define EIGRP_TOPOLOGY_ENTRY_FSUCCESSOR_FLAG    2
 
+/*EIGRP FSM state count, event count*/
 #define EIGRP_FSM_STATE_MAX                  5
 #define EIGRP_FSM_EVENT_MAX                  16
 
+/*EGRP FSM states*/
 #define EIGRP_FSM_STATE_PASSIVE              0
 #define EIGRP_FSM_STATE_ACTIVE_0             1
 #define EIGRP_FSM_STATE_ACTIVE_1             2
 #define EIGRP_FSM_STATE_ACTIVE_2             3
 #define EIGRP_FSM_STATE_ACTIVE_3             4
 
+/*EIGRP FSM events*/
 #define EIGRP_FSM_EVENT_1                       0
 #define EIGRP_FSM_EVENT_2                       1
 #define EIGRP_FSM_EVENT_3                       2
@@ -121,11 +128,5 @@
 #define EIGRP_FSM_EVENT_14                      13
 #define EIGRP_FSM_EVENT_15                      14
 #define EIGRP_FSM_EVENT_16                      15
-
-#define EIGRP_FSM_QUERY                         0
-#define EIGRP_FSM_REPLY                         1
-#define EIGRP_FSM_UPDATE                        2
-#define EIGRP_FSM_SIA_QUERY                     3
-#define EIGRP_FSM_SIA_REPLY                     4
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

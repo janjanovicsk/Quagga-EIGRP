@@ -304,13 +304,14 @@ struct eigrp_topology_node
   struct prefix_ipv4 *destination; //destination address
   u_int32_t fdistance;
   u_char state; //route state
+  u_char dest_type;
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_topology_entry
 {
   struct prefix *data;
-
+  struct eigrp_topology_node *parent;
   u_int32_t reported_distance; //distance reported by neighbor
   u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
 
@@ -320,7 +321,6 @@ struct eigrp_topology_entry
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS
 
-  u_char type; //connected or remote
   struct eigrp_interface *ei; /*pointer for case of connected entry*/
 };
 
@@ -330,9 +330,14 @@ struct eigrp_topology_entry
 
 struct eigrp_fsm_action_message
 {
-  u_char type;
-  struct eigrp_neighbor *adv_router;
-  struct TLV_IPv4_External_type *data;
+  u_char packet_type; //UPDATE, QUERY, SIAQUERY, SIAREPLY
+  struct eigrp_neighbor *adv_router; //advertising neighbor
+  struct eigrp_topology_node *dest;
+  int data_type; // internal or external tlv type
+  union{
+    struct TLV_IPv4_External_type *ipv4_ext_data;
+    struct TLV_IPv4_Internal_type *ipv4_int_type;
+  }data;
 };
 
 #endif /* _ZEBRA_EIGRP_STRUCTURES_H_ */
