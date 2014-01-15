@@ -243,7 +243,7 @@ eigrp_if_up (struct eigrp_interface *ei)
 
   /*Prepare metrics*/
   metric.bandwith = EIGRP_IF_PARAM(ei,bandwidth);
-  metric.delay = EIGRP_IF_PARAM(ei,delay)/10;
+  metric.delay = EIGRP_IF_PARAM(ei,delay)*100*256;
   metric.load =  EIGRP_IF_PARAM(ei,load);
   metric.reliability =  EIGRP_IF_PARAM(ei,reliability);
 
