@@ -253,13 +253,13 @@ eigrp_if_up (struct eigrp_interface *ei)
   tn->destination->family = AF_INET;
   tn->destination->prefix = ei->connected->address->u.prefix4;
   tn->destination->prefixlen = ei->connected->address->prefixlen;
+  tn->dest_type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
   apply_mask_ipv4(tn->destination);
 
   tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
   tn->fdistance = eigrp_calculate_metrics(&metric);
 
   te = eigrp_topology_entry_new();
-  te->type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
   te->ei = ei;
   te->received_metric = metric;
   eigrp_topology_entry_add(tn,te);

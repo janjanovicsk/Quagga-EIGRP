@@ -53,5 +53,10 @@
     IF_EIGRP_IF_INFO((O)->ifp)->membership_counts[(M)]--; \
   } while (0)
 
+//-----------------------------------------------------------------------------------------------------------------------------------
+
+/* FSM macros*/
+#define EIGRP_FSM_EVENT_SCHEDULE(I,E) \
+      thread_add_event (master, eigrp_fsm_event, (I), (E))
 
 #endif /* _ZEBRA_EIGRP_MACROS_H_ */

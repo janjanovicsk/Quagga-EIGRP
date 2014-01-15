@@ -46,6 +46,7 @@
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_fsm.h"
 
 
 static void eigrp_hello_send_sub (struct eigrp_interface *, in_addr_t);
@@ -170,6 +171,27 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
               stream_set_getp(s,s->getp-sizeof(u_int16_t));
 
               tlv = eigrp_read_ipv4_tlv(s);
+
+              /*seraching if destination exists */
+              struct prefix_ipv4 *dest_addr;
+              dest_addr->prefix = tlv->destination;
+              dest_addr->prefixlen = tlv->prefix_length;
+              struct eigrp_topology_node *dest = eigrp_topology_table_lookup(eigrp->topology_table, dest_addr);
+              /*if exists it comes to DUAL*/
+              if (dest != NULL)
+                {
+                  struct eigrp_fsm_action_message *msg;
+                  msg = XCALLOC(MTYPE_EIGRP_FSM_MSG, sizeof(struct eigrp_fsm_action_message));
+
+                  msg->packet_type = EIGRP_MSG_UPDATE;
+                  msg->data_type = TLV_INTERNAL_TYPE;
+                  msg->adv_router = nbr;
+                  msg->data.ipv4_int_type = tlv;
+                  msg->dest = dest;
+                  int event = eigrp_get_fsm_event(msg);
+                  EIGRP_FSM_EVENT_SCHEDULE(msg,event);
+                }
+
               /*Here comes topology information save*/
 
               tnode = eigrp_topology_node_new();
@@ -180,7 +202,6 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
 
               tentry = eigrp_topology_entry_new();
               tentry->adv_router = nbr;
-              tentry->type = EIGRP_TOPOLOGY_TYPE_REMOTE;
               tentry->received_metric = tlv->metric;
               tentry->actual_metric = tentry->received_metric;
               tentry->reported_distance = eigrp_calculate_metrics(&tlv->metric);
