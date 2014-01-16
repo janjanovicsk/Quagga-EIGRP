@@ -223,7 +223,6 @@ eigrp_if_up (struct eigrp_interface *ei)
 {
   struct eigrp_topology_node *tn;
   struct eigrp_topology_entry *te;
-  char address[128];
   struct eigrp_metrics metric;
 
   if (ei == NULL)

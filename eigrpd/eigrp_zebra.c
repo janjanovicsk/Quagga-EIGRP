@@ -42,7 +42,10 @@
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
+#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_fsm.h"
 
 static int eigrp_interface_add (int , struct zclient *, zebra_size_t);
 static int eigrp_interface_delete (int , struct zclient *,
@@ -321,3 +324,128 @@ zebra_interface_if_lookup (struct stream *s)
   return if_lookup_by_name_len(ifname_tmp,
                                strnlen(ifname_tmp, INTERFACE_NAMSIZ));
 }
+
+void
+eigrp_zebra_route_add (struct prefix_ipv4 *p, struct eigrp_topology_entry *te)
+{
+  u_char message;
+  u_char flags;
+  int psize;
+  struct stream *s;
+
+  if (zclient->redist[ZEBRA_ROUTE_EIGRP])
+    {
+      message = 0;
+      flags = 0;
+
+      /* OSPF pass nexthop and metric */
+      SET_FLAG (message, ZAPI_MESSAGE_NEXTHOP);
+      SET_FLAG (message, ZAPI_MESSAGE_METRIC);
+
+//      /* Distance value. */
+//      distance = ospf_distance_apply (p, or);
+//      if (distance)
+//        SET_FLAG (message, ZAPI_MESSAGE_DISTANCE);
+
+      /* Make packet. */
+      s = zclient->obuf;
+      stream_reset (s);
+
+      /* Put command, type, flags, message. */
+      zclient_create_header (s, ZEBRA_IPV4_ROUTE_ADD);
+      stream_putc (s, ZEBRA_ROUTE_EIGRP);
+      stream_putc (s, flags);
+      stream_putc (s, message);
+      stream_putw (s, SAFI_UNICAST);
+
+      /* Put prefix information. */
+      psize = PSIZE (p->prefixlen);
+      stream_putc (s, p->prefixlen);
+      stream_write (s, (u_char *) & p->prefix, psize);
+
+      /* Nexthop count. */
+      stream_putc (s, 1);
+
+      /* Nexthop, ifindex, distance and metric information. */
+      stream_putc (s, ZEBRA_NEXTHOP_IPV4_IFINDEX);
+      stream_put_in_addr (s, &te->adv_router->src);
+      stream_putl (s, te->ei->ifp->ifindex);
+
+//      if (IS_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
+//        {
+//          char buf[2][INET_ADDRSTRLEN];
+//          zlog_debug("Zebra: Route add %s/%d nexthop %s",
+//                     inet_ntop(AF_INET, &p->prefix,
+//                               buf[0], sizeof(buf[0])),
+//                     p->prefixlen,
+//                     inet_ntop(AF_INET, &path->nexthop,
+//                               buf[1], sizeof(buf[1])));
+//        }
+
+      stream_putl (s, te->distance);
+
+      stream_putw_at (s, 0, stream_get_endp (s));
+
+      zclient_send_message(zclient);
+    }
+}
+
+void
+eigrp_zebra_route_delete (struct prefix_ipv4 *p, struct eigrp_topology_entry *te)
+{
+  u_char message;
+  u_char flags;
+  int psize;
+  struct stream *s;
+
+  if (zclient->redist[ZEBRA_ROUTE_EIGRP])
+    {
+      message = 0;
+      flags = 0;
+      /* Make packet. */
+      s = zclient->obuf;
+      stream_reset (s);
+
+      /* Put command, type, flags, message. */
+      zclient_create_header (s, ZEBRA_IPV4_ROUTE_DELETE);
+      stream_putc (s, ZEBRA_ROUTE_EIGRP);
+      stream_putc (s, flags);
+      stream_putc (s, message);
+      stream_putw (s, SAFI_UNICAST);
+
+      /* Put prefix information. */
+      psize = PSIZE (p->prefixlen);
+      stream_putc (s, p->prefixlen);
+      stream_write (s, (u_char *) & p->prefix, psize);
+
+      /* Nexthop count. */
+      stream_putc (s, 1);
+
+      /* Nexthop, ifindex, distance and metric information. */
+          stream_putc (s, ZEBRA_NEXTHOP_IPV4_IFINDEX);
+          stream_put_in_addr (s, &te->adv_router->src);
+          stream_putl (s, te->ei->ifp->ifindex);
+
+//      if (IS_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
+//        {
+//          char buf[2][INET_ADDRSTRLEN];
+//          zlog_debug("Zebra: Route add %s/%d nexthop %s",
+//                     inet_ntop(AF_INET, &p->prefix,
+//                               buf[0], sizeof(buf[0])),
+//                     p->prefixlen,
+//                     inet_ntop(AF_INET, &path->nexthop,
+//                               buf[1], sizeof(buf[1])));
+//        }
+
+
+      if (CHECK_FLAG (message, ZAPI_MESSAGE_METRIC))
+        {
+            stream_putl (s, te->distance);
+        }
+
+      stream_putw_at (s, 0, stream_get_endp (s));
+
+      zclient_send_message(zclient);
+    }
+}
+

@@ -141,7 +141,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
         {
       case EIGRP_MSG_QUERY:
         {
-          if (msg->adv_router != eigrp_topology_get_successor(node))
+          if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
             {
               return EIGRP_FSM_EVENT_1;
             }
@@ -157,7 +157,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
             {
               return EIGRP_FSM_EVENT_2;
             }
-          if (msg->adv_router != eigrp_topology_get_successor(node))
+          if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
             {
               return EIGRP_FSM_EVENT_2;
             }
@@ -214,7 +214,7 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
   struct eigrp_topology_entry *data, *successor;
 
   u_int32_t best_metric = EIGRP_MAX_METRIC;
-
+  successor = NULL;
   for (ALL_LIST_ELEMENTS(dest->entries, node, nnode, data))
     {
       if(data->distance < best_metric)
@@ -223,10 +223,10 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
           successor = data;
         }
     }
-  successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
+    successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
 }
 
-void
+int
 eigrp_fsm_event(struct thread *thread)
 {
   int event;
@@ -234,5 +234,7 @@ eigrp_fsm_event(struct thread *thread)
   msg = (struct eigrp_fsm_action_message *)THREAD_ARG(thread);
   event = THREAD_VAL(thread);
 
-  (*(NSM[msg->dest->state][event].func))(msg);
+//  (*(NSM[msg->dest->state][event].func))(msg);
+
+  return 0;
 }

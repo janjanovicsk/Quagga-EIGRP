@@ -174,6 +174,7 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
 
               /*seraching if destination exists */
               struct prefix_ipv4 *dest_addr;
+              dest_addr = prefix_ipv4_new ();
               dest_addr->prefix = tlv->destination;
               dest_addr->prefixlen = tlv->prefix_length;
               struct eigrp_topology_node *dest = eigrp_topology_table_lookup(eigrp->topology_table, dest_addr);
@@ -199,6 +200,7 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
               tnode->destination->prefix = tlv->destination;
               tnode->destination->prefixlen = tlv->prefix_length;
               tnode->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+              tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
               tentry = eigrp_topology_entry_new();
               tentry->adv_router = nbr;
@@ -207,6 +209,8 @@ eigrp_update (struct ip *iph, struct eigrp_header *eigrph,
               tentry->reported_distance = eigrp_calculate_metrics(&tlv->metric);
               tentry->distance = tentry->reported_distance;
               tentry->ei = ei;
+              tentry->parent = tnode;
+
 
               eigrp_topology_node_add(eigrp->topology_table, tnode);
               eigrp_topology_entry_add(tnode,tentry);
@@ -730,74 +734,74 @@ eigrp_recv_packet (int fd, struct interface **ifp, struct stream *ibuf)
   return ibuf;
 }
 
-/* Verify a complete OSPF packet for proper sizing/alignment. */
-static unsigned
-eigrp_packet_examin (struct eigrp_header * eh, const unsigned bytesonwire)
-{
-//  unsigned ret;
-
-  /* Length, 1st approximation. */
-  if (bytesonwire < EIGRP_HEADER_SIZE)
-  {
-//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
-//      zlog_debug ("%s: undersized (%u B) packet", __func__, bytesonwire);
-    return MSG_NG;
-  }
-  /* Now it is safe to access header fields. Performing length check, allow
-   * for possible extra bytes of crypto auth/padding, which are not counted
-   * in the OSPF header "length" field. */
-  if (eh->version != EIGRP_HEADER_VERSION)
-  {
-//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
-//      zlog_debug ("%s: invalid (%u) protocol version", __func__, oh->version);
-    return MSG_NG;
-  }
-
-  switch (eh->opcode)
-  {
-  case EIGRP_MSG_HELLO:
-    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
-       by N>=0 router-IDs. */
-    break;
-  case EIGRP_MSG_PROBE:
-    /* RFC2328 A.3.3, packet header + OSPF_DB_DESC_MIN_SIZE bytes followed
-       by N>=0 header-only LSAs. */
-
-    break;
-  case EIGRP_MSG_QUERY:
-    /* RFC2328 A.3.4, packet header followed by N>=0 12-bytes request blocks. */
-    break;
-  case EIGRP_MSG_REPLY:
-    /* RFC2328 A.3.5, packet header + OSPF_LS_UPD_MIN_SIZE bytes followed
-       by N>=0 full LSAs (with N declared beforehand). */
-    break;
-  case EIGRP_MSG_REQUEST:
-    /* RFC2328 A.3.6, packet header followed by N>=0 header-only LSAs. */
-    break;
-  case EIGRP_MSG_SIAQUERY:
-    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
-       by N>=0 router-IDs. */
-
-    break;
-  case EIGRP_MSG_SIAREPLY:
-    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
-       by N>=0 router-IDs. */
-
-    break;
-  case EIGRP_MSG_UPDATE:
-    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
-       by N>=0 router-IDs. */
-
-    break;
-  default:
-//    if (IS_DEBUG_OSPF_PACKET (0, RECV))
-//      zlog_debug ("%s: invalid packet type 0x%02x", __func__, eh->opcode);
-    return MSG_NG;
-  }
-//  if (ret != MSG_OK && IS_DEBUG_OSPF_PACKET (0, RECV))
-//    zlog_debug ("%s: malformed %s packet", __func__, LOOKUP (ospf_packet_type_str, eh->opcode));
-  return MSG_OK;
-}
+///* Verify a complete OSPF packet for proper sizing/alignment. */
+//static unsigned
+//eigrp_packet_examin (struct eigrp_header * eh, const unsigned bytesonwire)
+//{
+////  unsigned ret;
+//
+//  /* Length, 1st approximation. */
+//  if (bytesonwire < EIGRP_HEADER_SIZE)
+//  {
+////    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+////      zlog_debug ("%s: undersized (%u B) packet", __func__, bytesonwire);
+//    return MSG_NG;
+//  }
+//  /* Now it is safe to access header fields. Performing length check, allow
+//   * for possible extra bytes of crypto auth/padding, which are not counted
+//   * in the OSPF header "length" field. */
+//  if (eh->version != EIGRP_HEADER_VERSION)
+//  {
+////    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+////      zlog_debug ("%s: invalid (%u) protocol version", __func__, oh->version);
+//    return MSG_NG;
+//  }
+//
+//  switch (eh->opcode)
+//  {
+//  case EIGRP_MSG_HELLO:
+//    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+//       by N>=0 router-IDs. */
+//    break;
+//  case EIGRP_MSG_PROBE:
+//    /* RFC2328 A.3.3, packet header + OSPF_DB_DESC_MIN_SIZE bytes followed
+//       by N>=0 header-only LSAs. */
+//
+//    break;
+//  case EIGRP_MSG_QUERY:
+//    /* RFC2328 A.3.4, packet header followed by N>=0 12-bytes request blocks. */
+//    break;
+//  case EIGRP_MSG_REPLY:
+//    /* RFC2328 A.3.5, packet header + OSPF_LS_UPD_MIN_SIZE bytes followed
+//       by N>=0 full LSAs (with N declared beforehand). */
+//    break;
+//  case EIGRP_MSG_REQUEST:
+//    /* RFC2328 A.3.6, packet header followed by N>=0 header-only LSAs. */
+//    break;
+//  case EIGRP_MSG_SIAQUERY:
+//    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+//       by N>=0 router-IDs. */
+//
+//    break;
+//  case EIGRP_MSG_SIAREPLY:
+//    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+//       by N>=0 router-IDs. */
+//
+//    break;
+//  case EIGRP_MSG_UPDATE:
+//    /* RFC2328 A.3.2, packet header + OSPF_HELLO_MIN_SIZE bytes followed
+//       by N>=0 router-IDs. */
+//
+//    break;
+//  default:
+////    if (IS_DEBUG_OSPF_PACKET (0, RECV))
+////      zlog_debug ("%s: invalid packet type 0x%02x", __func__, eh->opcode);
+//    return MSG_NG;
+//  }
+////  if (ret != MSG_OK && IS_DEBUG_OSPF_PACKET (0, RECV))
+////    zlog_debug ("%s: malformed %s packet", __func__, LOOKUP (ospf_packet_type_str, eh->opcode));
+//  return MSG_OK;
+//}
 
 struct eigrp_fifo *
 eigrp_fifo_new (void)
