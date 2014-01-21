@@ -397,6 +397,41 @@ eigrp_hello (struct ip *iph, struct eigrp_header *eigrph,
 //               ospf_options_dump (hello->options));
 }
 
+/*EIGRP QUERY read function*/
+static void
+eigrp_query (struct ip *iph, struct eigrp_header *eigrph,
+            struct stream * s, struct eigrp_interface *ei, int size)
+{
+  struct eigrp_neighbor *nbr;
+  struct prefix p;
+  struct TLV_IPv4_Internal_type *tlv;
+  struct eigrp_topology_node *tnode;
+  struct eigrp_topology_entry *tentry;
+  struct eigrp *eigrp;
+  u_int16_t type;
+
+  /* increment statistics. */
+  ei->query_in++;
+
+  eigrp = eigrp_lookup();
+  /* If Hello is myself, silently discard. */
+  if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
+    {
+      return;
+    }
+
+  /* get neighbour struct */
+  nbr = eigrp_nbr_get (ei, eigrph, iph, &p);
+
+  /* neighbour must be valid, eigrp_nbr_get creates if none existed */
+  assert (nbr);
+
+  nbr->recv_sequence_number = ntohl(eigrph->sequence);
+
+  eigrp_ack_send(nbr);
+
+}
+
 static int
 eigrp_write (struct thread *thread)
 {
@@ -689,7 +724,7 @@ eigrp_read (struct thread *thread)
 //      ospf_db_desc (iph, ospfh, ibuf, oi, length);
       break;
     case EIGRP_MSG_QUERY:
-//      ospf_ls_req (iph, ospfh, ibuf, oi, length);
+      eigrp_query (iph, eigrph, ibuf, ei, length);
       break;
     case EIGRP_MSG_REPLY:
 //      ospf_ls_upd (iph, ospfh, ibuf, oi, length);
