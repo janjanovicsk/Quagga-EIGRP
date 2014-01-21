@@ -19,110 +19,113 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
+int
+eigrp_fsm_event_test(struct eigrp_fsm_action_message *, int);
+
 struct
 {
   int
-  (*func)(struct eigrp_fsm_action_message *);
-} NSM [EIGRP_FSM_STATE_MAX][EIGRP_FSM_EVENT_MAX] =
+  (*func)(struct eigrp_fsm_action_message *,int);
+} NSM[EIGRP_FSM_STATE_MAX][EIGRP_FSM_EVENT_MAX] =
   {
     {
     //PASSIVE STATE
-          { NULL }, /* Event 1 */
-          { NULL }, /* Event 2 */
-          { NULL }, /* Event 3 */
-          { NULL }, /* Event 4 */
-          { NULL }, /* Event 5 */
-          { NULL }, /* Event 6 */
-          { NULL }, /* Event 7 */
-          { NULL }, /* Event 8 */
-          { NULL }, /* Event 9 */
-          { NULL }, /* Event 10 */
-          { NULL }, /* Event 11 */
-          { NULL }, /* Event 12 */
-          { NULL }, /* Event 13 */
-          { NULL }, /* Event 14 */
-          { NULL }, /* Event 15 */
-          { NULL } /* Event 16 */
+          { eigrp_fsm_event_test }, /* Event 1 */
+          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_test }, /* Event 4 */
+          { eigrp_fsm_event_test }, /* Event 5 */
+          { eigrp_fsm_event_test }, /* Event 6 */
+          { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+          { eigrp_fsm_event_test }, /* Event 9 */
+          { eigrp_fsm_event_test }, /* Event 10 */
+          { eigrp_fsm_event_test }, /* Event 11 */
+          { eigrp_fsm_event_test }, /* Event 12 */
+          { eigrp_fsm_event_test }, /* Event 13 */
+          { eigrp_fsm_event_test }, /* Event 14 */
+          { eigrp_fsm_event_test }, /* Event 15 */
+          { eigrp_fsm_event_test }  /* Event 16 */
 
     },
     {
     //Active 0 state
-          { NULL }, /* Event 1 */
-          { NULL }, /* Event 2 */
-          { NULL }, /* Event 3 */
-          { NULL }, /* Event 4 */
-          { NULL }, /* Event 5 */
-          { NULL }, /* Event 6 */
-          { NULL }, /* Event 7 */
-          { NULL }, /* Event 8 */
-          { NULL }, /* Event 9 */
-          { NULL }, /* Event 10 */
-          { NULL }, /* Event 11 */
-          { NULL }, /* Event 12 */
-          { NULL }, /* Event 13 */
-          { NULL }, /* Event 14 */
-          { NULL }, /* Event 15 */
-          { NULL } /* Event 16 */
+          { eigrp_fsm_event_test }, /* Event 1 */
+          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_test }, /* Event 4 */
+          { eigrp_fsm_event_test }, /* Event 5 */
+          { eigrp_fsm_event_test }, /* Event 6 */
+          { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+          { eigrp_fsm_event_test }, /* Event 9 */
+          { eigrp_fsm_event_test }, /* Event 10 */
+          { eigrp_fsm_event_test }, /* Event 11 */
+          { eigrp_fsm_event_test }, /* Event 12 */
+          { eigrp_fsm_event_test }, /* Event 13 */
+          { eigrp_fsm_event_test }, /* Event 14 */
+          { eigrp_fsm_event_test }, /* Event 15 */
+          { eigrp_fsm_event_test }  /* Event 16 */
 
     },
     {
     //Active 1 state
-          { NULL }, /* Event 1 */
-          { NULL }, /* Event 2 */
-          { NULL }, /* Event 3 */
-          { NULL }, /* Event 4 */
-          { NULL }, /* Event 5 */
-          { NULL }, /* Event 6 */
-          { NULL }, /* Event 7 */
-          { NULL }, /* Event 8 */
-          { NULL }, /* Event 9 */
-          { NULL }, /* Event 10 */
-          { NULL }, /* Event 11 */
-          { NULL }, /* Event 12 */
-          { NULL }, /* Event 13 */
-          { NULL }, /* Event 14 */
-          { NULL }, /* Event 15 */
-          { NULL }  /* Event 16 */
+          { eigrp_fsm_event_test }, /* Event 1 */
+          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_test }, /* Event 4 */
+          { eigrp_fsm_event_test }, /* Event 5 */
+          { eigrp_fsm_event_test }, /* Event 6 */
+          { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+          { eigrp_fsm_event_test }, /* Event 9 */
+          { eigrp_fsm_event_test }, /* Event 10 */
+          { eigrp_fsm_event_test }, /* Event 11 */
+          { eigrp_fsm_event_test }, /* Event 12 */
+          { eigrp_fsm_event_test }, /* Event 13 */
+          { eigrp_fsm_event_test }, /* Event 14 */
+          { eigrp_fsm_event_test }, /* Event 15 */
+          { eigrp_fsm_event_test } /* Event 16 */
 
     },
     {
     //Active 2 state
-          { NULL }, /* Event 1 */
-          { NULL }, /* Event 2 */
-          { NULL }, /* Event 3 */
-          { NULL }, /* Event 4 */
-          { NULL }, /* Event 5 */
-          { NULL }, /* Event 6 */
-          { NULL }, /* Event 7 */
-          { NULL }, /* Event 8 */
-          { NULL }, /* Event 9 */
-          { NULL }, /* Event 10 */
-          { NULL }, /* Event 11 */
-          { NULL }, /* Event 12 */
-          { NULL }, /* Event 13 */
-          { NULL }, /* Event 14 */
-          { NULL }, /* Event 15 */
-          { NULL } /* Event 16 */
+          { eigrp_fsm_event_test }, /* Event 1 */
+          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_test }, /* Event 4 */
+          { eigrp_fsm_event_test }, /* Event 5 */
+          { eigrp_fsm_event_test }, /* Event 6 */
+          { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+          { eigrp_fsm_event_test }, /* Event 9 */
+          { eigrp_fsm_event_test }, /* Event 10 */
+          { eigrp_fsm_event_test }, /* Event 11 */
+          { eigrp_fsm_event_test }, /* Event 12 */
+          { eigrp_fsm_event_test }, /* Event 13 */
+          { eigrp_fsm_event_test }, /* Event 14 */
+          { eigrp_fsm_event_test }, /* Event 15 */
+          { eigrp_fsm_event_test }  /* Event 16 */
 
     },
     {
     //Active 3 state
-          { NULL }, /* Event 1 */
-          { NULL }, /* Event 2 */
-          { NULL }, /* Event 3 */
-          { NULL }, /* Event 4 */
-          { NULL }, /* Event 5 */
-          { NULL }, /* Event 6 */
-          { NULL }, /* Event 7 */
-          { NULL }, /* Event 8 */
-          { NULL }, /* Event 9 */
-          { NULL }, /* Event 10 */
-          { NULL }, /* Event 11 */
-          { NULL }, /* Event 12 */
-          { NULL }, /* Event 13 */
-          { NULL }, /* Event 14 */
-          { NULL }, /* Event 15 */
-          { NULL }  /* Event 16 */
+          { eigrp_fsm_event_test }, /* Event 1 */
+          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_test }, /* Event 4 */
+          { eigrp_fsm_event_test }, /* Event 5 */
+          { eigrp_fsm_event_test }, /* Event 6 */
+          { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+          { eigrp_fsm_event_test }, /* Event 9 */
+          { eigrp_fsm_event_test }, /* Event 10 */
+          { eigrp_fsm_event_test }, /* Event 11 */
+          { eigrp_fsm_event_test }, /* Event 12 */
+          { eigrp_fsm_event_test }, /* Event 13 */
+          { eigrp_fsm_event_test }, /* Event 14 */
+          { eigrp_fsm_event_test }, /* Event 15 */
+          { eigrp_fsm_event_test }  /* Event 16 */
 
     }, };
 
@@ -192,7 +195,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
     }
 
-  return -1;
+  return 20;
 }
 
 void
@@ -213,28 +216,35 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
   struct listnode *node, *nnode;
   struct eigrp_topology_entry *data, *successor;
 
-  u_int32_t best_metric = EIGRP_MAX_METRIC;
   successor = NULL;
+
+  u_int32_t best_metric = EIGRP_MAX_METRIC;
+
   for (ALL_LIST_ELEMENTS(dest->entries, node, nnode, data))
     {
-      if(data->distance < best_metric)
+      if (data->distance < best_metric)
         {
           best_metric = data->distance;
           successor = data;
         }
     }
-    successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
+  successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
 }
 
-int
+void
 eigrp_fsm_event(struct thread *thread)
 {
   int event;
   struct eigrp_fsm_action_message *msg;
-  msg = (struct eigrp_fsm_action_message *)THREAD_ARG(thread);
+  msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
 
-//  (*(NSM[msg->dest->state][event].func))(msg);
+  (*(NSM[msg->dest->state][event].func))(msg,event);
+}
 
-  return 0;
+int
+eigrp_fsm_event_test(struct eigrp_fsm_action_message *msg, int cislo)
+{
+  zlog_info("Triggerred action %d\n", cislo);
+  return 1;
 }
