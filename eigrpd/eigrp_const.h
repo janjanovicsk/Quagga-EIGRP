@@ -10,8 +10,9 @@
 
 #define EIGRP_NEIGHBOR_DOWN           0
 #define EIGRP_NEIGHBOR_PENDING        1
-#define EIGRP_NEIGHBOR_UP             2
-#define EIGRP_NEIGHBOR_STATE_MAX      3
+#define EIGRP_NEIGHBOR_PENDING_INIT   2
+#define EIGRP_NEIGHBOR_UP             3
+#define EIGRP_NEIGHBOR_STATE_MAX      4
 
 #define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
 #define EIGRP_HEADER_SIZE         20U

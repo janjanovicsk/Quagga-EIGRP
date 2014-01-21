@@ -68,7 +68,6 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
   nbr->retrans_queue = eigrp_fifo_new();
 
-  nbr->update_init_completed = 0;
   nbr->init_sequence_number = 0;
 
   return nbr;
@@ -205,8 +204,11 @@ holddown_timer_expired (struct thread *thread)
 
   zlog_info("Neighbor %s (%s) is down: holding time expired",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
   nbr->state = EIGRP_NEIGHBOR_DOWN;
-  if(nbr->t_holddown)
-    thread_cancel(nbr->t_holddown);
+  nbr->ack = 0;
+  nbr->init_sequence_number = 0;
+  nbr->recv_sequence_number = 0;
+  eigrp_fifo_reset(nbr->retrans_queue);
+  THREAD_OFF (nbr->t_holddown);
 
   return 0;
 }

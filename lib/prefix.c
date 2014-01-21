@@ -449,6 +449,18 @@ str2prefix_ipv4 (const char *str, struct prefix_ipv4 *p)
   return ret;
 }
 
+int
+prefix_ipv4_same (const struct prefix_ipv4 *p1, const struct prefix_ipv4 *p2)
+{
+  if (p1->family == p2->family && p1->prefixlen == p2->prefixlen)
+    {
+      if (p1->family == AF_INET)
+      if (IPV4_ADDR_SAME (&p1->prefix.s_addr, &p2->prefix.s_addr))
+          return 1;
+    }
+  return 0;
+}
+
 /* Convert masklen into IP address's netmask (network byte order). */
 void
 masklen2ip (const int masklen, struct in_addr *netmask)

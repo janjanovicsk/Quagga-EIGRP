@@ -142,7 +142,6 @@ struct eigrp_neighbor
   u_int32_t recv_sequence_number; /* Last received sequence Number. */
   u_int32_t ack; /* Acknowledgement number*/
 
-  u_char update_init_completed;
   u_int32_t init_sequence_number;
 
   /*If packet is unacknowledged, we try to send it again 16 times*/
@@ -315,8 +314,8 @@ struct eigrp_topology_entry
   u_int32_t reported_distance; //distance reported by neighbor
   u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
 
-  struct eigrp_metrics received_metric;
-  struct eigrp_metrics actual_metric;
+  struct eigrp_metrics reported_metric;
+  struct eigrp_metrics feasible_metric;
 
   struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
   u_char flags; //used for marking successor and FS

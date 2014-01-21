@@ -158,6 +158,7 @@ extern struct prefix_ipv4 *prefix_ipv4_new (void);
 extern void prefix_ipv4_free (struct prefix_ipv4 *);
 extern int str2prefix_ipv4 (const char *, struct prefix_ipv4 *);
 extern void apply_mask_ipv4 (struct prefix_ipv4 *);
+extern int prefix_ipv4_same (const struct prefix_ipv4 *, const struct prefix_ipv4 *);
 
 #define PREFIX_COPY_IPV4(DST, SRC)	\
 	*((struct prefix_ipv4 *)(DST)) = *((const struct prefix_ipv4 *)(SRC));

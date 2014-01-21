@@ -260,7 +260,8 @@ eigrp_if_up (struct eigrp_interface *ei)
 
   te = eigrp_topology_entry_new();
   te->ei = ei;
-  te->received_metric = metric;
+  te->reported_metric = metric;
+  te->feasible_metric = metric;
   eigrp_topology_entry_add(tn,te);
   eigrp_topology_node_add(eigrp->topology_table,tn);
 

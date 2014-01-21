@@ -240,8 +240,7 @@ eigrp_topology_table_lookup (struct list *topology_table, struct prefix_ipv4 * a
   struct listnode *node, *nnode;
   for(ALL_LIST_ELEMENTS(topology_table, node, nnode, data))
     {
-      if(data->destination->prefix.s_addr == address->prefix.s_addr &&
-          data->destination->prefixlen == address->prefixlen)
+      if((data->destination->prefix.s_addr == address->prefix.s_addr) && (data->destination->prefixlen == address->prefixlen))
         return data;
     }
   return NULL;
