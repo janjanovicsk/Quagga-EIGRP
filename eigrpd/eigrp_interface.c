@@ -255,7 +255,7 @@ eigrp_if_up (struct eigrp_interface *ei)
   tn->dest_type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
   apply_mask_ipv4(tn->destination);
 
-  tn->state = EIGRP_TOPOLOGY_NODE_PASSIVE;
+  tn->state = EIGRP_FSM_STATE_PASSIVE;
   tn->fdistance = eigrp_calculate_metrics(&metric);
 
   te = eigrp_topology_entry_new();

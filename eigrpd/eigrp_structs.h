@@ -303,7 +303,7 @@ struct eigrp_topology_node
   struct list *entries;
   struct prefix_ipv4 *destination; //destination address
   u_int32_t fdistance;
-  u_char state; //route state
+  u_char state; //route fsm state
   u_char dest_type;
 };
 

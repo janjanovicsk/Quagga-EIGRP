@@ -195,7 +195,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
     }
 
-  return 20;
+  return 15;
 }
 
 void
@@ -231,15 +231,17 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
   successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
 }
 
-void
+int
 eigrp_fsm_event(struct thread *thread)
 {
   int event;
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-
+  zlog_info("State: %d\nEvent: %d",msg->dest->state,event);
   (*(NSM[msg->dest->state][event].func))(msg,event);
+
+  return 1;
 }
 
 int

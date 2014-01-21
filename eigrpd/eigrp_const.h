@@ -89,10 +89,6 @@
 #define EIGRP_IF_ACTIVE                  0
 #define EIGRP_IF_PASSIVE                 1
 
-/* EIGRP TT node state */
-#define EIGRP_TOPOLOGY_NODE_ACTIVE           65 /*ASCII character 'A'*/
-#define EIGRP_TOPOLOGY_NODE_PASSIVE          80 /*ASCII character 'P'*/
-
 /* EIGRP TT destination type */
 #define EIGRP_TOPOLOGY_TYPE_CONNECTED           0
 #define EIGRP_TOPOLOGY_TYPE_REMOTE              1
