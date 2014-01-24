@@ -241,10 +241,16 @@ eigrp_if_up (struct eigrp_interface *ei)
   thread_add_event (master, eigrp_hello_timer, ei, (1));
 
   /*Prepare metrics*/
-  metric.bandwith = EIGRP_IF_PARAM(ei,bandwidth);
-  metric.delay = EIGRP_IF_PARAM(ei,delay)*100*256;
+  metric.bandwith = ((256*100000000)/EIGRP_IF_PARAM(ei,bandwidth));
+  metric.delay = EIGRP_IF_PARAM(ei,delay)/10*256;
   metric.load =  EIGRP_IF_PARAM(ei,load);
   metric.reliability =  EIGRP_IF_PARAM(ei,reliability);
+  metric.mtu[0]= 0xDC;
+  metric.mtu[1]= 0x05;
+  metric.mtu[2]= 0x00;
+  metric.hop_count = 0;
+  metric.flags = 0;
+  metric.tag = 0;
 
   /*Add connected entry to topology table*/
   tn = eigrp_topology_node_new();

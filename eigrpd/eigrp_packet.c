@@ -123,6 +123,9 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
+  if ((ntohl(eigrph->flags) & EIGRP_HEADER_FLAG_CR) == EIGRP_HEADER_FLAG_CR)
+    return;
+
   /*If it is INIT update*/
   if ((ntohl(eigrph->flags) & EIGRP_HEADER_FLAG_INIT) == EIGRP_HEADER_FLAG_INIT)
     {
@@ -1160,7 +1163,7 @@ eigrp_send_init_update(struct eigrp_neighbor *nbr)
 void
 eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
 {
-  struct eigrp_packet *ep;
+  struct eigrp_packet *ep, *ep_multicast;
   u_int16_t length = EIGRP_HEADER_SIZE;
   struct eigrp_topology_entry *te;
   struct eigrp_topology_node *tn;
@@ -1172,14 +1175,14 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   eigrp_make_header(EIGRP_MSG_UPDATE, nbr->ei, ep->s, EIGRP_HEADER_FLAG_EOT,
       nbr->ei->eigrp->sequence_number, nbr->recv_sequence_number);
 
-//  for (ALL_LIST_ELEMENTS (nbr->ei->eigrp->topology_table, node, nnode, tn))
-//  {
-//    for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
-//      {
-//        if(te->flags == EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG)
-//          length += eigrp_add_internalTLV_to_stream(ep->s,te);
-//      }
-//  }
+  for (ALL_LIST_ELEMENTS (nbr->ei->eigrp->topology_table, node, nnode, tn))
+  {
+    for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+      {
+        if(te->ei != nbr->ei)
+          length += eigrp_add_internalTLV_to_stream(ep->s,te);
+      }
+  }
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(nbr->ei, ep->s, length);
@@ -1188,18 +1191,60 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
 
   ep->dst.s_addr = nbr->src.s_addr;
 
+  ep_multicast = eigrp_packet_duplicate(ep,nbr);
+  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
+  eigrp_packet_add_top(nbr->ei, ep_multicast);
 
   if (nbr->retrans_queue->count == 1)
     {
       eigrp_send_packet_reliably(nbr);
     }
 
+
+
 }
 
 void
 eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
+{
+  struct eigrp_packet *ep;
+
+  ep = eigrp_fifo_tail(nbr->retrans_queue);
+
+  if (ep)
+    {
+      struct eigrp_packet *duplicate;
+      duplicate = eigrp_packet_duplicate(ep, nbr);
+      /* Add packet to the top of the interface output queue*/
+      eigrp_packet_add_top(nbr->ei, duplicate);
+
+      /*Start retransmission timer*/
+      THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
+          nbr, EIGRP_PACKET_RETRANS_TIME);
+
+      /*This ack number we await from neighbor*/
+      nbr->ack = nbr->ei->eigrp->sequence_number;
+
+      /*Increment sequence number counter*/
+      nbr->ei->eigrp->sequence_number++;
+
+      /* Hook thread to write packet. */
+      if (nbr->ei->on_write_q == 0)
+        {
+          listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
+          nbr->ei->on_write_q = 1;
+        }
+      if (nbr->ei->eigrp->t_write == NULL)
+        nbr->ei->eigrp->t_write =
+            thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+    }
+}
+
+void
+eigrp_send_reply(struct eigrp_neighbor *nbr)
 {
   struct eigrp_packet *ep;
 
@@ -1600,25 +1645,25 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
   stream_putw(s, TLV_INTERNAL_TYPE);
   if (te->parent->destination->prefixlen <= 8)
     {
-      stream_putw(s, 0x0016);
-      length = 0x0016;
+      stream_putw(s, 0x001A);
+      length = 0x001A;
     }
   if ((te->parent->destination->prefixlen > 8)
       && (te->parent->destination->prefixlen <= 16))
     {
-      stream_putw(s, 0x0017);
-      length = 0x0017;
+      stream_putw(s, 0x001B);
+      length = 0x001B;
     }
   if ((te->parent->destination->prefixlen > 16)
       && (te->parent->destination->prefixlen <= 24))
     {
-      stream_putw(s, 0x0018);
-      length = 0x0018;
+      stream_putw(s, 0x001C);
+      length = 0x001C;
     }
   if (te->parent->destination->prefixlen > 24)
     {
-      stream_putw(s, 0x0019);
-      length = 0x0019;
+      stream_putw(s, 0x001D);
+      length = 0x001D;
     }
 
   stream_putl(s, 0x00000000);
@@ -1626,32 +1671,33 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
   /*Metric*/
   stream_putl(s, te->feasible_metric.delay);
   stream_putl(s, te->feasible_metric.bandwith);
-  stream_putc(s, te->feasible_metric.mtu[0]);
-  stream_putc(s, te->feasible_metric.mtu[1]);
   stream_putc(s, te->feasible_metric.mtu[2]);
+  stream_putc(s, te->feasible_metric.mtu[1]);
+  stream_putc(s, te->feasible_metric.mtu[0]);
   stream_putc(s, te->feasible_metric.hop_count);
   stream_putc(s, te->feasible_metric.reliability);
   stream_putc(s, te->feasible_metric.load);
   stream_putc(s, te->feasible_metric.tag);
+  stream_putc(s, te->feasible_metric.flags);
 
   stream_putc(s, te->parent->destination->prefixlen);
 
   if (te->parent->destination->prefixlen <= 8)
     {
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 24) & 0xFF);
+      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
     }
   if ((te->parent->destination->prefixlen > 8)
       && (te->parent->destination->prefixlen <= 16))
     {
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 24) & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
     }
   if ((te->parent->destination->prefixlen > 16)
       && (te->parent->destination->prefixlen <= 24))
     {
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 24) & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
       stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
     }
   if (te->parent->destination->prefixlen > 24)
     {
