@@ -1,6 +1,11 @@
 /*
  * EIGRP Topology table support.
- * Copyright (C) 1999, 2000 Alex Zinin, Kunihiro Ishiguro, Toshiaki Takada
+ * Copyright (C) 2013-2014
+ * Authors:
+ * Jan Janovic
+ * Matej Perina
+ * Peter Orsag
+ * Peter Paluch
  *
  * This file is part of GNU Zebra.
  *

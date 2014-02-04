@@ -1,5 +1,10 @@
 /* EIGRP VTY interface.
- * Copyright (C) 2000 Toshiaki Takada
+ * Copyright (C) 2013-2014
+ * Authors:
+ * Jan Janovic
+ * Matej Perina
+ * Peter Orsag
+ * Peter Paluch
  *
  * This file is part of GNU Zebra.
  *

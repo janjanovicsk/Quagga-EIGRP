@@ -1,6 +1,11 @@
 /*
  * Zebra connect library for EIGRPd
- * Copyright (C) 1997, 98, 99, 2000 Kunihiro Ishiguro, Toshiaki Takada
+ * Copyright (C) 2013-2014
+ * Authors:
+ * Jan Janovic
+ * Matej Perina
+ * Peter Orsag
+ * Peter Paluch
  *
  * This file is part of GNU Zebra.
  *
