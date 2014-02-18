@@ -161,7 +161,6 @@ struct eigrp_neighbor
   /* OSPF neighbor Information */
   u_char state; /* neigbor status. */
   u_int32_t recv_sequence_number; /* Last received sequence Number. */
-  u_int32_t ack; /* Acknowledgement number*/
 
   u_int32_t init_sequence_number;
 
@@ -184,6 +183,7 @@ struct eigrp_neighbor
   struct thread *t_holddown;
 
   struct eigrp_fifo *retrans_queue;
+  struct eigrp_fifo *multicast_queue;
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
@@ -204,6 +204,8 @@ struct eigrp_packet
 
   /*Packet retransmission counter*/
   u_char retrans_counter;
+
+  u_int32_t sequence_number;
 
   /* EIGRP packet length. */
   u_int16_t length;

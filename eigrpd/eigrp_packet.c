@@ -138,7 +138,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       ep = eigrp_fifo_tail(nbr->retrans_queue);
       if (ep != NULL)
         {
-          if (ntohl(eigrph->ack) == nbr->ack)
+          if (ntohl(eigrph->ack) == ep->sequence_number)
             {
               if (ntohl(eigrph->ack) == nbr->init_sequence_number)
                 {
@@ -168,7 +168,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       ep = eigrp_fifo_tail(nbr->retrans_queue);
       if (ep != NULL)
         {
-          if (ntohl(eigrph->ack) == nbr->ack)
+          if (ntohl(eigrph->ack) == ep->sequence_number)
             {
               ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
               eigrp_packet_free(ep);
@@ -407,7 +407,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       ep = eigrp_fifo_tail(nbr->retrans_queue);
       if (ep != NULL)
         {
-          if (ntohl(eigrph->ack) == nbr->ack)
+          if (ntohl(eigrph->ack) == ep->sequence_number)
             {
               ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
               eigrp_packet_free(ep);
@@ -415,8 +415,22 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                 {
                   eigrp_send_packet_reliably(nbr);
                 }
+              return;
             }
-          return;
+        }
+      ep = eigrp_fifo_tail(nbr->multicast_queue);
+      if (ep != NULL)
+        {
+          if (ntohl(eigrph->ack) == ep->sequence_number)
+            {
+              ep = eigrp_fifo_pop_tail(nbr->multicast_queue);
+              eigrp_packet_free(ep);
+              if (nbr->retrans_queue->count > 0)
+                {
+                  eigrp_send_packet_reliably(nbr);
+                }
+              return;
+            }
         }
     }
 
@@ -1184,8 +1198,10 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   {
     for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
       {
-        if(te->ei != nbr->ei)
-          length += eigrp_add_internalTLV_to_stream(ep->s,te);
+        if((te->ei == nbr->ei) && (te->parent->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE))
+          continue;
+
+        length += eigrp_add_internalTLV_to_stream(ep->s,te);
       }
   }
 
@@ -1224,14 +1240,15 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
       struct eigrp_packet *duplicate;
       duplicate = eigrp_packet_duplicate(ep, nbr);
       /* Add packet to the top of the interface output queue*/
-      eigrp_packet_add_top(nbr->ei, duplicate);
+      if(ep->dst.s_addr != htonl(EIGRP_MULTICAST_ADDRESS))
+          eigrp_packet_add_top(nbr->ei, duplicate);
 
       /*Start retransmission timer*/
       THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
           nbr, EIGRP_PACKET_RETRANS_TIME);
 
       /*This ack number we await from neighbor*/
-      nbr->ack = nbr->ei->eigrp->sequence_number;
+      ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
       /*Increment sequence number counter*/
       nbr->ei->eigrp->sequence_number++;
@@ -1249,7 +1266,7 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
 }
 
 void
-eigrp_send_reply(struct eigrp_neighbor *nbr)
+eigrp_send_reply(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
 {
   struct eigrp_packet *ep;
 
@@ -1267,7 +1284,7 @@ eigrp_send_reply(struct eigrp_neighbor *nbr)
           nbr, EIGRP_PACKET_RETRANS_TIME);
 
       /*This ack number we await from neighbor*/
-      nbr->ack = nbr->ei->eigrp->sequence_number;
+      ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
       /*Increment sequence number counter*/
       nbr->ei->eigrp->sequence_number++;
@@ -1282,33 +1299,6 @@ eigrp_send_reply(struct eigrp_neighbor *nbr)
         nbr->ei->eigrp->t_write =
             thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
     }
-}
-
-void
-eigrp_send_packet_multicast(struct eigrp_packet *ep)
-{
-//  struct eigrp_packet *duplicate;
-//  struct eigrp *eigrp;
-//
-//  eigrp = eigrp_lookup ();
-
-//  duplicate = eigrp_packet_duplicate(ep,nbr->);
-  /* Add packet to the top of the interface output queue*/
-//  eigrp_packet_add_top (nbr->ei, duplicate);
-//  /*Start retransmission timer*/
-//  THREAD_TIMER_ON(master,ep->t_retrans_timer, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
-//
-//  /*Increment sequence number counter*/
-//  ei->eigrp->sequence_number++;
-//
-//  /* Hook thread to write packet. */
-//    if (ei->on_write_q == 0)
-//      {
-//        listnode_add (nbr->ei->eigrp->oi_write_q, nbr->ei);
-//        nbr->ei->on_write_q = 1;
-//      }
-//    if (nbr->ei->eigrp->t_write == NULL)
-//      nbr->ei->eigrp->t_write = thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
 }
 
 /* Calculate EIGRP checksum */
@@ -1527,7 +1517,47 @@ eigrp_unack_packet_retrans(struct thread *thread)
           thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
 
       /*This ack number we await from neighbor*/
-      nbr->ack = nbr->ei->eigrp->sequence_number;
+      ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+      /*Increment sequence number counter*/
+      nbr->ei->eigrp->sequence_number++;
+
+      /* Hook thread to write packet. */
+      if (nbr->ei->on_write_q == 0)
+        {
+          listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
+          nbr->ei->on_write_q = 1;
+        }
+      if (nbr->ei->eigrp->t_write == NULL)
+        nbr->ei->eigrp->t_write =
+            thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
+    }
+
+  return 0;
+}
+
+int
+eigrp_unack_multicast_packet_retrans(struct thread *thread)
+{
+  struct eigrp_neighbor *nbr;
+  nbr = (struct eigrp_neighbor *) THREAD_ARG(thread);
+
+  struct eigrp_packet *ep;
+  ep = eigrp_fifo_tail(nbr->multicast_queue);
+
+  if (ep)
+    {
+      struct eigrp_packet *duplicate;
+      duplicate = eigrp_packet_duplicate(ep, nbr);
+      /* Add packet to the top of the interface output queue*/
+      eigrp_packet_add_top(nbr->ei, duplicate);
+
+      /*Start retransmission timer*/
+      ep->t_retrans_timer =
+          thread_add_timer(master, eigrp_unack_multicast_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
+
+      /*This ack number we await from neighbor*/
+      ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
       /*Increment sequence number counter*/
       nbr->ei->eigrp->sequence_number++;
@@ -1710,5 +1740,62 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
     }
 
   return length;
+
+}
+
+void
+eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
+{
+  struct eigrp_packet *ep, *duplicate;
+  struct route_node *rn;
+  struct eigrp_neighbor *nbr;
+
+  u_int16_t length = EIGRP_HEADER_SIZE;
+
+  ep = eigrp_packet_new(ei->ifp->mtu);
+
+  /* Prepare EIGRP INIT UPDATE header */
+  eigrp_make_header(EIGRP_MSG_UPDATE, ei, ep->s, EIGRP_HEADER_FLAG_INIT,
+      ei->eigrp->sequence_number, 0);
+
+  length += eigrp_add_internalTLV_to_stream(ep->s,te);
+
+  /* EIGRP Checksum */
+  eigrp_packet_checksum(ei, ep->s, length);
+
+  ep->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+
+  eigrp_packet_add_top(ei,ep);
+
+  /* Hook thread to write packet. */
+  if (ei->on_write_q == 0)
+    {
+      listnode_add(ei->eigrp->oi_write_q, ei);
+      ei->on_write_q = 1;
+    }
+  if (ei->eigrp->t_write == NULL)
+    ei->eigrp->t_write =
+        thread_add_write (master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+
+  for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+    {
+      nbr = rn->info;
+      if(nbr->state == EIGRP_NEIGHBOR_UP)
+        {
+          duplicate = eigrp_packet_duplicate(ep, nbr);
+          duplicate->dst.s_addr = nbr->src.s_addr;
+          /*Put packet to retransmission queue*/
+          eigrp_fifo_push_head(nbr->multicast_queue, duplicate);
+
+          if (nbr->retrans_queue->count == 1)
+            {
+              /*Start retransmission timer*/
+              THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_multicast_packet_retrans,
+                  nbr, EIGRP_PACKET_RETRANS_TIME);
+            }
+        }
+    }
+
+  ei->eigrp->sequence_number++;
 
 }

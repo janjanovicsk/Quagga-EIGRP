@@ -72,6 +72,7 @@ eigrp_nbr_new (struct eigrp_interface *ei)
   nbr->state = EIGRP_NEIGHBOR_DOWN;
 
   nbr->retrans_queue = eigrp_fifo_new();
+  nbr->multicast_queue = eigrp_fifo_new();
 
   nbr->init_sequence_number = 0;
 
@@ -87,27 +88,6 @@ eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   nbr = eigrp_nbr_new (ei);
 
   nbr->src = p->u.prefix4;
-  nbr->ack = 0;
-
-//  if (ei->type == OSPF_IFTYPE_NBMA)
-//    {
-//      struct ospf_nbr_nbma *nbr_nbma;
-//      struct listnode *node;
-//
-//      for (ALL_LIST_ELEMENTS_RO (oi->nbr_nbma, node, nbr_nbma))
-//        {
-//          if (IPV4_ADDR_SAME(&nbr_nbma->addr, &nbr->src))
-//            {
-//              nbr_nbma->nbr = nbr;
-//              nbr->nbr_nbma = nbr_nbma;
-//
-//              if (nbr_nbma->t_poll)
-//                OSPF_POLL_TIMER_OFF (nbr_nbma->t_poll);
-//
-//              nbr->state_change = nbr_nbma->state_change + 1;
-//            }
-//        }
-//    }
 
 //
 //  if (IS_DEBUG_OSPF_EVENT)
@@ -155,6 +135,9 @@ eigrp_nbr_free (struct eigrp_neighbor *nbr)
 
   /* Cancel all events. *//* Thread lookup cost would be negligible. */
   thread_cancel_event (master, nbr);
+  eigrp_fifo_free(nbr->multicast_queue);
+  eigrp_fifo_free(nbr->retrans_queue);
+  THREAD_OFF(nbr->t_holddown);
 
   XFREE (MTYPE_EIGRP_NEIGHBOR, nbr);
 }
@@ -209,7 +192,6 @@ holddown_timer_expired (struct thread *thread)
 
   zlog_info("Neighbor %s (%s) is down: holding time expired",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
   nbr->state = EIGRP_NEIGHBOR_DOWN;
-  nbr->ack = 0;
   nbr->init_sequence_number = 0;
   nbr->recv_sequence_number = 0;
   eigrp_fifo_reset(nbr->retrans_queue);

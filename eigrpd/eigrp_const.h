@@ -129,21 +129,12 @@
 #define EIGRP_FSM_STATE_ACTIVE_3             4
 
 /*EIGRP FSM events*/
-#define EIGRP_FSM_EVENT_1                       0
-#define EIGRP_FSM_EVENT_2                       1
-#define EIGRP_FSM_EVENT_3                       2
-#define EIGRP_FSM_EVENT_4                       3
-#define EIGRP_FSM_EVENT_5                       4
-#define EIGRP_FSM_EVENT_6                       5
-#define EIGRP_FSM_EVENT_7                       6
-#define EIGRP_FSM_EVENT_8                       7
-#define EIGRP_FSM_EVENT_9                       8
-#define EIGRP_FSM_EVENT_10                      9
-#define EIGRP_FSM_EVENT_11                      10
-#define EIGRP_FSM_EVENT_12                      11
-#define EIGRP_FSM_EVENT_13                      12
-#define EIGRP_FSM_EVENT_14                      13
-#define EIGRP_FSM_EVENT_15                      14
-#define EIGRP_FSM_EVENT_16                      15
+#define EIGRP_FSM_EVENT_NQ_FCN                  0 /*input event other than query from succ, FC not satisfied*/
+#define EIGRP_FSM_EVENT_LR                      1 /*last reply, FD is reset*/
+#define EIGRP_FSM_EVENT_Q_FCN                   2 /*query from succ, FC not satisfied*/
+#define EIGRP_FSM_EVENT_LR_FCS                  3 /*last reply, FC satisfied with current value of FDij*/
+#define EIGRP_FSM_EVENT_DINC                    4 /*distance increase while in active state*/
+#define EIGRP_FSM_EVENT_QACT                    5 /*query from succ while in active state*/
+#define EIGRP_FSM_EVENT_LR_FCN                  6 /*last reply, FC not satisfied with current value of FDij*/
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

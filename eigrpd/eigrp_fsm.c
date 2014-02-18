@@ -65,16 +65,6 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
-          { eigrp_fsm_event_test }, /* Event 8 */
-          { eigrp_fsm_event_test }, /* Event 9 */
-          { eigrp_fsm_event_test }, /* Event 10 */
-          { eigrp_fsm_event_test }, /* Event 11 */
-          { eigrp_fsm_event_test }, /* Event 12 */
-          { eigrp_fsm_event_test }, /* Event 13 */
-          { eigrp_fsm_event_test }, /* Event 14 */
-          { eigrp_fsm_event_test }, /* Event 15 */
-          { eigrp_fsm_event_test }  /* Event 16 */
-
     },
     {
     //Active 0 state
@@ -85,16 +75,6 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
-          { eigrp_fsm_event_test }, /* Event 8 */
-          { eigrp_fsm_event_test }, /* Event 9 */
-          { eigrp_fsm_event_test }, /* Event 10 */
-          { eigrp_fsm_event_test }, /* Event 11 */
-          { eigrp_fsm_event_test }, /* Event 12 */
-          { eigrp_fsm_event_test }, /* Event 13 */
-          { eigrp_fsm_event_test }, /* Event 14 */
-          { eigrp_fsm_event_test }, /* Event 15 */
-          { eigrp_fsm_event_test }  /* Event 16 */
-
     },
     {
     //Active 1 state
@@ -105,16 +85,6 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
-          { eigrp_fsm_event_test }, /* Event 8 */
-          { eigrp_fsm_event_test }, /* Event 9 */
-          { eigrp_fsm_event_test }, /* Event 10 */
-          { eigrp_fsm_event_test }, /* Event 11 */
-          { eigrp_fsm_event_test }, /* Event 12 */
-          { eigrp_fsm_event_test }, /* Event 13 */
-          { eigrp_fsm_event_test }, /* Event 14 */
-          { eigrp_fsm_event_test }, /* Event 15 */
-          { eigrp_fsm_event_test } /* Event 16 */
-
     },
     {
     //Active 2 state
@@ -125,16 +95,6 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
-          { eigrp_fsm_event_test }, /* Event 8 */
-          { eigrp_fsm_event_test }, /* Event 9 */
-          { eigrp_fsm_event_test }, /* Event 10 */
-          { eigrp_fsm_event_test }, /* Event 11 */
-          { eigrp_fsm_event_test }, /* Event 12 */
-          { eigrp_fsm_event_test }, /* Event 13 */
-          { eigrp_fsm_event_test }, /* Event 14 */
-          { eigrp_fsm_event_test }, /* Event 15 */
-          { eigrp_fsm_event_test }  /* Event 16 */
-
     },
     {
     //Active 3 state
@@ -145,16 +105,6 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
-          { eigrp_fsm_event_test }, /* Event 8 */
-          { eigrp_fsm_event_test }, /* Event 9 */
-          { eigrp_fsm_event_test }, /* Event 10 */
-          { eigrp_fsm_event_test }, /* Event 11 */
-          { eigrp_fsm_event_test }, /* Event 12 */
-          { eigrp_fsm_event_test }, /* Event 13 */
-          { eigrp_fsm_event_test }, /* Event 14 */
-          { eigrp_fsm_event_test }, /* Event 15 */
-          { eigrp_fsm_event_test }  /* Event 16 */
-
     }, };
 
 int
@@ -174,11 +124,11 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
         {
           if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
             {
-              return EIGRP_FSM_EVENT_1;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           else
             {
-              return EIGRP_FSM_EVENT_3;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           break;
         }
@@ -186,19 +136,19 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
         {
           if (node->dest_type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
             {
-              return EIGRP_FSM_EVENT_2;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
             {
-              return EIGRP_FSM_EVENT_2;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           else if (eigrp_topology_get_fsuccessor(node) != NULL)
             {
-              return EIGRP_FSM_EVENT_2;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           else
             {
-              return EIGRP_FSM_EVENT_3;
+              return EIGRP_FSM_EVENT_NQ_FCN;
             }
           break;
         }
@@ -257,6 +207,7 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
         }
     }
   successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
+  dest->fdistance = successor->distance;
 }
 
 int

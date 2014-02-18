@@ -229,6 +229,8 @@ eigrp_if_up (struct eigrp_interface *ei)
   struct eigrp_topology_node *tn;
   struct eigrp_topology_entry *te;
   struct eigrp_metrics metric;
+  struct eigrp_interface *ei2;
+  struct listnode *node;
 
   if (ei == NULL)
     return 0;
@@ -273,8 +275,17 @@ eigrp_if_up (struct eigrp_interface *ei)
   te->ei = ei;
   te->reported_metric = metric;
   te->feasible_metric = metric;
+  te->parent = tn;
   eigrp_topology_entry_add(tn,te);
   eigrp_topology_node_add(eigrp->topology_table,tn);
+
+  if(ei->nbrs->count)
+    {
+      for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei2))
+        {
+          eigrp_update_send(ei2,te);
+        }
+    }
 
   return 1;
 }
