@@ -118,41 +118,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     {
   case EIGRP_FSM_STATE_PASSIVE:
     {
-      switch (msg->packet_type)
-        {
-      case EIGRP_MSG_QUERY:
-        {
-          if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          else
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          break;
-        }
-      case EIGRP_MSG_UPDATE:
-        {
-          if (node->dest_type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          if (msg->adv_router != eigrp_topology_get_successor(node)->adv_router)
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          else if (eigrp_topology_get_fsuccessor(node) != NULL)
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          else
-            {
-              return EIGRP_FSM_EVENT_NQ_FCN;
-            }
-          break;
-        }
-        }
+      eigrp_topology_update_distance(msg);
       break;
     }
   case EIGRP_FSM_STATE_ACTIVE_0:

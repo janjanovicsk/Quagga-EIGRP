@@ -46,6 +46,8 @@ extern unsigned int eigrp_topology_table_isempty(struct list *);
 extern struct eigrp_topology_node *eigrp_topology_table_lookup (struct list *, struct prefix_ipv4 *);
 extern struct eigrp_topology_entry *eigrp_topology_get_successor(struct eigrp_topology_node *);
 extern struct eigrp_topology_entry *eigrp_topology_get_fsuccessor(struct eigrp_topology_node *);
+extern struct eigrp_topology_entry *eigrp_topology_node_lookup(struct list *, struct eigrp_neighbor *);
+extern void eigrp_topology_update_distance ( struct eigrp_fsm_action_message *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
 /*extern void ospf_lsdb_clean_stat (struct ospf_lsdb *lsdb);
 extern struct ospf_lsa *ospf_lsdb_lookup_by_id (struct ospf_lsdb *, u_char,
