@@ -158,6 +158,9 @@ eigrp_new (const char *AS)
 
   new->topology_table = eigrp_topology_new();
 
+  new->neighbor_self = eigrp_nbr_new(NULL);
+  inet_aton("127.0.0.1",&new->neighbor_self->src);
+
   return new;
 }
 
@@ -238,6 +241,8 @@ eigrp_finish_final (struct eigrp *eigrp)
 
   eigrp_topology_cleanup(eigrp->topology_table);
   eigrp_topology_free(eigrp->topology_table);
+
+  eigrp_nbr_free(eigrp->neighbor_self);
 
   eigrp_delete (eigrp);
 
