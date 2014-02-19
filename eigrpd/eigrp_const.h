@@ -88,7 +88,7 @@
 
 #define EIGRP_HELLO_INTERVAL_DEFAULT        5
 #define EIGRP_HOLD_INTERVAL_DEFAULT         15
-#define EIGRP_BANDWIDTH_DEFAULT             10000
+#define EIGRP_BANDWIDTH_DEFAULT             10000000
 #define EIGRP_DELAY_DEFAULT                 1000
 #define EIGRP_RELIABILITY_DEFAULT           255
 #define EIGRP_LOAD_DEFAULT                  1

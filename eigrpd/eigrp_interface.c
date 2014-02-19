@@ -230,7 +230,7 @@ eigrp_if_up (struct eigrp_interface *ei)
   struct eigrp_topology_entry *te;
   struct eigrp_metrics metric;
   struct eigrp_interface *ei2;
-  struct listnode *node;
+  struct listnode *node, *nnode;
 
   if (ei == NULL)
     return 0;
@@ -248,7 +248,7 @@ eigrp_if_up (struct eigrp_interface *ei)
   thread_add_event (master, eigrp_hello_timer, ei, (1));
 
   /*Prepare metrics*/
-  metric.bandwith = ((256*100000000)/EIGRP_IF_PARAM(ei,bandwidth));
+  metric.bandwith = ((256*10000000)/EIGRP_IF_PARAM(ei,bandwidth));
   metric.delay = EIGRP_IF_PARAM(ei,delay)/10*256;
   metric.load =  EIGRP_IF_PARAM(ei,load);
   metric.reliability =  EIGRP_IF_PARAM(ei,reliability);
@@ -279,13 +279,10 @@ eigrp_if_up (struct eigrp_interface *ei)
   eigrp_topology_entry_add(tn,te);
   eigrp_topology_node_add(eigrp->topology_table,tn);
 
-  if(ei->nbrs->count)
-    {
-      for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei2))
-        {
-          eigrp_update_send(ei2,te);
-        }
-    }
+//  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei2))
+//    {
+//      eigrp_update_send(ei2,te);
+//    }
 
   return 1;
 }

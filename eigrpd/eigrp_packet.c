@@ -309,6 +309,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   eigrp_topology_entry_add(tnode, tentry);
                   eigrp_fsm_update_node(tnode);
 
+
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -451,6 +452,7 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   struct eigrp_topology_node *tnode;
   struct eigrp_topology_entry *tentry;
   struct eigrp *eigrp;
+  struct listnode *node, *nnode;
   u_int16_t type;
 
   /* increment statistics. */
@@ -1079,39 +1081,6 @@ eigrp_ack_send(struct eigrp_neighbor *nbr)
         thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
 }
 
-//void
-//eigrp_reply_send(struct eigrp_neighbor *nbr)
-//{
-//  struct eigrp_packet *ep;
-//
-//  u_int16_t length = EIGRP_HEADER_SIZE;
-//
-//  ep = eigrp_packet_new(nbr->ei->ifp->mtu);
-//  /* Prepare EIGRP common header. */
-//  eigrp_make_header(EIGRP_MSG_HELLO, nbr->ei, ep->s, 0, 0,
-//      nbr->recv_sequence_number);
-//
-//  /* EIGRP Checksum */
-//  eigrp_packet_checksum(nbr->ei, ep->s, length);
-//
-//  ep->length = length;
-//
-//  ep->dst.s_addr = nbr->src.s_addr;
-//
-//  /* Add packet to the top of the interface output queue*/
-//  eigrp_packet_add_top(nbr->ei, ep);
-//
-//  /* Hook thread to write packet. */
-//  if (nbr->ei->on_write_q == 0)
-//    {
-//      listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-//      nbr->ei->on_write_q = 1;
-//    }
-//  if (nbr->ei->eigrp->t_write == NULL)
-//    nbr->ei->eigrp->t_write =
-//        thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
-//}
-
 static void
 eigrp_hello_send_sub(struct eigrp_interface *ei, in_addr_t addr)
 {
@@ -1170,6 +1139,10 @@ eigrp_send_init_update(struct eigrp_neighbor *nbr)
 
   nbr->init_sequence_number = nbr->ei->eigrp->sequence_number;
 
+  /*This ack number we await from neighbor*/
+  ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
 
@@ -1212,6 +1185,9 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
 
   ep->dst.s_addr = nbr->src.s_addr;
 
+  /*This ack number we await from neighbor*/
+  ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
   ep_multicast = eigrp_packet_duplicate(ep,nbr);
   ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
@@ -1247,9 +1223,6 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
       THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
           nbr, EIGRP_PACKET_RETRANS_TIME);
 
-      /*This ack number we await from neighbor*/
-      ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
       /*Increment sequence number counter*/
       nbr->ei->eigrp->sequence_number++;
 
@@ -1268,37 +1241,34 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
 void
 eigrp_send_reply(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
 {
-  struct eigrp_packet *ep;
+    struct eigrp_packet *ep;
+    u_int16_t length = EIGRP_HEADER_SIZE;
 
-  ep = eigrp_fifo_tail(nbr->retrans_queue);
+    ep = eigrp_packet_new(nbr->ei->ifp->mtu);
 
-  if (ep)
-    {
-      struct eigrp_packet *duplicate;
-      duplicate = eigrp_packet_duplicate(ep, nbr);
-      /* Add packet to the top of the interface output queue*/
-      eigrp_packet_add_top(nbr->ei, duplicate);
+    /* Prepare EIGRP INIT UPDATE header */
+    eigrp_make_header(EIGRP_MSG_REPLY, nbr->ei, ep->s, 0,
+        nbr->ei->eigrp->sequence_number, 0);
 
-      /*Start retransmission timer*/
-      THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
-          nbr, EIGRP_PACKET_RETRANS_TIME);
+    length += eigrp_add_internalTLV_to_stream(ep->s,te);
 
-      /*This ack number we await from neighbor*/
-      ep->sequence_number = nbr->ei->eigrp->sequence_number;
+    /* EIGRP Checksum */
+    eigrp_packet_checksum(nbr->ei, ep->s, length);
 
-      /*Increment sequence number counter*/
-      nbr->ei->eigrp->sequence_number++;
+    ep->length = length;
 
-      /* Hook thread to write packet. */
-      if (nbr->ei->on_write_q == 0)
-        {
-          listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-          nbr->ei->on_write_q = 1;
-        }
-      if (nbr->ei->eigrp->t_write == NULL)
-        nbr->ei->eigrp->t_write =
-            thread_add_write (master, eigrp_write, nbr->ei->eigrp, nbr->ei->eigrp->fd);
-    }
+    ep->dst.s_addr = nbr->src.s_addr;
+
+    /*This ack number we await from neighbor*/
+    ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+    /*Put packet to retransmission queue*/
+    eigrp_fifo_push_head(nbr->retrans_queue, ep);
+
+    if (nbr->retrans_queue->count == 1)
+      {
+        eigrp_send_packet_reliably(nbr);
+      }
 }
 
 /* Calculate EIGRP checksum */
@@ -1763,8 +1733,13 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
   /* EIGRP Checksum */
   eigrp_packet_checksum(ei, ep->s, length);
 
+  zlog_info("%d DEBUG\n",ei->ifp->ifindex);
   ep->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
+  /*This ack number we await from neighbor*/
+  ep->sequence_number = ei->eigrp->sequence_number;
+
+//  duplicate = eigrp_packet_duplicate(ep, nbr);
   eigrp_packet_add_top(ei,ep);
 
   /* Hook thread to write packet. */
@@ -1782,7 +1757,6 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
       nbr = rn->info;
       if(nbr->state == EIGRP_NEIGHBOR_UP)
         {
-          duplicate = eigrp_packet_duplicate(ep, nbr);
           duplicate->dst.s_addr = nbr->src.s_addr;
           /*Put packet to retransmission queue*/
           eigrp_fifo_push_head(nbr->multicast_queue, duplicate);

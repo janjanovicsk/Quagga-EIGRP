@@ -82,6 +82,9 @@ struct eigrp
 
   struct list *topology_table;
 
+  /*Neighbor self*/
+  struct eigrp_neighbor *neighbor_self;
+
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
