@@ -279,10 +279,13 @@ eigrp_if_up (struct eigrp_interface *ei)
   eigrp_topology_entry_add(tn,te);
   eigrp_topology_node_add(eigrp->topology_table,tn);
 
-//  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei2))
-//    {
-//      eigrp_update_send(ei2,te);
-//    }
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei2))
+    {
+      if(ei2->nbrs->count !=0)
+        {
+          eigrp_update_send(ei2,te);
+        }
+    }
 
   return 1;
 }

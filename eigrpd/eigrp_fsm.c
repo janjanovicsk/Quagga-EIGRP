@@ -139,7 +139,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
     }
 
-  return 15;
+  return 0;
 }
 
 void
