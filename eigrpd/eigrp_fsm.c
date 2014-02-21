@@ -25,7 +25,6 @@
  * Boston, MA 02111-1307, USA.
  */
 
-
 #include <thread.h>
 #include <zebra.h>
 
@@ -53,7 +52,7 @@ eigrp_fsm_event_test(struct eigrp_fsm_action_message *, int);
 struct
 {
   int
-  (*func)(struct eigrp_fsm_action_message *,int);
+  (*func)(struct eigrp_fsm_action_message *, int);
 } NSM[EIGRP_FSM_STATE_MAX][EIGRP_FSM_EVENT_MAX] =
   {
     {
@@ -65,6 +64,7 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
     },
     {
     //Active 0 state
@@ -75,6 +75,8 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
+
     },
     {
     //Active 1 state
@@ -85,6 +87,7 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
     },
     {
     //Active 2 state
@@ -95,6 +98,7 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
     },
     {
     //Active 3 state
@@ -105,6 +109,7 @@ struct
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
           { eigrp_fsm_event_test }, /* Event 7 */
+          { eigrp_fsm_event_test }, /* Event 8 */
     }, };
 
 int
@@ -112,27 +117,62 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
 {
 
   struct eigrp_topology_node *node = msg->dest;
-  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(node->entries,msg->adv_router);
+  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(node->entries,
+      msg->adv_router);
   u_char actual_state = node->state;
 
   switch (actual_state)
     {
   case EIGRP_FSM_STATE_PASSIVE:
     {
-      eigrp_topology_update_distance(msg);
-      /*
-       * If it is message from current successor
-       */
-      if(ISSUCCESSOR(entry))
+      if (entry == NULL)
         {
+          entry = eigrp_topology_entry_new();
+          entry->adv_router = msg->adv_router;
+          entry->ei = msg->adv_router->ei;
+          entry->parent = node;
+          eigrp_topology_entry_add(node,entry);
+          eigrp_topology_update_distance(msg);
 
+          if(entry->distance < eigrp_topology_get_successor(node)->distance)
+            {
+              eigrp_topology_get_successor(node)->flags = 0;
+              //vyhodit succesora z route table
+              eigrp_fsm_update_node(node);
+              //vlozit noveho sucessora
+              eigrp_update_send_all(entry);
+            }
+          else
+            {
+              entry->flags = entry->reported_distance < node->fdistance ? EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG : 0;
+            }
+          return 7;
         }
-      /*
-       * If it is not from current successor
-       */
       else
         {
-          //send update
+          eigrp_topology_update_distance(msg);
+          /*
+           * If FC not satisfied
+           */
+          if (eigrp_topology_get_successor(node)->distance > node->fdistance)
+            {
+              if(msg->packet_type == EIGRP_MSG_QUERY)
+                {
+                  return EIGRP_FSM_EVENT_Q_FCN;
+                }
+              else
+                {
+                  return EIGRP_FSM_EVENT_NQ_FCN;
+                }
+            }
+          /*
+           * If FC satisfied
+           * send update with change to all neighbors
+           */
+          else
+            {
+              eigrp_update_send_all(entry);
+            }
         }
       break;
     }
@@ -154,7 +194,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
     }
 
-  return 0;
+  return 7;
 }
 
 void
@@ -188,7 +228,7 @@ eigrp_fsm_update_node(struct eigrp_topology_node *dest)
         }
     }
   successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
-  dest->fdistance = successor->distance;
+  dest->rdistance = dest->fdistance = dest->distance = successor->distance;
 }
 
 int
@@ -198,8 +238,8 @@ eigrp_fsm_event(struct thread *thread)
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-  zlog_info("State: %d\nEvent: %d",msg->dest->state,event);
-  (*(NSM[msg->dest->state][event].func))(msg,event);
+  zlog_info("State: %d\nEvent: %d", msg->dest->state, event);
+  (*(NSM[msg->dest->state][event].func))(msg, event);
 
   return 1;
 }

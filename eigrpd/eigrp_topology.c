@@ -332,7 +332,9 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
       entry->feasible_metric= int_data->metric;
       u_int32_t bw = EIGRP_IF_PARAM(entry->ei,bandwidth);
       entry->feasible_metric.bandwith = entry->feasible_metric.bandwith > bw ? bw : entry->feasible_metric.bandwith;
+      entry->feasible_metric.delay += EIGRP_IF_PARAM(entry->ei, delay);
       entry->distance = eigrp_calculate_metrics(&entry->feasible_metric);
+      node->fdistance = node->fdistance > entry->distance ? entry->distance : node->fdistance;
 
     }
   else

@@ -239,6 +239,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   eigrp_topology_node_add(eigrp->topology_table, tnode);
                   eigrp_topology_entry_add(tnode, tentry);
                   eigrp_fsm_update_node(tnode);
+                  eigrp_update_send_all(tentry);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -1776,4 +1777,16 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
 
   ei->eigrp->sequence_number++;
 
+}
+
+void
+eigrp_update_send_all (struct eigrp_topology_entry *te)
+{
+  struct eigrp_interface *iface;
+  struct listnode *node;
+
+  for(ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
+    {
+      eigrp_update_send(iface,te);
+    }
 }

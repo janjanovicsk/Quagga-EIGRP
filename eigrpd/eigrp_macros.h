@@ -76,8 +76,6 @@
 //-----------------------------------------------------------------------------------------------------------------------------------
 /* Topology Macros */
 
-#define ISSUCCESSOR(N) \
-  N->flags & EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG == EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG
 
 /* FSM macros*/
 #define EIGRP_FSM_EVENT_SCHEDULE(I,E) \
