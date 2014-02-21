@@ -426,7 +426,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
             {
               ep = eigrp_fifo_pop_tail(nbr->multicast_queue);
               eigrp_packet_free(ep);
-              if (nbr->retrans_queue->count > 0)
+              if (nbr->multicast_queue->count > 0)
                 {
                   eigrp_send_packet_reliably(nbr);
                 }
@@ -1578,6 +1578,7 @@ eigrp_packet_duplicate(struct eigrp_packet *old, struct eigrp_neighbor *nbr)
   new->length = old->length;
   new->retrans_counter = old->retrans_counter;
   new->dst = old->dst;
+  new->sequence_number = old->sequence_number;
   stream_copy(new->s, old->s);
 
   return new;
@@ -1706,7 +1707,10 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
     }
   if (te->parent->destination->prefixlen > 24)
     {
-      stream_putl(s, te->parent->destination->prefix.s_addr);
+      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, (te->parent->destination->prefix.s_addr >> 24) & 0xFF);
     }
 
   return length;
@@ -1725,21 +1729,39 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
   ep = eigrp_packet_new(ei->ifp->mtu);
 
   /* Prepare EIGRP INIT UPDATE header */
-  eigrp_make_header(EIGRP_MSG_UPDATE, ei, ep->s, EIGRP_HEADER_FLAG_INIT,
+  eigrp_make_header(EIGRP_MSG_UPDATE, ei, ep->s, 0,
       ei->eigrp->sequence_number, 0);
 
   length += eigrp_add_internalTLV_to_stream(ep->s,te);
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(ei, ep->s, length);
+  ep->length = length;
 
-  zlog_info("%d DEBUG\n",ei->ifp->ifindex);
   ep->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
   /*This ack number we await from neighbor*/
   ep->sequence_number = ei->eigrp->sequence_number;
 
-//  duplicate = eigrp_packet_duplicate(ep, nbr);
+  for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+    {
+      nbr = rn->info;
+      if(nbr->state == EIGRP_NEIGHBOR_UP)
+        {
+          duplicate = eigrp_packet_duplicate(ep,nbr);
+          duplicate->dst.s_addr = nbr->src.s_addr;
+          /*Put packet to retransmission queue*/
+          eigrp_fifo_push_head(nbr->multicast_queue, duplicate);
+
+          if (nbr->multicast_queue->count == 1)
+            {
+              /*Start retransmission timer*/
+              THREAD_TIMER_ON(master, duplicate->t_retrans_timer, eigrp_unack_multicast_packet_retrans,
+                  nbr, EIGRP_PACKET_RETRANS_TIME);
+            }
+        }
+    }
+
   eigrp_packet_add_top(ei,ep);
 
   /* Hook thread to write packet. */
@@ -1751,24 +1773,6 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
   if (ei->eigrp->t_write == NULL)
     ei->eigrp->t_write =
         thread_add_write (master, eigrp_write, ei->eigrp, ei->eigrp->fd);
-
-  for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
-    {
-      nbr = rn->info;
-      if(nbr->state == EIGRP_NEIGHBOR_UP)
-        {
-          duplicate->dst.s_addr = nbr->src.s_addr;
-          /*Put packet to retransmission queue*/
-          eigrp_fifo_push_head(nbr->multicast_queue, duplicate);
-
-          if (nbr->retrans_queue->count == 1)
-            {
-              /*Start retransmission timer*/
-              THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_multicast_packet_retrans,
-                  nbr, EIGRP_PACKET_RETRANS_TIME);
-            }
-        }
-    }
 
   ei->eigrp->sequence_number++;
 
