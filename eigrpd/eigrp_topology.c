@@ -300,13 +300,13 @@ eigrp_topology_get_fsuccessor(struct eigrp_topology_node *table_node)
 }
 
 struct eigrp_topology_entry *
-eigrp_topology_node_lookup(struct list *entries, struct eigrp_neighbor *entry)
+eigrp_topology_node_lookup(struct list *entries, struct eigrp_neighbor *nbr)
 {
   struct eigrp_topology_entry *data;
   struct listnode *node, *nnode;
   for (ALL_LIST_ELEMENTS(entries, node, nnode, data))
     {
-      if (data->adv_router == entry)
+      if (data->adv_router == nbr)
         {
           return data;
         }
@@ -332,7 +332,9 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
       entry->feasible_metric= int_data->metric;
       u_int32_t bw = EIGRP_IF_PARAM(entry->ei,bandwidth);
       entry->feasible_metric.bandwith = entry->feasible_metric.bandwith > bw ? bw : entry->feasible_metric.bandwith;
+      entry->feasible_metric.delay += EIGRP_IF_PARAM(entry->ei, delay);
       entry->distance = eigrp_calculate_metrics(&entry->feasible_metric);
+      node->fdistance = node->fdistance > entry->distance ? entry->distance : node->fdistance;
 
     }
   else
