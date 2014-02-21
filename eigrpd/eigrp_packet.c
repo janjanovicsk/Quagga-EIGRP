@@ -239,7 +239,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   eigrp_topology_node_add(eigrp->topology_table, tnode);
                   eigrp_topology_entry_add(tnode, tentry);
                   eigrp_fsm_update_node(tnode);
-                  eigrp_update_send_all(tentry);
+                  eigrp_update_send_all(tentry, ei);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -450,10 +450,12 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   struct eigrp_neighbor *nbr;
   struct prefix p;
   struct TLV_IPv4_Internal_type *tlv;
-  struct eigrp_topology_node *tnode;
-  struct eigrp_topology_entry *tentry;
   struct eigrp *eigrp;
   struct listnode *node, *nnode;
+
+  struct eigrp_topology_node *temp_tn;
+  struct eigrp_topology_entry *temp_te;
+
   u_int16_t type;
 
   /* increment statistics. */
@@ -489,6 +491,16 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
           dest_addr->prefixlen = tlv->prefix_length;
           struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
               eigrp->topology_table, dest_addr);
+
+          temp_te = XCALLOC(MTYPE_EIGRP_TOPOLOGY_ENTRY, sizeof(struct eigrp_topology_entry));
+          temp_tn = XCALLOC(MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
+          temp_te->feasible_metric.delay = 0xFFFFFFFF;
+          temp_te->parent = temp_tn;
+          temp_tn->destination = dest_addr;
+
+          eigrp_send_reply(nbr,temp_te);
+          XFREE(MTYPE_EIGRP_TOPOLOGY_ENTRY,temp_te);
+          XFREE(MTYPE_EIGRP_TOPOLOGY_NODE,temp_tn);
 
           /* If the destination exists (it should, but one never know)*/
           if (dest != NULL)
@@ -1780,13 +1792,14 @@ eigrp_update_send (struct eigrp_interface *ei,struct eigrp_topology_entry *te)
 }
 
 void
-eigrp_update_send_all (struct eigrp_topology_entry *te)
+eigrp_update_send_all (struct eigrp_topology_entry *te, struct eigrp_interface *exception)
 {
   struct eigrp_interface *iface;
   struct listnode *node;
 
   for(ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
     {
-      eigrp_update_send(iface,te);
+      if(iface!=exception)
+        eigrp_update_send(iface,te);
     }
 }

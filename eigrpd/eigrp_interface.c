@@ -305,7 +305,7 @@ eigrp_if_down (struct eigrp_interface *ei)
   /* Shutdown packet reception and sending */
   eigrp_if_stream_unset (ei);
 
-  /*Set infinite metrics to routes learned by this interface and send them in query*/
+  /*Set infinite metrics to routes learned by this interface and start querry process*/
   for (ALL_LIST_ELEMENTS (ei->eigrp->topology_table, node, nnode, tn))
     {
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))

@@ -140,7 +140,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
               //vyhodit succesora z route table
               eigrp_fsm_update_node(node);
               //vlozit noveho sucessora
-              eigrp_update_send_all(entry);
+              eigrp_update_send_all(entry,msg->adv_router->ei);
             }
           else
             {
@@ -171,7 +171,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
            */
           else
             {
-              eigrp_update_send_all(entry);
+              eigrp_update_send_all(entry,msg->adv_router->ei);
             }
         }
       break;
