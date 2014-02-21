@@ -293,12 +293,29 @@ eigrp_if_up (struct eigrp_interface *ei)
 int
 eigrp_if_down (struct eigrp_interface *ei)
 {
+
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_topology_node *tn;
+  struct eigrp_topology_entry *te;
+
   if (ei == NULL)
     return 0;
 
   THREAD_OFF(ei->t_hello);
   /* Shutdown packet reception and sending */
   eigrp_if_stream_unset (ei);
+
+  /*Set infinite metrics to routes learned by this interface and send them in query*/
+  for (ALL_LIST_ELEMENTS (ei->eigrp->topology_table, node, nnode, tn))
+    {
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+        {
+          if((te->ei == ei))
+            te->feasible_metric.delay = 0xFFFFFFFF;
+
+        }
+    }
+
 
   return 1;
 }
