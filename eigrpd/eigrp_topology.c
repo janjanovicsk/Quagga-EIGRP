@@ -300,13 +300,13 @@ eigrp_topology_get_fsuccessor(struct eigrp_topology_node *table_node)
 }
 
 struct eigrp_topology_entry *
-eigrp_topology_node_lookup(struct list *entries, struct eigrp_neighbor *entry)
+eigrp_topology_node_lookup(struct list *entries, struct eigrp_neighbor *nbr)
 {
   struct eigrp_topology_entry *data;
   struct listnode *node, *nnode;
   for (ALL_LIST_ELEMENTS(entries, node, nnode, data))
     {
-      if (data->adv_router == entry)
+      if (data->adv_router == nbr)
         {
           return data;
         }

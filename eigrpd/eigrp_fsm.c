@@ -112,6 +112,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
 {
 
   struct eigrp_topology_node *node = msg->dest;
+  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(node->entries,msg->adv_router);
   u_char actual_state = node->state;
 
   switch (actual_state)
@@ -119,6 +120,20 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
   case EIGRP_FSM_STATE_PASSIVE:
     {
       eigrp_topology_update_distance(msg);
+      /*
+       * If it is message from current successor
+       */
+      if(ISSUCCESSOR(entry))
+        {
+
+        }
+      /*
+       * If it is not from current successor
+       */
+      else
+        {
+          //send update
+        }
       break;
     }
   case EIGRP_FSM_STATE_ACTIVE_0:
