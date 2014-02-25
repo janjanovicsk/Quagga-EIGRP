@@ -201,6 +201,8 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               dest_addr->prefixlen = tlv->prefix_length;
               struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
                   eigrp->topology_table, dest_addr);
+              struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(dest->entries,nbr);
+
               /*if exists it comes to DUAL*/
               if (dest != NULL)
                 {
@@ -212,7 +214,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   msg->data_type = TLV_INTERNAL_TYPE;
                   msg->adv_router = nbr;
                   msg->data.ipv4_int_type = tlv;
-                  msg->dest = dest;
+                  msg->entry = entry;
                   int event = eigrp_get_fsm_event(msg);
                   EIGRP_FSM_EVENT_SCHEDULE(msg, event);
                 }
@@ -234,11 +236,11 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       &tlv->metric);
                   tentry->distance = tentry->reported_distance;
                   tentry->ei = ei;
-                  tentry->parent = tnode;
+                  tentry->node = tnode;
 
                   eigrp_topology_node_add(eigrp->topology_table, tnode);
                   eigrp_topology_entry_add(tnode, tentry);
-                  eigrp_fsm_update_node(tnode);
+                  eigrp_topology_update_node(tnode);
                   eigrp_update_send_all(tentry, ei);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
@@ -282,7 +284,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   msg->data_type = TLV_INTERNAL_TYPE;
                   msg->adv_router = nbr;
                   msg->data.ipv4_int_type = tlv;
-                  msg->dest = dest;
+                  msg->entry->node = dest;
                   int event = eigrp_get_fsm_event(msg);
                   EIGRP_FSM_EVENT_SCHEDULE(msg, event);
                 }
@@ -304,11 +306,11 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       &tlv->metric);
                   tentry->distance = tentry->reported_distance;
                   tentry->ei = ei;
-                  tentry->parent = tnode;
+                  tentry->node = tnode;
 
                   eigrp_topology_node_add(eigrp->topology_table, tnode);
                   eigrp_topology_entry_add(tnode, tentry);
-                  eigrp_fsm_update_node(tnode);
+                  eigrp_topology_update_node(tnode);
 
 
                 }
@@ -495,7 +497,7 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
           temp_te = XCALLOC(MTYPE_EIGRP_TOPOLOGY_ENTRY, sizeof(struct eigrp_topology_entry));
           temp_tn = XCALLOC(MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
           temp_te->feasible_metric.delay = 0xFFFFFFFF;
-          temp_te->parent = temp_tn;
+          temp_te->node = temp_tn;
           temp_tn->destination = dest_addr;
 
           eigrp_send_reply(nbr,temp_te);
@@ -513,7 +515,7 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               msg->data_type = TLV_INTERNAL_TYPE;
               msg->adv_router = nbr;
               msg->data.ipv4_int_type = tlv;
-              msg->dest = dest;
+              msg->entry->node = dest;
               int event = eigrp_get_fsm_event(msg);
               EIGRP_FSM_EVENT_SCHEDULE(msg, event);
               eigrp_topology_node_delete(eigrp->topology_table,dest);
@@ -1229,7 +1231,7 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   {
     for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
       {
-        if((te->ei == nbr->ei) && (te->parent->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE))
+        if((te->ei == nbr->ei) && (te->node->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE))
           continue;
 
         length += eigrp_add_internalTLV_to_stream(ep->s,te);
@@ -1740,24 +1742,24 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
   u_int16_t length;
 
   stream_putw(s, TLV_INTERNAL_TYPE);
-  if (te->parent->destination->prefixlen <= 8)
+  if (te->node->destination->prefixlen <= 8)
     {
       stream_putw(s, 0x001A);
       length = 0x001A;
     }
-  if ((te->parent->destination->prefixlen > 8)
-      && (te->parent->destination->prefixlen <= 16))
+  if ((te->node->destination->prefixlen > 8)
+      && (te->node->destination->prefixlen <= 16))
     {
       stream_putw(s, 0x001B);
       length = 0x001B;
     }
-  if ((te->parent->destination->prefixlen > 16)
-      && (te->parent->destination->prefixlen <= 24))
+  if ((te->node->destination->prefixlen > 16)
+      && (te->node->destination->prefixlen <= 24))
     {
       stream_putw(s, 0x001C);
       length = 0x001C;
     }
-  if (te->parent->destination->prefixlen > 24)
+  if (te->node->destination->prefixlen > 24)
     {
       stream_putw(s, 0x001D);
       length = 0x001D;
@@ -1777,31 +1779,31 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
   stream_putc(s, te->feasible_metric.tag);
   stream_putc(s, te->feasible_metric.flags);
 
-  stream_putc(s, te->parent->destination->prefixlen);
+  stream_putc(s, te->node->destination->prefixlen);
 
-  if (te->parent->destination->prefixlen <= 8)
+  if (te->node->destination->prefixlen <= 8)
     {
-      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, te->node->destination->prefix.s_addr & 0xFF);
     }
-  if ((te->parent->destination->prefixlen > 8)
-      && (te->parent->destination->prefixlen <= 16))
+  if ((te->node->destination->prefixlen > 8)
+      && (te->node->destination->prefixlen <= 16))
     {
-      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, te->node->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 8) & 0xFF);
     }
-  if ((te->parent->destination->prefixlen > 16)
-      && (te->parent->destination->prefixlen <= 24))
+  if ((te->node->destination->prefixlen > 16)
+      && (te->node->destination->prefixlen <= 24))
     {
-      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, te->node->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 16) & 0xFF);
     }
-  if (te->parent->destination->prefixlen > 24)
+  if (te->node->destination->prefixlen > 24)
     {
-      stream_putc(s, te->parent->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 8) & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 16) & 0xFF);
-      stream_putc(s, (te->parent->destination->prefix.s_addr >> 24) & 0xFF);
+      stream_putc(s, te->node->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, (te->node->destination->prefix.s_addr >> 24) & 0xFF);
     }
 
   return length;

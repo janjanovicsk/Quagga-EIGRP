@@ -326,7 +326,7 @@ struct TLV_IPv4_External_type
 /* EIGRP Topology table node structure */
 struct eigrp_topology_node
 {
-  struct list *entries;
+  struct list *entries, *rij;
   struct prefix_ipv4 *destination; //destination address
   u_int32_t fdistance;
   u_int32_t rdistance;
@@ -339,7 +339,7 @@ struct eigrp_topology_node
 struct eigrp_topology_entry
 {
   struct prefix *data;
-  struct eigrp_topology_node *parent;
+  struct eigrp_topology_node *node;
   u_int32_t reported_distance; //distance reported by neighbor
   u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
 
@@ -360,7 +360,7 @@ struct eigrp_fsm_action_message
 {
   u_char packet_type; //UPDATE, QUERY, SIAQUERY, SIAREPLY
   struct eigrp_neighbor *adv_router; //advertising neighbor
-  struct eigrp_topology_node *dest;
+  struct eigrp_topology_entry *entry;
   int data_type; // internal or external tlv type
   union{
     struct TLV_IPv4_External_type *ipv4_ext_data;

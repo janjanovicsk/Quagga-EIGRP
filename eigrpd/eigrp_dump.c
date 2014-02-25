@@ -205,9 +205,9 @@ show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
 void
 show_ip_eigrp_topology_entry (struct vty *vty, struct eigrp_topology_entry *te)
 {
-  if (te->parent->dest_type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
+  if (te->node->dest_type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
     vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
-  if (te->parent->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE)
+  if (te->node->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE)
     {
       vty_out (vty, "%-7s%s%s (%d/%d), %s%s"," ","via ",inet_ntoa(te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string(te->ei), VTY_NEWLINE);
     }
