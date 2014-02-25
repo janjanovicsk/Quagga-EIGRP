@@ -350,6 +350,7 @@ struct eigrp_topology_entry
   u_char flags; //used for marking successor and FS
 
   struct eigrp_interface *ei; /*pointer for case of connected entry*/
+
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------

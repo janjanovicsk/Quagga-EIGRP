@@ -244,6 +244,7 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
   node->state = EIGRP_FSM_STATE_ACTIVE_1;
   node->rdistance = node->distance = eigrp_topology_get_successor(node)->distance;
   //send query to all
+  eigrp_query_send_all(msg->entry,NULL);
 
 
   return 1;

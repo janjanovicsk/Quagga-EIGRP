@@ -111,6 +111,7 @@ eigrp_topology_node_new()
   new = XCALLOC(MTYPE_EIGRP_TOPOLOGY_NODE, sizeof(struct eigrp_topology_node));
   new->destination = XCALLOC(MTYPE_PREFIX_IPV4, sizeof(struct prefix_ipv4));
   new->entries = list_new();
+  new->rij = list_new();
   new->entries->cmp = (int
   (*)(void *, void *)) eigrp_topology_entry_cmp;
 
@@ -212,6 +213,7 @@ eigrp_topology_node_delete(struct list *topology,
     {
       list_delete_all_node(node->entries);
       list_free(node->entries);
+      list_free(node->rij);
       listnode_delete(topology, node);
     }
 }

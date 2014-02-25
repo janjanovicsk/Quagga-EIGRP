@@ -201,7 +201,6 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               dest_addr->prefixlen = tlv->prefix_length;
               struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
                   eigrp->topology_table, dest_addr);
-              struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(dest->entries,nbr);
 
               /*if exists it comes to DUAL*/
               if (dest != NULL)
@@ -209,6 +208,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   struct eigrp_fsm_action_message *msg;
                   msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
                       sizeof(struct eigrp_fsm_action_message));
+                  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(dest->entries,nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
                   msg->data_type = TLV_INTERNAL_TYPE;
@@ -229,13 +229,21 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
                   tentry = eigrp_topology_entry_new();
+                  tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
                   tentry->feasible_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
-                  tentry->distance = tentry->reported_distance;
-                  tentry->ei = ei;
+
+                  u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
+                  tentry->feasible_metric.bandwith =
+                      tentry->feasible_metric.bandwith > bw ?
+                          bw : tentry->feasible_metric.bandwith;
+                  tentry->feasible_metric.delay += EIGRP_IF_PARAM(tentry->ei, delay);
+                  tentry->distance = eigrp_calculate_metrics(
+                                        &tentry->feasible_metric);
+                  tnode->fdistance = tnode->distance = tnode->rdistance = tentry->distance;
                   tentry->node = tnode;
 
                   eigrp_topology_node_add(eigrp->topology_table, tnode);
@@ -279,12 +287,13 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   struct eigrp_fsm_action_message *msg;
                   msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
                       sizeof(struct eigrp_fsm_action_message));
+                  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(dest->entries,nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
                   msg->data_type = TLV_INTERNAL_TYPE;
                   msg->adv_router = nbr;
                   msg->data.ipv4_int_type = tlv;
-                  msg->entry->node = dest;
+                  msg->entry = entry;
                   int event = eigrp_get_fsm_event(msg);
                   EIGRP_FSM_EVENT_SCHEDULE(msg, event);
                 }
@@ -563,9 +572,29 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 
   while (s->endp > s->getp)
     {
+      struct eigrp_packet *ep;
+      ep = eigrp_fifo_tail(nbr->retrans_queue);
+      if (ep != NULL)
+        {
+          if (ntohl(eigrph->ack) == ep->sequence_number)
+            {
+              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+              eigrp_packet_free(ep);
+              if (nbr->retrans_queue->count > 0)
+                {
+                  eigrp_send_packet_reliably(nbr);
+                }
+            }
+        }
+
       type = stream_getw(s);
       if (type == TLV_INTERNAL_TYPE)
         {
+          stream_set_getp(s, s->getp - sizeof(u_int16_t));
+
+          tlv = eigrp_read_ipv4_tlv(s);
+
+          //TU TREBA MSG!!!!!!!!!!!!!
 
         }
     }
@@ -1343,8 +1372,10 @@ eigrp_send_query(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
     eigrp_make_header(EIGRP_MSG_QUERY, nbr->ei, ep->s, 0,
         nbr->ei->eigrp->sequence_number, 0);
 
+
     length += eigrp_add_internalTLV_to_stream(ep->s,te);
 
+    listnode_add(te->node->rij,nbr);
     /* EIGRP Checksum */
     eigrp_packet_checksum(nbr->ei, ep->s, length);
 
