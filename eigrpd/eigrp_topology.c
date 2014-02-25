@@ -195,7 +195,7 @@ eigrp_topology_entry_add(struct eigrp_topology_node *node,
   if (listnode_lookup(node->entries, entry) == NULL)
     {
       listnode_add_sort(node->entries, entry);
-      entry->parent = node;
+      entry->node = node;
     }
 
 }
@@ -317,30 +317,70 @@ eigrp_topology_node_lookup(struct list *entries, struct eigrp_neighbor *nbr)
 void
 eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
 {
-  struct eigrp_topology_node *node = msg->dest;
-  struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(node->entries,msg->adv_router);
+  struct eigrp_topology_node *node = msg->entry->node;
+  struct eigrp_topology_entry *entry = msg->entry;
 
   assert(entry);
 
   struct TLV_IPv4_External_type *ext_data = NULL;
   struct TLV_IPv4_Internal_type *int_data = NULL;
-  if(msg->data_type == TLV_INTERNAL_TYPE)
+  if (msg->data_type == TLV_INTERNAL_TYPE)
     {
       int_data = msg->data.ipv4_int_type;
       entry->reported_metric = int_data->metric;
       entry->reported_distance = eigrp_calculate_metrics(&int_data->metric);
-      entry->feasible_metric= int_data->metric;
+      entry->feasible_metric = int_data->metric;
       u_int32_t bw = EIGRP_IF_PARAM(entry->ei,bandwidth);
-      entry->feasible_metric.bandwith = entry->feasible_metric.bandwith > bw ? bw : entry->feasible_metric.bandwith;
+      entry->feasible_metric.bandwith =
+          entry->feasible_metric.bandwith > bw ?
+              bw : entry->feasible_metric.bandwith;
       entry->feasible_metric.delay += EIGRP_IF_PARAM(entry->ei, delay);
       entry->distance = eigrp_calculate_metrics(&entry->feasible_metric);
-      node->fdistance = node->fdistance > entry->distance ? entry->distance : node->fdistance;
-
     }
   else
     {
       ext_data = msg->data.ipv4_ext_data;
     }
+}
 
+void
+eigrp_topology_update_all_nodes()
+{
+  struct list *table = eigrp_lookup()->topology_table;
+  struct eigrp_topology_node *data;
+  struct listnode *node, *nnode;
+  for (ALL_LIST_ELEMENTS(table, node, nnode, data))
+    {
+      eigrp_topology_update_node(data);
+    }
+}
 
+void
+eigrp_topology_update_node(struct eigrp_topology_node *dest)
+{
+  struct eigrp_topology_entry *successor = eigrp_topology_get_best_entry(dest);
+  successor->flags = EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG;
+  dest->rdistance = dest->fdistance = dest->distance = successor->distance;
+}
+
+struct eigrp_topology_entry *
+eigrp_topology_get_best_entry(struct eigrp_topology_node *dest)
+{
+  struct listnode *node, *nnode;
+  struct eigrp_topology_entry *data, *successor;
+
+  successor = NULL;
+
+  u_int32_t best_metric = EIGRP_MAX_METRIC;
+
+  for (ALL_LIST_ELEMENTS(dest->entries, node, nnode, data))
+    {
+      if (data->distance < best_metric)
+        {
+          best_metric = data->distance;
+          successor = data;
+        }
+    }
+
+  return successor;
 }
