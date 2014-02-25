@@ -181,6 +181,7 @@ main (int argc, char **argv)
   /* EIGRP VTY inits */
   eigrp_vty_init ();
   eigrp_vty_show_init ();
+  eigrp_vty_if_init ();
 
   /* Start execution only if not in dry-run mode */
   if (dryrun)

@@ -200,6 +200,58 @@ DEFUN (show_ip_eigrp_neighbors,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_if_delay,
+       eigrp_if_delay_cmd,
+       "delay <1-16777215>",
+       "IP-EIGRP neighbors\n")
+{
+  struct eigrp *eigrp;
+  u_int32_t delay;
+  struct eigrp_interface *ei;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  /* delay range is <1-16777215>. */
+  if (delay < 1 || delay > 16777215)
+    {
+      vty_out (vty, "Interface delay is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_if_bandwidth,
+       eigrp_if_bandwidth_cmd,
+       "delay <1-10000000>",
+       "IP-EIGRP neighbors\n")
+{
+  u_int32_t bandwidth;
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  /* bandwidth range is <1-10000000>. */
+  if (bandwidth < 1 || bandwidth > 10000000)
+    {
+      vty_out (vty, "Interface bandwidth is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -243,13 +295,28 @@ eigrp_write_interface (struct vty *vty)
   return write;
 }
 
-static void
+void
 eigrp_vty_if_init (void)
 {
   install_node (&eigrp_interface_node, eigrp_write_interface);
+  install_default (INTERFACE_NODE);
+  install_element (CONFIG_NODE, &interface_cmd);
+  install_element (CONFIG_NODE, &no_interface_cmd);
 
+  /* Delay and bandwidth configuration commands*/
+  install_element(INTERFACE_NODE, &eigrp_if_delay_cmd);
+  install_element(INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
+
+  /* "description" commands. */
+  install_element (INTERFACE_NODE, &interface_desc_cmd);
+  install_element (INTERFACE_NODE, &no_interface_desc_cmd);
+
+//  /* "ip ospf dead-interval" commands. */
+//  install_element (INTERFACE_NODE, &ip_ospf_dead_interval_cmd);
+//
+//  /* "ip ospf hello-interval" commands. */
+//  install_element (INTERFACE_NODE, &ip_ospf_hello_interval_cmd);
 }
-
 
 static void
 eigrp_vty_zebra_init (void)

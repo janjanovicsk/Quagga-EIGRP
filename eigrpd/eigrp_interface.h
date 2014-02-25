@@ -48,6 +48,7 @@ extern u_char eigrp_default_iftype(struct interface *);
 extern void eigrp_if_free (struct eigrp_interface *);
 extern int eigrp_if_down (struct eigrp_interface *);
 extern void eigrp_if_stream_unset (struct eigrp_interface *);
+
 extern struct eigrp_interface *eigrp_if_lookup_by_local_addr (struct eigrp *,
                                                               struct interface *,
                                                               struct in_addr);
@@ -56,5 +57,16 @@ struct eigrp_interface * eigrp_if_lookup_recv_if (struct eigrp *, struct in_addr
 
 /* Simulate down/up on the interface. */
 extern void eigrp_if_reset (struct interface *);
+
+extern u_int32_t eigrp_bandwidth_to_scaled(u_int32_t);
+extern u_int32_t eigrp_scaled_to_bandwidth(u_int32_t);
+extern u_int32_t eigrp_delay_to_scaled(u_int32_t);
+extern u_int32_t eigrp_scaled_to_delay(u_int32_t);
+
+extern void eigrp_if_set_delay(struct eigrp_interface *, u_int32_t);
+extern void eigrp_if_set_bandwidth(struct eigrp_interface *, u_int32_t);
+
+
+
 
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */

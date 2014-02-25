@@ -126,6 +126,7 @@ struct eigrp_interface
   u_int32_t hello_in; /* Hello message input count. */
   u_int32_t update_in; /* Update message input count. */
   u_int32_t query_in; /* Querry message input count. */
+  u_int32_t reply_in; /* Querry message input count. */
 };
 
 struct eigrp_if_params

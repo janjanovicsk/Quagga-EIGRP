@@ -248,8 +248,8 @@ eigrp_if_up (struct eigrp_interface *ei)
   thread_add_event (master, eigrp_hello_timer, ei, (1));
 
   /*Prepare metrics*/
-  metric.bandwith = ((256*10000000)/EIGRP_IF_PARAM(ei,bandwidth));
-  metric.delay = EIGRP_IF_PARAM(ei,delay)/10*256;
+  metric.bandwith = eigrp_bandwidth_to_scaled(EIGRP_IF_PARAM(ei,bandwidth));
+  metric.delay = eigrp_delay_to_scaled(EIGRP_IF_PARAM(ei,delay));
   metric.load =  EIGRP_IF_PARAM(ei,load);
   metric.reliability =  EIGRP_IF_PARAM(ei,reliability);
   metric.mtu[0]= 0xDC;
@@ -496,4 +496,40 @@ eigrp_if_lookup_recv_if (struct eigrp *eigrp, struct in_addr src,
     }
 
   return match;
+}
+
+u_int32_t
+eigrp_bandwidth_to_scaled(u_int32_t bandwidth)
+{
+  return (256 * 10000000)/bandwidth;
+}
+
+u_int32_t
+eigrp_scaled_to_bandwidth(u_int32_t scaled)
+{
+  return scaled * (256 * 10000000);
+}
+
+u_int32_t
+eigrp_delay_to_scaled(u_int32_t delay)
+{
+  return delay * 256;
+}
+
+u_int32_t
+eigrp_scaled_to_delay(u_int32_t scaled)
+{
+  return scaled/256;
+}
+
+void
+eigrp_if_set_bandwidth(struct eigrp_interface *ei, u_int32_t bandwidth)
+{
+
+}
+
+void
+eigrp_if_set_delay(struct eigrp_interface *ei, u_int32_t delay)
+{
+
 }
