@@ -190,8 +190,8 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
            */
           else
             {
-              if (entry->flags
-                  & EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG
+              if ((entry->flags
+                  & EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG)
                       == EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG)
                 {
                   eigrp_update_send_all(entry, msg->adv_router->ei);
@@ -207,7 +207,21 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
   case EIGRP_FSM_STATE_ACTIVE_1:
     {
+      if (msg->packet_type == EIGRP_MSG_REPLY)
+        {
+          listnode_delete(node->rij, entry->adv_router);
+          eigrp_topology_update_distance(msg);
 
+          if (node->rij->count)
+            {
+              return EIGRP_FSM_EVENT_SNC;
+            }
+          else
+            {
+              zlog_info("All reply received\n");
+              return EIGRP_FSM_EVENT_LR;
+            }
+        }
       break;
     }
   case EIGRP_FSM_STATE_ACTIVE_2:
@@ -230,7 +244,7 @@ eigrp_fsm_event(struct thread *thread)
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-  zlog_info("State: %d\nEvent: %d\n", msg->entry->node->state, event);
+  zlog_info("State: %d  Event: %d\n", msg->entry->node->state, event);
   (*(NSM[msg->entry->node->state][event].func))(msg);
 
   return 1;
@@ -242,14 +256,12 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
 
   struct eigrp_topology_node *node = msg->entry->node;
   node->state = EIGRP_FSM_STATE_ACTIVE_1;
-  node->rdistance = node->distance = eigrp_topology_get_successor(node)->distance;
-  //send query to all
-  eigrp_query_send_all(msg->entry,NULL);
-
+  node->rdistance = node->distance =
+      eigrp_topology_get_successor(node)->distance;
+  eigrp_query_send_all(msg->entry);
 
   return 1;
 }
-
 
 int
 eigrp_fsm_event_test(struct eigrp_fsm_action_message *msg)
