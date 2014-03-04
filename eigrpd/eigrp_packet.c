@@ -129,7 +129,11 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
   if ((ntohl(eigrph->flags) & EIGRP_HEADER_FLAG_CR) == EIGRP_HEADER_FLAG_CR)
-    return;
+    {
+      if (nbr->state >= EIGRP_NEIGHBOR_PENDING_INIT)
+          eigrp_ack_send(nbr);
+      return;
+    }
 
   /*If it is INIT update*/
   if ((ntohl(eigrph->flags) & EIGRP_HEADER_FLAG_INIT) == EIGRP_HEADER_FLAG_INIT)
@@ -1916,7 +1920,7 @@ eigrp_update_send_all (struct eigrp_topology_entry *te, struct eigrp_interface *
 }
 
 void
-eigrp_query_send_all (struct eigrp_topology_entry *te, struct eigrp_interface *exception)
+eigrp_query_send_all (struct eigrp_topology_entry *te)
 {
   struct eigrp_interface *iface;
   struct listnode *node;
@@ -1925,14 +1929,11 @@ eigrp_query_send_all (struct eigrp_topology_entry *te, struct eigrp_interface *e
 
   for(ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
     {
-      if(iface!=exception)
+      for (rn = route_top (iface->nbrs); rn; rn = route_next (rn))
         {
-          for (rn = route_top (iface->nbrs); rn; rn = route_next (rn))
-            {
-              nbr = rn->info;
-              eigrp_send_query(nbr,te);
-            }
+          nbr = rn->info;
+          eigrp_send_query(nbr,te);
+          listnode_add(te->node->rij,nbr);
         }
-
     }
 }
