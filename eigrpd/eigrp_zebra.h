@@ -32,7 +32,7 @@
 
 extern void eigrp_zebra_init (void);
 
-extern void eigrp_zebra_route_add (struct prefix_ipv4 *, struct eigrp_topology_entry *);
-extern void eigrp_zebra_route_delete (struct prefix_ipv4 *, struct eigrp_topology_entry *);
+extern void eigrp_zebra_route_add (struct prefix_ipv4 *, struct eigrp_neighbor_entry *);
+extern void eigrp_zebra_route_delete (struct prefix_ipv4 *, struct eigrp_neighbor_entry *);
 
 #endif /* _ZEBRA_EIGRP_ZEBRA_H_ */

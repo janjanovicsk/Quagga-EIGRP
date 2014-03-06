@@ -32,25 +32,24 @@
 /* EIGRP Topology table related functions. */
 extern struct list *eigrp_topology_new (void);
 extern void eigrp_topology_init(struct list*);
-extern struct eigrp_topology_node *eigrp_topology_node_new (void);
-extern void eigrp_topology_node_init(struct eigrp_topology_node*);
-extern struct eigrp_topology_entry *eigrp_topology_entry_new (void);
+extern struct eigrp_prefix_entry *eigrp_prefix_entry_new (void);
+extern struct eigrp_neighbor_entry *eigrp_neighbor_entry_new (void);
 extern void eigrp_topology_free (struct list *);
 extern void eigrp_topology_cleanup (struct list *);
-extern void eigrp_topology_node_add (struct list *, struct eigrp_topology_node *);
-extern void eigrp_topology_entry_add (struct eigrp_topology_node *, struct eigrp_topology_entry *);
-extern void eigrp_topology_node_delete (struct list *, struct eigrp_topology_node *);
-extern void eigrp_topology_entry_delete (struct eigrp_topology_node *, struct eigrp_topology_entry *);
+extern void eigrp_prefix_entry_add (struct list *, struct eigrp_prefix_entry *);
+extern void eigrp_neighbor_entry_add (struct eigrp_prefix_entry *, struct eigrp_neighbor_entry *);
+extern void eigrp_prefix_entry_delete (struct list *, struct eigrp_prefix_entry *);
+extern void eigrp_neighbor_entry_delete (struct eigrp_prefix_entry *, struct eigrp_neighbor_entry *);
 extern void eigrp_topology_delete_all (struct list *);
 extern unsigned int eigrp_topology_table_isempty(struct list *);
-extern struct eigrp_topology_node *eigrp_topology_table_lookup (struct list *, struct prefix_ipv4 *);
-extern struct eigrp_topology_entry *eigrp_topology_get_successor(struct eigrp_topology_node *);
-extern struct eigrp_topology_entry *eigrp_topology_get_fsuccessor(struct eigrp_topology_node *);
-extern struct eigrp_topology_entry *eigrp_topology_node_lookup(struct list *, struct eigrp_neighbor *);
+extern struct eigrp_prefix_entry *eigrp_topology_table_lookup (struct list *, struct prefix_ipv4 *);
+extern struct eigrp_neighbor_entry *eigrp_topology_get_successor(struct eigrp_prefix_entry *);
+extern struct eigrp_neighbor_entry *eigrp_topology_get_fsuccessor(struct eigrp_prefix_entry *);
+extern struct eigrp_neighbor_entry *eigrp_prefix_entry_lookup(struct list *, struct eigrp_neighbor *);
 extern void eigrp_topology_update_all_nodes(void);
-extern void eigrp_topology_update_node(struct eigrp_topology_node *);
+extern void eigrp_topology_update_node(struct eigrp_prefix_entry *);
 extern void eigrp_topology_update_distance ( struct eigrp_fsm_action_message *);
-struct eigrp_topology_entry * eigrp_topology_get_best_entry(struct eigrp_topology_node *);
+struct eigrp_neighbor_entry * eigrp_topology_get_best_entry(struct eigrp_prefix_entry *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
 /*extern void ospf_lsdb_clean_stat (struct ospf_lsdb *lsdb);
 extern struct ospf_lsa *ospf_lsdb_lookup_by_id (struct ospf_lsdb *, u_char,

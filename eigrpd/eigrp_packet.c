@@ -105,8 +105,8 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   struct eigrp_neighbor *nbr;
   struct prefix p;
   struct TLV_IPv4_Internal_type *tlv;
-  struct eigrp_topology_node *tnode;
-  struct eigrp_topology_entry *tentry;
+  struct eigrp_prefix_entry *tnode;
+  struct eigrp_neighbor_entry *tentry;
   struct eigrp *eigrp;
   u_int16_t type;
 
@@ -203,7 +203,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               dest_addr = prefix_ipv4_new();
               dest_addr->prefix = tlv->destination;
               dest_addr->prefixlen = tlv->prefix_length;
-              struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
+              struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
                   eigrp->topology_table, dest_addr);
 
               /*if exists it comes to DUAL*/
@@ -212,8 +212,8 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   struct eigrp_fsm_action_message *msg;
                   msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
                       sizeof(struct eigrp_fsm_action_message));
-                  struct eigrp_topology_entry *entry =
-                      eigrp_topology_node_lookup(dest->entries, nbr);
+                  struct eigrp_neighbor_entry *entry =
+                      eigrp_prefix_entry_lookup(dest->entries, nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
                   msg->data_type = TLV_INTERNAL_TYPE;
@@ -226,35 +226,35 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               else
                 {
                   /*Here comes topology information save*/
-                  tnode = eigrp_topology_node_new();
+                  tnode = eigrp_prefix_entry_new();
                   tnode->destination->family = AF_INET;
                   tnode->destination->prefix = tlv->destination;
                   tnode->destination->prefixlen = tlv->prefix_length;
                   tnode->state = EIGRP_FSM_STATE_PASSIVE;
                   tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
-                  tentry = eigrp_topology_entry_new();
+                  tentry = eigrp_neighbor_entry_new();
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->feasible_metric = tentry->reported_metric;
+                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
 
                   u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
-                  tentry->feasible_metric.bandwith =
-                      tentry->feasible_metric.bandwith > bw ?
-                          bw : tentry->feasible_metric.bandwith;
-                  tentry->feasible_metric.delay +=
+                  tentry->total_metric.bandwith =
+                      tentry->total_metric.bandwith > bw ?
+                          bw : tentry->total_metric.bandwith;
+                  tentry->total_metric.delay +=
                       EIGRP_IF_PARAM(tentry->ei, delay);
                   tentry->distance = eigrp_calculate_metrics(
-                      &tentry->feasible_metric);
+                      &tentry->total_metric);
                   tnode->fdistance = tnode->distance = tnode->rdistance =
                       tentry->distance;
                   tentry->node = tnode;
 
-                  eigrp_topology_node_add(eigrp->topology_table, tnode);
-                  eigrp_topology_entry_add(tnode, tentry);
+                  eigrp_prefix_entry_add(eigrp->topology_table, tnode);
+                  eigrp_neighbor_entry_add(tnode, tentry);
                   eigrp_topology_update_node(tnode);
                   eigrp_update_send_all(tentry, ei);
                 }
@@ -286,7 +286,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               dest_addr = prefix_ipv4_new();
               dest_addr->prefix = tlv->destination;
               dest_addr->prefixlen = tlv->prefix_length;
-              struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
+              struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
                   eigrp->topology_table, dest_addr);
               /*if exists it comes to DUAL*/
               if (dest != NULL)
@@ -294,8 +294,8 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   struct eigrp_fsm_action_message *msg;
                   msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
                       sizeof(struct eigrp_fsm_action_message));
-                  struct eigrp_topology_entry *entry =
-                      eigrp_topology_node_lookup(dest->entries, nbr);
+                  struct eigrp_neighbor_entry *entry =
+                      eigrp_prefix_entry_lookup(dest->entries, nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
                   msg->data_type = TLV_INTERNAL_TYPE;
@@ -308,25 +308,25 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               else
                 {
                   /*Here comes topology information save*/
-                  tnode = eigrp_topology_node_new();
+                  tnode = eigrp_prefix_entry_new();
                   tnode->destination->family = AF_INET;
                   tnode->destination->prefix = tlv->destination;
                   tnode->destination->prefixlen = tlv->prefix_length;
                   tnode->state = EIGRP_FSM_STATE_PASSIVE;
                   tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
-                  tentry = eigrp_topology_entry_new();
+                  tentry = eigrp_neighbor_entry_new();
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->feasible_metric = tentry->reported_metric;
+                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
                   tentry->distance = tentry->reported_distance;
                   tentry->ei = ei;
                   tentry->node = tnode;
 
-                  eigrp_topology_node_add(eigrp->topology_table, tnode);
-                  eigrp_topology_entry_add(tnode, tentry);
+                  eigrp_prefix_entry_add(eigrp->topology_table, tnode);
+                  eigrp_neighbor_entry_add(tnode, tentry);
                   eigrp_topology_update_node(tnode);
 
                 }
@@ -471,8 +471,8 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   struct eigrp *eigrp;
   struct listnode *node, *nnode;
 
-  struct eigrp_topology_node *temp_tn;
-  struct eigrp_topology_entry *temp_te;
+  struct eigrp_prefix_entry *temp_tn;
+  struct eigrp_neighbor_entry *temp_te;
 
   u_int16_t type;
 
@@ -507,20 +507,20 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
           dest_addr->prefixlen = tlv->prefix_length;
-          struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
+          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
               eigrp->topology_table, dest_addr);
 
-          temp_te = XCALLOC(MTYPE_EIGRP_TOPOLOGY_ENTRY,
-              sizeof(struct eigrp_topology_entry));
-          temp_tn = XCALLOC(MTYPE_EIGRP_TOPOLOGY_NODE,
-              sizeof(struct eigrp_topology_node));
-          temp_te->feasible_metric.delay = 0xFFFFFFFF;
+          temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
+              sizeof(struct eigrp_neighbor_entry));
+          temp_tn = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY,
+              sizeof(struct eigrp_prefix_entry));
+          temp_te->total_metric.delay = 0xFFFFFFFF;
           temp_te->node = temp_tn;
           temp_tn->destination = dest_addr;
 
           eigrp_send_reply(nbr, temp_te);
-          XFREE(MTYPE_EIGRP_TOPOLOGY_ENTRY, temp_te);
-          XFREE(MTYPE_EIGRP_TOPOLOGY_NODE, temp_tn);
+          XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
+          XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
 
           /* If the destination exists (it should, but one never know)*/
           if (dest != NULL)
@@ -536,7 +536,7 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
               msg->entry->node = dest;
               int event = eigrp_get_fsm_event(msg);
               EIGRP_FSM_EVENT_SCHEDULE(msg, event);
-              eigrp_topology_node_delete(eigrp->topology_table, dest);
+              eigrp_prefix_entry_delete(eigrp->topology_table, dest);
             }
 
         }
@@ -556,8 +556,8 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   struct eigrp *eigrp;
   struct listnode *node, *nnode;
 
-  struct eigrp_topology_node *temp_tn;
-  struct eigrp_topology_entry *temp_te;
+  struct eigrp_prefix_entry *temp_tn;
+  struct eigrp_neighbor_entry *temp_te;
 
   u_int16_t type;
 
@@ -608,13 +608,13 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
           dest_addr->prefixlen = tlv->prefix_length;
-          struct eigrp_topology_node *dest = eigrp_topology_table_lookup(
+          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
               eigrp->topology_table, dest_addr);
 
           struct eigrp_fsm_action_message *msg;
           msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
               sizeof(struct eigrp_fsm_action_message));
-          struct eigrp_topology_entry *entry = eigrp_topology_node_lookup(
+          struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
               dest->entries, nbr);
 
           msg->packet_type = EIGRP_MSG_REPLY;
@@ -1274,8 +1274,8 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
 {
   struct eigrp_packet *ep, *ep_multicast;
   u_int16_t length = EIGRP_HEADER_SIZE;
-  struct eigrp_topology_entry *te;
-  struct eigrp_topology_node *tn;
+  struct eigrp_neighbor_entry *te;
+  struct eigrp_prefix_entry *tn;
   struct listnode *node, *node2, *nnode, *nnode2;
 
   ep = eigrp_packet_new(nbr->ei->ifp->mtu);
@@ -1355,7 +1355,7 @@ eigrp_send_packet_reliably(struct eigrp_neighbor *nbr)
 }
 
 void
-eigrp_send_reply(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
+eigrp_send_reply(struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_SIZE;
@@ -1388,7 +1388,7 @@ eigrp_send_reply(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
 }
 
 void
-eigrp_send_query(struct eigrp_neighbor *nbr, struct eigrp_topology_entry *te)
+eigrp_send_query(struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_SIZE;
@@ -1794,7 +1794,7 @@ eigrp_read_ipv4_tlv(struct stream *s)
 
 u_int16_t
 eigrp_add_internalTLV_to_stream(struct stream *s,
-    struct eigrp_topology_entry *te)
+    struct eigrp_neighbor_entry *te)
 {
   u_int16_t length;
 
@@ -1825,16 +1825,16 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
   stream_putl(s, 0x00000000);
 
   /*Metric*/
-  stream_putl(s, te->feasible_metric.delay);
-  stream_putl(s, te->feasible_metric.bandwith);
-  stream_putc(s, te->feasible_metric.mtu[2]);
-  stream_putc(s, te->feasible_metric.mtu[1]);
-  stream_putc(s, te->feasible_metric.mtu[0]);
-  stream_putc(s, te->feasible_metric.hop_count);
-  stream_putc(s, te->feasible_metric.reliability);
-  stream_putc(s, te->feasible_metric.load);
-  stream_putc(s, te->feasible_metric.tag);
-  stream_putc(s, te->feasible_metric.flags);
+  stream_putl(s, te->total_metric.delay);
+  stream_putl(s, te->total_metric.bandwith);
+  stream_putc(s, te->total_metric.mtu[2]);
+  stream_putc(s, te->total_metric.mtu[1]);
+  stream_putc(s, te->total_metric.mtu[0]);
+  stream_putc(s, te->total_metric.hop_count);
+  stream_putc(s, te->total_metric.reliability);
+  stream_putc(s, te->total_metric.load);
+  stream_putc(s, te->total_metric.tag);
+  stream_putc(s, te->total_metric.flags);
 
   stream_putc(s, te->node->destination->prefixlen);
 
@@ -1868,7 +1868,7 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
 }
 
 void
-eigrp_update_send(struct eigrp_interface *ei, struct eigrp_topology_entry *te)
+eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_packet *ep, *duplicate;
   struct route_node *rn;
@@ -1930,7 +1930,7 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_topology_entry *te)
 }
 
 void
-eigrp_update_send_all(struct eigrp_topology_entry *te,
+eigrp_update_send_all(struct eigrp_neighbor_entry *te,
     struct eigrp_interface *exception)
 {
   struct eigrp_interface *iface;
@@ -1944,7 +1944,7 @@ eigrp_update_send_all(struct eigrp_topology_entry *te,
 }
 
 void
-eigrp_query_send_all(struct eigrp_topology_entry *te)
+eigrp_query_send_all(struct eigrp_neighbor_entry *te)
 {
   struct eigrp_interface *iface;
   struct listnode *node;

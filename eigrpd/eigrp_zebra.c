@@ -331,7 +331,7 @@ zebra_interface_if_lookup (struct stream *s)
 }
 
 void
-eigrp_zebra_route_add (struct prefix_ipv4 *p, struct eigrp_topology_entry *te)
+eigrp_zebra_route_add (struct prefix_ipv4 *p, struct eigrp_neighbor_entry *te)
 {
   u_char message;
   u_char flags;
@@ -396,7 +396,7 @@ eigrp_zebra_route_add (struct prefix_ipv4 *p, struct eigrp_topology_entry *te)
 }
 
 void
-eigrp_zebra_route_delete (struct prefix_ipv4 *p, struct eigrp_topology_entry *te)
+eigrp_zebra_route_delete (struct prefix_ipv4 *p, struct eigrp_neighbor_entry *te)
 {
   u_char message;
   u_char flags;

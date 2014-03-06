@@ -114,8 +114,8 @@
 #define EIGRP_TOPOLOGY_TYPE_REMOTE              1
 
 /*EIGRP TT entry flags*/
-#define EIGRP_TOPOLOGY_ENTRY_SUCCESSOR_FLAG     1
-#define EIGRP_TOPOLOGY_ENTRY_FSUCCESSOR_FLAG    2
+#define EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG     1
+#define EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG    2
 
 /*EIGRP FSM state count, event count*/
 #define EIGRP_FSM_STATE_MAX                  5
@@ -136,6 +136,6 @@
 #define EIGRP_FSM_EVENT_DINC                    4 /*distance increase while in active state*/
 #define EIGRP_FSM_EVENT_QACT                    5 /*query from succ while in active state*/
 #define EIGRP_FSM_EVENT_LR_FCN                  6 /*last reply, FC not satisfied with current value of FDij*/
-#define EIGRP_FSM_EVENT_SNC                     7 /*state not changed, usually by receiving not last reply */
+#define EIGRP_FSM_KEEP_STATE                     7 /*state not changed, usually by receiving not last reply */
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

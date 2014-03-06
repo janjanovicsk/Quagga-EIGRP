@@ -226,8 +226,8 @@ eigrp_lookup_if_params (struct interface *ifp, struct in_addr addr)
 int
 eigrp_if_up (struct eigrp_interface *ei)
 {
-  struct eigrp_topology_node *tn;
-  struct eigrp_topology_entry *te;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
   struct eigrp_metrics metric;
   struct eigrp_interface *ei2;
   struct listnode *node, *nnode;
@@ -260,7 +260,7 @@ eigrp_if_up (struct eigrp_interface *ei)
   metric.tag = 0;
 
   /*Add connected entry to topology table*/
-  tn = eigrp_topology_node_new();
+  tn = eigrp_prefix_entry_new();
 
   tn->destination->family = AF_INET;
   tn->destination->prefix = ei->connected->address->u.prefix4;
@@ -271,13 +271,13 @@ eigrp_if_up (struct eigrp_interface *ei)
   tn->state = EIGRP_FSM_STATE_PASSIVE;
   tn->fdistance = eigrp_calculate_metrics(&metric);
 
-  te = eigrp_topology_entry_new();
+  te = eigrp_neighbor_entry_new();
   te->ei = ei;
   te->reported_metric = metric;
-  te->feasible_metric = metric;
+  te->total_metric = metric;
   te->node = tn;
-  eigrp_topology_entry_add(tn,te);
-  eigrp_topology_node_add(eigrp->topology_table,tn);
+  eigrp_neighbor_entry_add(tn,te);
+  eigrp_prefix_entry_add(eigrp->topology_table,tn);
 
   for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei2))
     {
@@ -295,8 +295,8 @@ eigrp_if_down (struct eigrp_interface *ei)
 {
 
   struct listnode *node, *nnode, *node2, *nnode2;
-  struct eigrp_topology_node *tn;
-  struct eigrp_topology_entry *te;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
 
   if (ei == NULL)
     return 0;
@@ -311,7 +311,7 @@ eigrp_if_down (struct eigrp_interface *ei)
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
           if((te->ei == ei))
-            te->feasible_metric.delay = 0xFFFFFFFF;
+            te->total_metric.delay = 0xFFFFFFFF;
 
         }
     }

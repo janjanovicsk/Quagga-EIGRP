@@ -96,7 +96,7 @@ eigrp_if_name_string (struct eigrp_interface *ei)
 }
 
 const char *
-eigrp_topology_ip_string (struct eigrp_topology_node *tn)
+eigrp_topology_ip_string (struct eigrp_prefix_entry *tn)
 {
   static char buf[EIGRP_IF_STRING_MAXLEN] = "";
   u_int32_t ifaddr;
@@ -193,7 +193,7 @@ show_ip_eigrp_topology_header (struct vty *vty)
 }
 
 void
-show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
+show_ip_eigrp_prefix_entry (struct vty *vty, struct eigrp_prefix_entry *tn)
 {
     vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
     vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
@@ -203,7 +203,7 @@ show_ip_eigrp_topology_node (struct vty *vty, struct eigrp_topology_node *tn)
 }
 
 void
-show_ip_eigrp_topology_entry (struct vty *vty, struct eigrp_topology_entry *te)
+show_ip_eigrp_neighbor_entry (struct vty *vty, struct eigrp_neighbor_entry *te)
 {
   if (te->node->dest_type == EIGRP_TOPOLOGY_TYPE_CONNECTED)
     vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);

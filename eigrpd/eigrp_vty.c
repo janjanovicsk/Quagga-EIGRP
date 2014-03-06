@@ -114,8 +114,8 @@ DEFUN (show_ip_eigrp_topology,
 {
   struct eigrp *eigrp;
   struct listnode *node, *nnode, *node2, *nnode2;
-  struct eigrp_topology_node *tn;
-  struct eigrp_topology_entry *te;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -128,10 +128,10 @@ DEFUN (show_ip_eigrp_topology,
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
     {
-      show_ip_eigrp_topology_node(vty,tn);
+      show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
-          show_ip_eigrp_topology_entry(vty,te);
+          show_ip_eigrp_neighbor_entry(vty,te);
         }
     }
   return CMD_SUCCESS;
