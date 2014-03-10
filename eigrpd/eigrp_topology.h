@@ -49,7 +49,6 @@ extern struct eigrp_neighbor_entry *eigrp_prefix_entry_lookup(struct list *, str
 extern void eigrp_topology_update_all_nodes(void);
 extern void eigrp_topology_update_node(struct eigrp_prefix_entry *);
 extern void eigrp_topology_update_distance ( struct eigrp_fsm_action_message *);
-struct eigrp_neighbor_entry * eigrp_topology_get_best_entry(struct eigrp_prefix_entry *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
 /*extern void ospf_lsdb_clean_stat (struct ospf_lsdb *lsdb);
 extern struct ospf_lsa *ospf_lsdb_lookup_by_id (struct ospf_lsdb *, u_char,

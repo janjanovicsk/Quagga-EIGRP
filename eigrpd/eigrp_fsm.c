@@ -53,7 +53,6 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *);
 int
 eigrp_fsm_event_lr(struct eigrp_fsm_action_message *);
 
-
 struct
 {
   int
@@ -121,9 +120,9 @@ int
 eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
 {
 
-  struct eigrp_prefix_entry *node = msg->entry->node;
+  struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *entry = msg->entry;
-  u_char actual_state = node->state;
+  u_char actual_state = prefix->state;
 
   switch (actual_state)
     {
@@ -131,79 +130,87 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     {
       if (entry == NULL)
         {
-          entry = eigrp_neighbor_entry_new();
-          entry->adv_router = msg->adv_router;
-          entry->ei = msg->adv_router->ei;
-          entry->node = node;
-          eigrp_neighbor_entry_add(node, entry);
-          eigrp_topology_update_distance(msg);
+          if (msg->packet_type == EIGRP_MSG_UPDATE)
+            {
+              entry = eigrp_neighbor_entry_new();
+              entry->adv_router = msg->adv_router;
+              entry->ei = msg->adv_router->ei;
+              entry->prefix = prefix;
+              msg->entry = entry;
+              eigrp_topology_update_distance(msg);
 
-          if (entry->distance < eigrp_topology_get_successor(node)->distance)
-            {
-              eigrp_topology_get_successor(node)->flags = 0;
-              //vyhodit succesora z route table
-              eigrp_topology_update_node(node);
-              //vlozit noveho sucessora
-              eigrp_update_send_all(entry, msg->adv_router->ei);
+              if (entry->distance < prefix->distance)
+                {
+                  //TO DO: remove current successor/s from route table
+                  eigrp_topology_update_node(prefix);
+                  //TO DO: insert new successor route to route table
+                  eigrp_update_send_all(entry, msg->adv_router->ei);
+                }
+              else
+                {
+                  entry->flags =
+                      entry->distance == prefix->distance ?
+                          EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG :
+                          (entry->reported_distance < prefix->fdistance ?
+                              EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG : 0);
+                }
+              return EIGRP_FSM_KEEP_STATE;
             }
-          else
-            {
-              entry->flags =
-                  entry->reported_distance < node->fdistance ?
-                      EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG : 0;
-            }
+          //TO DO: send infinity
           return EIGRP_FSM_KEEP_STATE;
         }
       else
         {
           eigrp_topology_update_distance(msg);
-          node->fdistance =
-              node->fdistance > entry->distance ?
-                  entry->distance : node->fdistance;
-          /*
-           * If FC not satisfied
-           */
-          if (eigrp_topology_get_successor(node)->distance > node->fdistance)
+          prefix->fdistance =
+              prefix->fdistance > entry->distance ?
+                  entry->distance : prefix->fdistance;
+
+          struct eigrp_neighbor_entry * head =
+              (struct eigrp_neighbor_entry *) entry->prefix->entries->head->data;
+          if ((head->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == 1
+              && head->reported_distance < prefix->fdistance)
             {
-              struct eigrp_neighbor_entry *best = eigrp_topology_get_best_entry(
-                  node);
-              if (best->reported_distance < node->fdistance)
+              //TO DO: remove possible successors with increased distance from route table
+              if (prefix->fdistance < prefix->distance)
                 {
-                  eigrp_topology_get_successor(node)->flags = 0;
-                  //vyhodit succesora z route table
-                  eigrp_topology_update_node(node);
-                  //vlozit noveho sucessora
+                  eigrp_topology_update_node(prefix);
+                  eigrp_update_send_all(entry, msg->adv_router->ei);
+                }
+              else
+                {
+                  eigrp_topology_update_node(prefix);
+                }
+              //TO DO: insert possible new successor to route table
+
+              return EIGRP_FSM_KEEP_STATE;
+            }
+          else
+            {
+              if ((head->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == 1)
+                {
+                  //TO DO: remove successors with increased distance from route table
+                  eigrp_topology_update_node(prefix);
+                  //TO DO: insert possible new successor/s to route table
                   eigrp_update_send_all(entry, msg->adv_router->ei);
 
                   return EIGRP_FSM_KEEP_STATE;
                 }
-
-              if (msg->packet_type == EIGRP_MSG_QUERY)
-                {
-                  return EIGRP_FSM_EVENT_Q_FCN;
-                }
               else
                 {
-                  return EIGRP_FSM_EVENT_NQ_FCN;
+                  if (msg->packet_type == EIGRP_MSG_QUERY)
+                    {
+                      return EIGRP_FSM_EVENT_Q_FCN;
+                    }
+                  else
+                    {
+                      return EIGRP_FSM_EVENT_NQ_FCN;
+                    }
                 }
-            }
-          /*
-           * If FC satisfied
-           * send update with change to all neighbors
-           */
-          else
-            {
-              if ((entry->flags
-                  & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
-                      == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
-                {
-                  eigrp_update_send_all(entry, msg->adv_router->ei);
-                }
-              return EIGRP_FSM_KEEP_STATE;
             }
         }
-      break;
     }
+
   case EIGRP_FSM_STATE_ACTIVE_0:
     {
       break;
@@ -212,10 +219,10 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     {
       if (msg->packet_type == EIGRP_MSG_REPLY)
         {
-          listnode_delete(node->rij, entry->adv_router);
+          listnode_delete(prefix->rij, entry->adv_router);
           eigrp_topology_update_distance(msg);
 
-          if (node->rij->count)
+          if (prefix->rij->count)
             {
               return EIGRP_FSM_KEEP_STATE;
             }
@@ -247,8 +254,8 @@ eigrp_fsm_event(struct thread *thread)
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-  zlog_info("State: %d  Event: %d\n", msg->entry->node->state, event);
-  (*(NSM[msg->entry->node->state][event].func))(msg);
+  zlog_info("State: %d  Event: %d Network: %s\n", msg->prefix->state, event,eigrp_topology_ip_string(msg->prefix));
+  (*(NSM[msg->prefix->state][event].func))(msg);
 
   return 1;
 }
@@ -257,10 +264,10 @@ int
 eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
 {
 
-  struct eigrp_prefix_entry *node = msg->entry->node;
-  node->state = EIGRP_FSM_STATE_ACTIVE_1;
-  node->rdistance = node->distance =
-      eigrp_topology_get_successor(node)->distance;
+  struct eigrp_prefix_entry *prefix = msg->prefix;
+  prefix->state = EIGRP_FSM_STATE_ACTIVE_1;
+  prefix->rdistance = prefix->distance =
+      eigrp_topology_get_successor(prefix)->distance;
   eigrp_query_send_all(msg->entry);
 
   return 1;
@@ -272,20 +279,18 @@ eigrp_fsm_event_test(struct eigrp_fsm_action_message *msg)
   return 1;
 }
 
-
 int
 eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
 {
 
-  struct eigrp_prefix_entry *node = msg->entry->node;
-  node->state = EIGRP_FSM_STATE_ACTIVE_0;
+  struct eigrp_prefix_entry *prefix = msg->prefix;
+  prefix->state = EIGRP_FSM_STATE_PASSIVE;
 
-  eigrp_topology_get_successor(node)->flags = 0;
-  //vyhodit succesora z route table
-  eigrp_topology_update_node(node);
-  //vlozit noveho sucessora
+  //TO DO: remove current successor route from route table
+  eigrp_topology_get_successor(prefix)->flags = 0;
+  eigrp_topology_update_node(prefix);
+  //TO DO: insert new successor route to route table
   eigrp_update_send_all(msg->entry, msg->adv_router->ei);
-
 
   return 1;
 }

@@ -196,7 +196,7 @@ eigrp_neighbor_entry_add(struct eigrp_prefix_entry *node,
   if (listnode_lookup(node->entries, entry) == NULL)
     {
       listnode_add_sort(node->entries, entry);
-      entry->node = node;
+      entry->prefix = node;
     }
 
 }
@@ -319,7 +319,7 @@ eigrp_prefix_entry_lookup(struct list *entries, struct eigrp_neighbor *nbr)
 void
 eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
 {
-  struct eigrp_prefix_entry *node = msg->entry->node;
+  struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *entry = msg->entry;
 
   assert(entry);
@@ -343,6 +343,12 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
     {
       ext_data = msg->data.ipv4_ext_data;
     }
+  /*
+   * Move to correct position in list according to new distance
+   */
+  listnode_delete(prefix->entries,entry);
+  listnode_add_sort(prefix->entries,entry);
+
 }
 
 void
@@ -360,29 +366,25 @@ eigrp_topology_update_all_nodes()
 void
 eigrp_topology_update_node(struct eigrp_prefix_entry *dest)
 {
-  struct eigrp_neighbor_entry *successor = eigrp_topology_get_best_entry(dest);
-  successor->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
-  dest->rdistance = dest->fdistance = dest->distance = successor->distance;
-}
+  struct listnode *node;
+  struct eigrp_neighbor_entry *entry;
+  entry =dest->entries->head->data;
+  dest->rdistance = dest->fdistance = dest->distance = entry->distance;
 
-struct eigrp_neighbor_entry *
-eigrp_topology_get_best_entry(struct eigrp_prefix_entry *dest)
-{
-  struct listnode *node, *nnode;
-  struct eigrp_neighbor_entry *data, *successor;
-
-  successor = NULL;
-
-  u_int32_t best_metric = EIGRP_MAX_METRIC;
-
-  for (ALL_LIST_ELEMENTS(dest->entries, node, nnode, data))
+  for(ALL_LIST_ELEMENTS_RO(dest->entries,node,entry))
     {
-      if (data->distance < best_metric)
+      if(entry->distance == dest->fdistance)
         {
-          best_metric = data->distance;
-          successor = data;
+          entry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
+        }
+      else if(entry->distance < dest->fdistance)
+        {
+          zlog_err("ERROR: Bad sorting");
+        }
+      else if(entry->reported_distance < dest->fdistance)
+        {
+          entry->flags = EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG;
         }
     }
 
-  return successor;
 }
