@@ -51,6 +51,8 @@ eigrp_fsm_event_test(struct eigrp_fsm_action_message *);
 int
 eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *);
 int
+eigrp_fsm_event_q_fcn(struct eigrp_fsm_action_message *);
+int
 eigrp_fsm_event_lr(struct eigrp_fsm_action_message *);
 
 struct
@@ -63,7 +65,7 @@ struct
     //PASSIVE STATE
           { eigrp_fsm_event_nq_fcn }, /* Event 1 */
           { eigrp_fsm_event_test }, /* Event 2 */
-          { eigrp_fsm_event_test }, /* Event 3 */
+          { eigrp_fsm_event_q_fcn }, /* Event 3 */
           { eigrp_fsm_event_test }, /* Event 4 */
           { eigrp_fsm_event_test }, /* Event 5 */
           { eigrp_fsm_event_test }, /* Event 6 */
@@ -107,7 +109,7 @@ struct
     {
     //Active 3 state
           { eigrp_fsm_event_test }, /* Event 1 */
-          { eigrp_fsm_event_test }, /* Event 2 */
+          { eigrp_fsm_event_lr }, /* Event 2 */
           { eigrp_fsm_event_test }, /* Event 3 */
           { eigrp_fsm_event_test }, /* Event 4 */
           { eigrp_fsm_event_test }, /* Event 5 */
@@ -240,6 +242,21 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
     }
   case EIGRP_FSM_STATE_ACTIVE_3:
     {
+      if (msg->packet_type == EIGRP_MSG_REPLY)
+        {
+          listnode_delete(prefix->rij, entry->adv_router);
+          eigrp_topology_update_distance(msg);
+
+          if (prefix->rij->count)
+            {
+              return EIGRP_FSM_KEEP_STATE;
+            }
+          else
+            {
+              zlog_info("All reply received\n");
+              return EIGRP_FSM_EVENT_LR;
+            }
+        }
       break;
     }
     }
@@ -254,7 +271,8 @@ eigrp_fsm_event(struct thread *thread)
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-  zlog_info("State: %d  Event: %d Network: %s\n", msg->prefix->state, event,eigrp_topology_ip_string(msg->prefix));
+  zlog_info("State: %d  Event: %d Network: %s\n", msg->prefix->state, event,
+      eigrp_topology_ip_string(msg->prefix));
   (*(NSM[msg->prefix->state][event].func))(msg);
 
   return 1;
@@ -266,6 +284,19 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
 
   struct eigrp_prefix_entry *prefix = msg->prefix;
   prefix->state = EIGRP_FSM_STATE_ACTIVE_1;
+  prefix->rdistance = prefix->distance =
+      eigrp_topology_get_successor(prefix)->distance;
+  eigrp_query_send_all(msg->entry);
+
+  return 1;
+}
+
+int
+eigrp_fsm_event_q_fcn(struct eigrp_fsm_action_message *msg)
+{
+
+  struct eigrp_prefix_entry *prefix = msg->prefix;
+  prefix->state = EIGRP_FSM_STATE_ACTIVE_3;
   prefix->rdistance = prefix->distance =
       eigrp_topology_get_successor(prefix)->distance;
   eigrp_query_send_all(msg->entry);
@@ -287,7 +318,6 @@ eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
   prefix->state = EIGRP_FSM_STATE_PASSIVE;
 
   //TO DO: remove current successor route from route table
-  eigrp_topology_get_successor(prefix)->flags = 0;
   eigrp_topology_update_node(prefix);
   //TO DO: insert new successor route to route table
   eigrp_update_send_all(msg->entry, msg->adv_router->ei);
