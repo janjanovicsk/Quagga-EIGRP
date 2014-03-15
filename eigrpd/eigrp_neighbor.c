@@ -114,16 +114,10 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
     {
       route_unlock_node (rn);
       nbr = rn->info;
-
-//      if (ei->type == OSPF_IFTYPE_NBMA)
-//        {
-//          nbr->src = iph->ip_src;
-//          memcpy (&nbr->address, p, sizeof (struct prefix));
-//        }
     }
   else
     {
-      rn->info = nbr = eigrp_nbr_add (ei, eigrph, p);
+      rn->info = nbr = eigrp_nbr_add (ei, eigrph, &key);
     }
 
   return nbr;
