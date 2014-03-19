@@ -366,7 +366,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
 
-  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
+//  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
 
   /*If received packet is hello with Parameter TLV*/
   if (eigrph->ack == 0)

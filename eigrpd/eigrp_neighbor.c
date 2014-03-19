@@ -70,6 +70,10 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
   /* Set default values. */
   nbr->state = EIGRP_NEIGHBOR_DOWN;
+  if(ei!=NULL)
+    nbr->v_holddown = EIGRP_IF_PARAM(ei,v_wait);
+  else
+    nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
   nbr->retrans_queue = eigrp_fifo_new();
   nbr->multicast_queue = eigrp_fifo_new();
@@ -114,16 +118,10 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
     {
       route_unlock_node (rn);
       nbr = rn->info;
-
-//      if (ei->type == OSPF_IFTYPE_NBMA)
-//        {
-//          nbr->src = iph->ip_src;
-//          memcpy (&nbr->address, p, sizeof (struct prefix));
-//        }
     }
   else
     {
-      rn->info = nbr = eigrp_nbr_add (ei, eigrph, p);
+      rn->info = nbr = eigrp_nbr_add (ei, eigrph, &key);
     }
 
   return nbr;
