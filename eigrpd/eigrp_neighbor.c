@@ -70,6 +70,10 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
   /* Set default values. */
   nbr->state = EIGRP_NEIGHBOR_DOWN;
+  if(ei!=NULL)
+    nbr->v_holddown = EIGRP_IF_PARAM(ei,v_wait);
+  else
+    nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
   nbr->retrans_queue = eigrp_fifo_new();
   nbr->multicast_queue = eigrp_fifo_new();
