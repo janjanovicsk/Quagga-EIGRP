@@ -194,6 +194,7 @@ holddown_timer_expired (struct thread *thread)
   nbr->recv_sequence_number = 0;
   eigrp_fifo_reset(nbr->retrans_queue);
   THREAD_OFF (nbr->t_holddown);
+  eigrp_nbr_delete(nbr);
 
   return 0;
 }

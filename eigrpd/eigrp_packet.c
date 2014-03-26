@@ -366,8 +366,6 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
 
-//  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
-
   /*If received packet is hello with Parameter TLV*/
   if (eigrph->ack == 0)
     {
@@ -1316,12 +1314,12 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
-  ep_multicast = eigrp_packet_duplicate(ep, nbr);
-  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+//  ep_multicast = eigrp_packet_duplicate(ep, nbr);
+//  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
-  eigrp_packet_add_top(nbr->ei, ep_multicast);
+//  eigrp_packet_add_top(nbr->ei, ep_multicast);
 
   if (nbr->retrans_queue->count == 1)
     {
@@ -1958,15 +1956,23 @@ eigrp_query_send_all(struct eigrp_neighbor_entry *te)
 {
   struct eigrp_interface *iface;
   struct listnode *node;
-  struct route_node *rn;
   struct eigrp_neighbor *nbr;
+  struct route_node *rn;
+  struct eigrp *eigrp;
 
-  for (ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    }
+
+  for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
     {
       for (rn = route_top(iface->nbrs); rn; rn = route_next(rn))
         {
           nbr = rn->info;
-          eigrp_send_query(nbr, te);
+          if(nbr->state == EIGRP_NEIGHBOR_UP)
+            eigrp_send_query(nbr, te);
         }
     }
 }
