@@ -1963,7 +1963,7 @@ eigrp_query_send_all(struct eigrp_neighbor_entry *te)
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
     {
-      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      zlog_debug("EIGRP Routing Process not enabled");
     }
 
   for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
