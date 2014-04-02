@@ -174,7 +174,7 @@ DEFUN (show_ip_eigrp_neighbors,
 {
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
-  struct listnode *node;
+  struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
   struct route_node *rn;
 
@@ -189,9 +189,8 @@ DEFUN (show_ip_eigrp_neighbors,
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
     {
-      for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+      for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
         {
-          nbr = rn->info;
           if(nbr->state == EIGRP_NEIGHBOR_UP)
             show_ip_eigrp_neighbor_sub(vty,nbr);
         }
