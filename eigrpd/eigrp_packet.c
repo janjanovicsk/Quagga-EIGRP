@@ -1855,7 +1855,7 @@ void
 eigrp_update_send(struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
 {
   struct eigrp_packet *ep, *duplicate;
-  struct listnode *node, *nnode, *node2;
+  struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
   struct eigrp_neighbor_entry *entry;
 
@@ -1868,7 +1868,7 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
   eigrp_make_header(EIGRP_MSG_UPDATE, ei, ep->s, 0, ei->eigrp->sequence_number,
       0);
 
-  for (ALL_LIST_ELEMENTS_RO(pe->entries, node2, entry))
+  for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, entry))
     {
       if((entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
         length += eigrp_add_internalTLV_to_stream(ep->s, entry);

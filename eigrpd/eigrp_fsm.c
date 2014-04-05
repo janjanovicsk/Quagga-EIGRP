@@ -338,6 +338,41 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
        */
       if (msg->packet_type == EIGRP_MSG_REPLY)
         {
+
+          //If entry doesn't exists yet
+          if (msg->entry == NULL)
+            {
+              /*
+               * If it's a reply packet then new neighbor_entry is created
+               * with values from received TLV.
+               */
+                entry = eigrp_neighbor_entry_new();
+                entry->adv_router = msg->adv_router;
+                entry->ei = msg->adv_router->ei;
+                entry->prefix = prefix;
+                msg->entry = entry;
+                //Calculate resultant metrics and insert to correct position in entries list
+                eigrp_topology_update_distance(msg);
+
+                //If new entry is closer to destination then current successor
+                if (entry->distance < prefix->distance)
+                  {
+                    //TO DO: remove current successor/s from route table
+                    eigrp_topology_update_node(prefix);
+                    //TO DO: insert new successor route to route table
+                    eigrp_update_send_all(prefix, msg->adv_router->ei);
+                  }
+                //If not just set correct flags
+                else
+                  {
+                    entry->flags =
+                        entry->distance == prefix->distance ?
+                            EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG :
+                            (entry->reported_distance < prefix->fdistance ?
+                                EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG : 0);
+                  }
+            }
+
           listnode_delete(prefix->rij, entry->adv_router);
           eigrp_topology_update_distance(msg);
 

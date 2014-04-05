@@ -294,7 +294,7 @@ eigrp_if_up(struct eigrp_interface *ei)
     {
       if (ei2->nbrs->count != 0)
         {
-          eigrp_update_send(ei2, te);
+          eigrp_update_send(ei2, tn);
         }
     }
 
