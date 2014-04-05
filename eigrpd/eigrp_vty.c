@@ -46,6 +46,24 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 
+
+static int
+config_write_network (struct vty *vty, struct eigrp *eigrp)
+{
+  struct route_node *rn;
+
+  /* `network area' print. */
+  for (rn = route_top (eigrp->networks); rn; rn = route_next (rn))
+    if (rn->info)
+      {
+        /* Network print. */
+        vty_out (vty, " network %s/%d %s",
+                 inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen, VTY_NEWLINE);
+      }
+
+  return 0;
+}
+
 DEFUN (router_eigrp,
        router_eigrp_cmd,
        "router eigrp <1-65535>",
@@ -131,6 +149,42 @@ DEFUN (show_ip_eigrp_topology,
       show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
+          if ((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
+              (te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
+            show_ip_eigrp_neighbor_entry(vty,te);
+        }
+    }
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_topology_all_links,
+       show_ip_eigrp_topology_all_links_cmd,
+       "show ip eigrp topology all-links",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP topology\n"
+       "Show all links in topology table\n")
+{
+  struct eigrp *eigrp;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+        vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_topology_header (vty);
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
+    {
+      show_ip_eigrp_prefix_entry(vty,tn);
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+        {
           show_ip_eigrp_neighbor_entry(vty,te);
         }
     }
@@ -176,7 +230,6 @@ DEFUN (show_ip_eigrp_neighbors,
   struct eigrp_interface *ei;
   struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
-  struct route_node *rn;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -262,7 +315,109 @@ static struct cmd_node eigrp_node =
 static int
 eigrp_config_write (struct vty *vty)
 {
+  struct eigrp *eigrp;
+  struct interface *ifp;
+  struct eigrp_interface *ei;
+  struct listnode *node;
   int write = 0;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp != NULL)
+    {
+      /* `router eigrp' print. */
+      vty_out (vty, "router eigrp %d%s", eigrp->AS, VTY_NEWLINE);
+
+      write++;
+
+      if (!eigrp->networks)
+        return write;
+
+      /* Router ID print. */
+      if (eigrp->router_id_static.s_addr != 0)
+        vty_out (vty, " eigrp router-id %s%s",
+                 inet_ntoa (eigrp->router_id_static), VTY_NEWLINE);
+
+//      /* log-adjacency-changes flag print. */
+//      if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_CHANGES))
+//        {
+//          vty_out(vty, " log-adjacency-changes");
+//          if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_DETAIL))
+//            vty_out(vty, " detail");
+//          vty_out(vty, "%s", VTY_NEWLINE);
+//        }
+
+      /* SPF timers print. */
+//      if (ospf->spf_delay != OSPF_SPF_DELAY_DEFAULT ||
+//          ospf->spf_holdtime != OSPF_SPF_HOLDTIME_DEFAULT ||
+//          ospf->spf_max_holdtime != OSPF_SPF_MAX_HOLDTIME_DEFAULT)
+//        vty_out (vty, " timers throttle spf %d %d %d%s",
+//                 ospf->spf_delay, ospf->spf_holdtime,
+//                 ospf->spf_max_holdtime, VTY_NEWLINE);
+
+//      /* Max-metric router-lsa print */
+//      config_write_stub_router (vty, ospf);
+
+//      /* SPF refresh parameters print. */
+//      if (ospf->lsa_refresh_interval != OSPF_LSA_REFRESH_INTERVAL_DEFAULT)
+//        vty_out (vty, " refresh timer %d%s",
+//                 ospf->lsa_refresh_interval, VTY_NEWLINE);
+//
+//      /* Redistribute information print. */
+//      config_write_ospf_redistribute (vty, ospf);
+//
+//      /* passive-interface print. */
+//      if (ospf->passive_interface_default == OSPF_IF_PASSIVE)
+//        vty_out (vty, " passive-interface default%s", VTY_NEWLINE);
+//
+//      for (ALL_LIST_ELEMENTS_RO (om->iflist, node, ifp))
+//        if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (ifp), passive_interface)
+//            && IF_DEF_PARAMS (ifp)->passive_interface !=
+//                              ospf->passive_interface_default)
+//          {
+//            vty_out (vty, " %spassive-interface %s%s",
+//                     IF_DEF_PARAMS (ifp)->passive_interface ? "" : "no ",
+//                     ifp->name, VTY_NEWLINE);
+//          }
+//      for (ALL_LIST_ELEMENTS_RO (ospf->oiflist, node, oi))
+//        {
+//          if (!OSPF_IF_PARAM_CONFIGURED (oi->params, passive_interface))
+//            continue;
+//          if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (oi->ifp),
+//                                        passive_interface))
+//            {
+//              if (oi->params->passive_interface == IF_DEF_PARAMS (oi->ifp)->passive_interface)
+//                continue;
+//            }
+//          else if (oi->params->passive_interface == ospf->passive_interface_default)
+//            continue;
+//
+//          vty_out (vty, " %spassive-interface %s %s%s",
+//                   oi->params->passive_interface ? "" : "no ",
+//                   oi->ifp->name,
+//                   inet_ntoa (oi->address->u.prefix4), VTY_NEWLINE);
+//        }
+
+      /* Network area print. */
+      config_write_network (vty, eigrp);
+
+//      /* Area config print. */
+//      config_write_ospf_area (vty, ospf);
+//
+//      /* static neighbor print. */
+//      config_write_ospf_nbr_nbma (vty, ospf);
+//
+//      /* Virtual-Link print. */
+//      config_write_virtual_link (vty, ospf);
+//
+//      /* Default metric configuration.  */
+//      config_write_ospf_default_metric (vty, ospf);
+//
+//      /* Distribute-list and default-information print. */
+//      config_write_ospf_distribute (vty, ospf);
+//
+//      /* Distance configuration. */
+//      config_write_ospf_distance (vty, ospf)
+    }
 
   return write;
 }
@@ -274,6 +429,8 @@ eigrp_vty_show_init (void)
   install_element(VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_topology_cmd);
 }
