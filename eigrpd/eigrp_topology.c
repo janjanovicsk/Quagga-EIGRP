@@ -369,7 +369,7 @@ eigrp_topology_update_node(struct eigrp_prefix_entry *dest)
   struct listnode *node;
   struct eigrp_neighbor_entry *entry;
   entry =dest->entries->head->data;
-  dest->rdistance = dest->fdistance = dest->distance = entry->distance;
+  //dest->rdistance = dest->fdistance = dest->distance = entry->distance;
 
   for(ALL_LIST_ELEMENTS_RO(dest->entries,node,entry))
     {

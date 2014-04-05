@@ -1316,12 +1316,12 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
-  ep_multicast = eigrp_packet_duplicate(ep, nbr);
-  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+  //ep_multicast = eigrp_packet_duplicate(ep, nbr);
+  //ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
-  eigrp_packet_add_top(nbr->ei, ep_multicast);
+  //eigrp_packet_add_top(nbr->ei, ep_multicast);
 
   if (nbr->retrans_queue->count == 1)
     {
