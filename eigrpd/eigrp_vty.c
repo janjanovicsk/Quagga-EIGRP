@@ -149,6 +149,42 @@ DEFUN (show_ip_eigrp_topology,
       show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
+          if ((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
+              (te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
+            show_ip_eigrp_neighbor_entry(vty,te);
+        }
+    }
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_topology_all_links,
+       show_ip_eigrp_topology_all_links_cmd,
+       "show ip eigrp topology all-links",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP topology\n"
+       "Show all links in topology table\n")
+{
+  struct eigrp *eigrp;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+        vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
+  }
+
+  show_ip_eigrp_topology_header (vty);
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
+    {
+      show_ip_eigrp_prefix_entry(vty,tn);
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+        {
           show_ip_eigrp_neighbor_entry(vty,te);
         }
     }
@@ -393,6 +429,8 @@ eigrp_vty_show_init (void)
   install_element(VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_topology_cmd);
 }
