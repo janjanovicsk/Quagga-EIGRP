@@ -90,7 +90,7 @@ eigrp_if_new(struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
   ei->type = EIGRP_IFTYPE_BROADCAST;
 
   /* Initialize neighbor list. */
-  ei->nbrs = route_table_init();
+  ei->nbrs = list_new();
 
   return ei;
 }
@@ -403,7 +403,7 @@ eigrp_if_free(struct eigrp_interface *ei)
 {
   eigrp_if_down(ei);
 
-  route_table_finish(ei->nbrs);
+  list_delete(ei->nbrs);
 
   eigrp_delete_from_if(ei->ifp, ei);
 

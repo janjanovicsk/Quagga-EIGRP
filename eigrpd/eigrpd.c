@@ -242,7 +242,7 @@ eigrp_finish_final (struct eigrp *eigrp)
   eigrp_topology_cleanup(eigrp->topology_table);
   eigrp_topology_free(eigrp->topology_table);
 
-  eigrp_nbr_free(eigrp->neighbor_self);
+  eigrp_nbr_delete(eigrp->neighbor_self);
 
   eigrp_delete (eigrp);
 

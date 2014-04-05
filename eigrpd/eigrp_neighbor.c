@@ -47,16 +47,6 @@
 #include "eigrpd/eigrp_network.h"
 
 
-static void
-eigrp_nbr_key (struct eigrp_interface *ei, struct eigrp_neighbor *nbr,
-              struct prefix *key)
-{
-  key->family = AF_INET;
-  key->prefixlen = IPV4_MAX_BITLEN;
-  key->u.prefix4 = nbr->src;
-  return;
-}
-
 struct eigrp_neighbor *
 eigrp_nbr_new (struct eigrp_interface *ei)
 {
@@ -85,13 +75,13 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
 static struct eigrp_neighbor *
 eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
-              struct prefix *p)
+              struct ip *iph)
 {
   struct eigrp_neighbor *nbr;
 
   nbr = eigrp_nbr_new (ei);
 
-  nbr->src = p->u.prefix4;
+  nbr->src = iph->ip_src;
 
 //
 //  if (IS_DEBUG_OSPF_EVENT)
@@ -103,82 +93,37 @@ eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
 
 struct eigrp_neighbor *
 eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
-              struct ip *iph, struct prefix *p)
+              struct ip *iph)
 {
-  struct route_node *rn;
-  struct prefix key;
   struct eigrp_neighbor *nbr;
+  struct listnode *node, *nnode;
 
-  key.family = AF_INET;
-  key.prefixlen = IPV4_MAX_BITLEN;
-  key.u.prefix4 = iph->ip_src;
+  for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
+    {
+      if(iph->ip_src.s_addr == nbr->src.s_addr)
+        {
+          return nbr;
+        }
+    }
 
-  rn = route_node_get (ei->nbrs, &key);
-  if (rn->info)
-    {
-      route_unlock_node (rn);
-      nbr = rn->info;
-    }
-  else
-    {
-      rn->info = nbr = eigrp_nbr_add (ei, eigrph, &key);
-    }
+  nbr = eigrp_nbr_add (ei, eigrph, iph);
+  listnode_add(ei->nbrs, nbr);
 
   return nbr;
-}
-
-void
-eigrp_nbr_free (struct eigrp_neighbor *nbr)
-{
-
-  /* Cancel all events. *//* Thread lookup cost would be negligible. */
-  thread_cancel_event (master, nbr);
-  eigrp_fifo_free(nbr->multicast_queue);
-  eigrp_fifo_free(nbr->retrans_queue);
-  THREAD_OFF(nbr->t_holddown);
-
-  XFREE (MTYPE_EIGRP_NEIGHBOR, nbr);
 }
 
 /* Delete specified EIGRP neighbor from interface. */
 void
 eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 {
-  struct eigrp_interface *ei;
-  struct route_node *rn;
-  struct prefix p;
+  /* Cancel all events. *//* Thread lookup cost would be negligible. */
+  thread_cancel_event (master, nbr);
+  eigrp_fifo_free(nbr->multicast_queue);
+  eigrp_fifo_free(nbr->retrans_queue);
+  THREAD_OFF(nbr->t_holddown);
 
-  ei = nbr->ei;
-
-  /* get appropriate prefix 'key' */
-  eigrp_nbr_key (ei, nbr, &p);
-
-  rn = route_node_lookup (ei->nbrs, &p);
-  if (rn)
-    {
-      /* If lookup for a NBR succeeds, the leaf route_node could
-       * only exist because there is (or was) a nbr there.
-       * If the nbr was deleted, the leaf route_node should have
-       * lost its last refcount too, and be deleted.
-       * Therefore a looked-up leaf route_node in nbrs table
-       * should never have NULL info.
-       */
-      assert (rn->info);
-
-      if (rn->info)
-        {
-          rn->info = NULL;
-          route_unlock_node (rn);
-        }
-      else
-        zlog_info ("Can't find neighbor %s in the interface %s",
-                   inet_ntoa (nbr->src), IF_NAME (ei));
-
-      route_unlock_node (rn);
-    }
-
-  /* Free ospf_neighbor structure. */
-  eigrp_nbr_free (nbr);
+  listnode_delete(nbr->ei->nbrs,nbr);
+  XFREE (MTYPE_EIGRP_NEIGHBOR, nbr);
 }
 
 int
@@ -189,11 +134,7 @@ holddown_timer_expired (struct thread *thread)
   nbr = THREAD_ARG(thread);
 
   zlog_info("Neighbor %s (%s) is down: holding time expired",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
-  nbr->state = EIGRP_NEIGHBOR_DOWN;
-  nbr->init_sequence_number = 0;
-  nbr->recv_sequence_number = 0;
-  eigrp_fifo_reset(nbr->retrans_queue);
-  THREAD_OFF (nbr->t_holddown);
+  eigrp_nbr_delete(nbr);
 
   return 0;
 }
@@ -210,5 +151,3 @@ eigrp_neighborship_check(struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *p
 
   return 1;
 }
-
-

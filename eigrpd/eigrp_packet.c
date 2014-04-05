@@ -69,8 +69,8 @@ static void
 eigrp_packet_checksum(struct eigrp_interface *, struct stream *, u_int16_t);
 static struct stream *
 eigrp_recv_packet(int, struct interface **, struct stream *);
-static unsigned
-eigrp_packet_examin(struct eigrp_header *, const unsigned);
+//static unsigned
+//eigrp_packet_examin(struct eigrp_header *, const unsigned);
 static int
 eigrp_verify_header(struct stream *, struct eigrp_interface *, struct ip *,
     struct eigrp_header *);
@@ -103,7 +103,6 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
-  struct prefix p;
   struct TLV_IPv4_Internal_type *tlv;
   struct eigrp_prefix_entry *tnode;
   struct eigrp_neighbor_entry *tentry;
@@ -121,7 +120,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     }
 
   /* get neighbour struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph, &p);
+  nbr = eigrp_nbr_get(ei, eigrph, iph);
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
@@ -348,11 +347,6 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 {
   struct TLV_Parameter_Type *hello;
   struct eigrp_neighbor *nbr;
-  struct prefix p;
-
-  /* get neighbor prefix. */
-  p.family = AF_INET;
-  p.u.prefix4 = iph->ip_src;
 
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
@@ -361,12 +355,10 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     }
 
   /* get neighbour struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph, &p);
+  nbr = eigrp_nbr_get(ei, eigrph, iph);
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
-
-//  hello = (struct TLV_Parameter_Type *) STREAM_PNT (s);
 
   /*If received packet is hello with Parameter TLV*/
   if (eigrph->ack == 0)
@@ -381,12 +373,13 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_DOWN:
         {
           nbr->v_holddown = ntohs(hello->hold_time);
+          /*Start Hold Down Timer for neighbor*/
+          THREAD_OFF(nbr->t_holddown);
+          THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired,
+              nbr, nbr->v_holddown);
           /*Check for correct values to be able to become neighbors*/
           if (eigrp_neighborship_check(nbr, hello))
             {
-              /*Start Hold Down Timer for neighbor*/
-              THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired,
-                  nbr, nbr->v_holddown);
               nbr->state = EIGRP_NEIGHBOR_PENDING;
               eigrp_send_init_update(nbr);
               zlog_info("Neighbor %s (%s) is up: new adjacency",
@@ -468,10 +461,8 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
-  struct prefix p;
   struct TLV_IPv4_Internal_type *tlv;
   struct eigrp *eigrp;
-  struct listnode *node, *nnode;
 
   struct eigrp_prefix_entry *temp_tn;
   struct eigrp_neighbor_entry *temp_te;
@@ -489,7 +480,7 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     }
 
   /* get neighbour struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph, &p);
+  nbr = eigrp_nbr_get(ei, eigrph, iph);
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
@@ -554,13 +545,8 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
-  struct prefix p;
   struct TLV_IPv4_Internal_type *tlv;
   struct eigrp *eigrp;
-  struct listnode *node, *nnode;
-
-  struct eigrp_prefix_entry *temp_tn;
-  struct eigrp_neighbor_entry *temp_te;
 
   u_int16_t type;
 
@@ -575,7 +561,7 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     }
 
   /* get neighbour struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph, &p);
+  nbr = eigrp_nbr_get(ei, eigrph, iph);
 
   /* neighbour must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
@@ -1290,7 +1276,7 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
 
   ep = eigrp_packet_new(nbr->ei->ifp->mtu);
 
-  /* Prepare EIGRP INIT UPDATE header */
+  /* Prepare EIGRP EOT UPDATE header */
   eigrp_make_header(EIGRP_MSG_UPDATE, nbr->ei, ep->s, EIGRP_HEADER_FLAG_EOT,
       nbr->ei->eigrp->sequence_number, nbr->recv_sequence_number);
 
@@ -1316,12 +1302,12 @@ eigrp_send_EOT_update(struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
 
-  //ep_multicast = eigrp_packet_duplicate(ep, nbr);
-  //ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+//  ep_multicast = eigrp_packet_duplicate(ep, nbr);
+//  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
-  //eigrp_packet_add_top(nbr->ei, ep_multicast);
+//  eigrp_packet_add_top(nbr->ei, ep_multicast);
 
   if (nbr->retrans_queue->count == 1)
     {
@@ -1881,8 +1867,9 @@ void
 eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_packet *ep, *duplicate;
-  struct route_node *rn;
+  struct listnode *node, *nnode;
   struct eigrp_neighbor *nbr;
+
 
   u_int16_t length = EIGRP_HEADER_SIZE;
 
@@ -1903,9 +1890,8 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
   /*This ack number we await from neighbor*/
   ep->sequence_number = ei->eigrp->sequence_number;
 
-  for (rn = route_top(ei->nbrs); rn; rn = route_next(rn))
+  for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
     {
-      nbr = rn->info;
       if (nbr->state == EIGRP_NEIGHBOR_UP)
         {
           duplicate = eigrp_packet_duplicate(ep, nbr);
@@ -1957,16 +1943,22 @@ void
 eigrp_query_send_all(struct eigrp_neighbor_entry *te)
 {
   struct eigrp_interface *iface;
-  struct listnode *node;
-  struct route_node *rn;
+  struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
+  struct eigrp *eigrp;
 
-  for (ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
     {
-      for (rn = route_top(iface->nbrs); rn; rn = route_next(rn))
+      zlog_debug("EIGRP Routing Process not enabled");
+    }
+
+  for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
+    {
+      for (ALL_LIST_ELEMENTS (iface->nbrs, node2, nnode2, nbr))
         {
-          nbr = rn->info;
-          eigrp_send_query(nbr, te);
+          if(nbr->state == EIGRP_NEIGHBOR_UP)
+            eigrp_send_query(nbr, te);
         }
     }
 }
