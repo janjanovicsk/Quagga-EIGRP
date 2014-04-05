@@ -33,7 +33,7 @@ extern int eigrp_read (struct thread *);
 extern struct eigrp_fifo *eigrp_fifo_new (void);
 extern struct eigrp_packet *eigrp_packet_new (size_t);
 extern void eigrp_hello_send (struct eigrp_interface *);
-extern void eigrp_update_send (struct eigrp_interface *, struct eigrp_neighbor_entry *);
+extern void eigrp_update_send (struct eigrp_interface *, struct eigrp_prefix_entry *);
 extern struct eigrp_packet *eigrp_fifo_head (struct eigrp_fifo *);
 extern struct eigrp_packet *eigrp_fifo_tail (struct eigrp_fifo *);
 extern void eigrp_packet_delete (struct eigrp_interface *);
@@ -47,7 +47,7 @@ extern void eigrp_send_EOT_update(struct eigrp_neighbor *);
 extern void eigrp_send_packet_reliably(struct eigrp_neighbor *);
 extern void eigrp_send_reply(struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
 extern void eigrp_send_query(struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
-extern void eigrp_update_send_all (struct eigrp_neighbor_entry *, struct eigrp_interface *);
+extern void eigrp_update_send_all (struct eigrp_prefix_entry *, struct eigrp_interface *);
 extern void eigrp_query_send_all (struct eigrp_neighbor_entry *);
 extern struct eigrp_packet *eigrp_packet_duplicate(struct eigrp_packet *,
                                                    struct eigrp_neighbor *);

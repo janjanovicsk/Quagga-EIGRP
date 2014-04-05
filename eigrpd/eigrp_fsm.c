@@ -221,7 +221,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                   //TO DO: remove current successor/s from route table
                   eigrp_topology_update_node(prefix);
                   //TO DO: insert new successor route to route table
-                  eigrp_update_send_all(entry, msg->adv_router->ei);
+                  eigrp_update_send_all(prefix, msg->adv_router->ei);
                 }
               //If not just set correct flags
               else
@@ -260,7 +260,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
               if (head->distance != prefix->distance)
                 {
                   eigrp_topology_update_node(prefix);
-                  eigrp_update_send_all(entry, msg->adv_router->ei);
+                  eigrp_update_send_all(prefix, msg->adv_router->ei);
                 }
               //TO DO: insert possible new successor to route table
 
@@ -278,7 +278,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                   //TO DO: remove successors with increased distance from route table
                   eigrp_topology_update_node(prefix);
                   //TO DO: insert possible new successor/s to route table
-                  eigrp_update_send_all(entry, msg->adv_router->ei);
+                  eigrp_update_send_all(prefix, msg->adv_router->ei);
 
                   return EIGRP_FSM_KEEP_STATE;
                 }
@@ -421,7 +421,7 @@ eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
   //TO DO: remove current successor route from route table
   eigrp_topology_update_node(prefix);
   //TO DO: insert new successor route to route table
-  eigrp_update_send_all(msg->entry, msg->adv_router->ei);
+  eigrp_update_send_all(prefix, msg->adv_router->ei);
 
   return 1;
 }
