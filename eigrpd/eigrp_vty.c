@@ -149,8 +149,8 @@ DEFUN (show_ip_eigrp_topology,
       show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
-          if ((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
-              (te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
+          if (((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
+              ((te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
             show_ip_eigrp_neighbor_entry(vty,te);
         }
     }
@@ -255,11 +255,16 @@ DEFUN (show_ip_eigrp_neighbors,
 DEFUN (eigrp_if_delay,
        eigrp_if_delay_cmd,
        "delay <1-16777215>",
-       "IP-EIGRP neighbors\n")
+       "Specify interface throughput delay\n"
+       "Throughput delay (tens of microseconds)\n")
 {
   struct eigrp *eigrp;
   u_int32_t delay;
+  struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -268,11 +273,30 @@ DEFUN (eigrp_if_delay,
       return CMD_SUCCESS;
     }
 
+  delay = atoi(argv[0]);
+
   /* delay range is <1-16777215>. */
-  if (delay < 1 || delay > 16777215)
+  if ((delay < 1 )|| (delay > 16777215))
     {
       vty_out (vty, "Interface delay is invalid%s", VTY_NEWLINE);
       return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->delay = delay;
+
+  for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
     }
 
   return CMD_SUCCESS;
@@ -280,12 +304,17 @@ DEFUN (eigrp_if_delay,
 
 DEFUN (eigrp_if_bandwidth,
        eigrp_if_bandwidth_cmd,
-       "delay <1-10000000>",
-       "IP-EIGRP neighbors\n")
+       "bandwidth <1-10000000>",
+       "Set bandwidth informational parameter\n"
+       "Bandwidth in kilobits\n")
 {
   u_int32_t bandwidth;
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -294,11 +323,30 @@ DEFUN (eigrp_if_bandwidth,
       return CMD_SUCCESS;
     }
 
+  bandwidth = atoi(argv[0]);
+
   /* bandwidth range is <1-10000000>. */
-  if (bandwidth < 1 || bandwidth > 10000000)
+  if ((bandwidth < 1) || (bandwidth > 10000000))
     {
       vty_out (vty, "Interface bandwidth is invalid%s", VTY_NEWLINE);
       return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
     }
 
   return CMD_SUCCESS;
@@ -319,6 +367,7 @@ eigrp_config_write (struct vty *vty)
   struct interface *ifp;
   struct eigrp_interface *ei;
   struct listnode *node;
+
   int write = 0;
 
   eigrp = eigrp_lookup ();

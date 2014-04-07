@@ -50,14 +50,13 @@
 static int
 eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
 {
-  struct route_node *rn;
   struct eigrp_neighbor *nbr;
+  struct listnode *node, *nnode;
   int sum;
   sum = 0;
 
-  for (rn = route_top (ei->nbrs); rn; rn = route_next (rn))
+  for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
     {
-      nbr = rn->info;
       sum += nbr->retrans_queue->count;
     }
 
@@ -144,9 +143,9 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_interface_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-20s %-7s %-12s %-7s %-14s %-12s %-10s%s %-26s %-13s %-7s %-14s %-12s %-8s%s",
+  vty_out (vty, "%s %-15s %-12s %-12s %-6s %-12s %-7s %-14s %-12s %-10s%s %-48s %-13s %-7s %-14s %-12s %-8s%s",
            VTY_NEWLINE,
-           "Interface", "Peers", "Xmit Queue", "Mean",
+           "Interface", "Bandwidth", "Delay", "Peers", "Xmit Queue", "Mean",
            "Pacing Time", "Multicast", "Pending",
            VTY_NEWLINE,"","Un/Reliable","SRTT","Un/Reliable","Flow Timer","Routes"
            ,VTY_NEWLINE);
@@ -156,7 +155,9 @@ void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 struct eigrp_interface *ei)
 {
-  vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
+  vty_out (vty, "%-16s ", eigrp_if_name_string(ei));
+  vty_out (vty, "%-13lu",IF_DEF_PARAMS (ei->ifp)->bandwidth);
+  vty_out (vty, "%-13lu",IF_DEF_PARAMS (ei->ifp)->delay);
   vty_out (vty, "%-7lu", route_table_count(ei->nbrs));
   vty_out (vty, "%d %c %-10d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
   vty_out (vty, "%-7d %-14d %-12d %d%s",0,0,0,0,VTY_NEWLINE);

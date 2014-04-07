@@ -530,15 +530,3 @@ eigrp_scaled_to_delay(u_int32_t scaled)
 {
   return scaled / 256;
 }
-
-void
-eigrp_if_set_bandwidth(struct eigrp_interface *ei, u_int32_t bandwidth)
-{
-
-}
-
-void
-eigrp_if_set_delay(struct eigrp_interface *ei, u_int32_t delay)
-{
-
-}
