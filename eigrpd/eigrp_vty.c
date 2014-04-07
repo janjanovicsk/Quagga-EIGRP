@@ -352,6 +352,86 @@ DEFUN (eigrp_if_bandwidth,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_if_ip_hellointerval,
+       eigrp_if_ip_hellointerval_cmd,
+       "ip hello-interval eigrp <1-65535>",
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds between hello transmissions\n")
+{
+  u_int32_t hello;
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct listnode *node, *nnode;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  hello = atoi(argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((hello < 1) || (hello > 65535))
+    {
+      vty_out (vty, "Hello-interval value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_hello = hello;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        {
+          THREAD_TIMER_OFF(ei->t_hello);
+          THREAD_TIMER_ON(master,ei->t_hello,eigrp_hello_timer,ei,1);
+          break;
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_if_ip_holdinterval,
+       eigrp_if_ip_holdinterval_cmd,
+       "ip hold-time eigrp <1-65535>",
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds before neighbor is considered down\n")
+{
+  u_int32_t hold;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  hold = atoi(argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((hold < 1) || (hold > 65535))
+    {
+      vty_out (vty, "Hello-interval value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_wait = hold;
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -364,9 +444,6 @@ static int
 eigrp_config_write (struct vty *vty)
 {
   struct eigrp *eigrp;
-  struct interface *ifp;
-  struct eigrp_interface *ei;
-  struct listnode *node;
 
   int write = 0;
 
@@ -511,6 +588,10 @@ eigrp_vty_if_init (void)
   /* Delay and bandwidth configuration commands*/
   install_element(INTERFACE_NODE, &eigrp_if_delay_cmd);
   install_element(INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
+
+  /*Hello-interval and hold-time interval configuration commands*/
+  install_element(INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
+  install_element(INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
 
   /* "description" commands. */
   install_element (INTERFACE_NODE, &interface_desc_cmd);

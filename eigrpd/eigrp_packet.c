@@ -399,6 +399,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_PENDING:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -407,6 +408,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_PENDING_INIT:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -415,6 +417,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_UP:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -1476,7 +1479,7 @@ eigrp_make_hello(struct eigrp_interface *ei, struct stream *s)
   stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
   stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
   stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
-  stream_putw(s, (u_int16_t) 15);
+  stream_putw(s, IF_DEF_PARAMS (ei->ifp)->v_wait);
 
   return length;
 }
