@@ -199,9 +199,9 @@ void
 show_ip_eigrp_prefix_entry (struct vty *vty, struct eigrp_prefix_entry *tn)
 {
     vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
-    vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
-    vty_out (vty, "%d successors, ",eigrp_topology_get_successor_count(tn));
-    vty_out (vty, "FD is %d%s",tn->fdistance, VTY_NEWLINE);
+    vty_out (vty, "%s/%u, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
+    vty_out (vty, "%u successors, ",eigrp_topology_get_successor_count(tn));
+    vty_out (vty, "FD is %u%s",tn->fdistance, VTY_NEWLINE);
 
 }
 
@@ -212,7 +212,7 @@ show_ip_eigrp_neighbor_entry (struct vty *vty, struct eigrp_neighbor_entry *te)
     vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
   else
     {
-      vty_out (vty, "%-7s%s%s (%d/%d), %s%s"," ","via ",inet_ntoa(te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string(te->ei), VTY_NEWLINE);
+      vty_out (vty, "%-7s%s%s (%u/%u), %s%s"," ","via ",inet_ntoa(te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string(te->ei), VTY_NEWLINE);
     }
 }
 
