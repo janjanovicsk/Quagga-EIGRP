@@ -266,6 +266,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
            * After distance change check if first entry in list (with best metric)
            * has successor flag and satisfy feasible condition
            */
+          zlog_info("flag: %d rdist: %u dist: %u pfdist: %u pdist: %u", head->flags, head->reported_distance, head->distance, prefix->fdistance, prefix->distance);
           if ((head->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG
               && head->reported_distance < prefix->fdistance
               )

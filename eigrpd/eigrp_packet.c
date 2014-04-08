@@ -237,18 +237,11 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
 
-                  u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
-                  tentry->total_metric.bandwith =
-                      tentry->total_metric.bandwith > bw ?
-                          bw : tentry->total_metric.bandwith;
-                  tentry->total_metric.delay +=
-                      EIGRP_IF_PARAM(tentry->ei, delay);
-                  tentry->distance = eigrp_calculate_metrics(
-                      &tentry->total_metric);
+                  tentry->distance = eigrp_calculate_total_metrics(tentry);
+
                   tnode->fdistance = tnode->distance = tnode->rdistance =
                       tentry->distance;
                   tentry->prefix = tnode;
@@ -324,17 +317,9 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
-                  u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
-                  tentry->total_metric.bandwith =
-                      tentry->total_metric.bandwith > bw ?
-                          bw : tentry->total_metric.bandwith;
-                  tentry->total_metric.delay +=
-                      EIGRP_IF_PARAM(tentry->ei, delay);
-                  tentry->distance = eigrp_calculate_metrics(
-                      &tentry->total_metric);
+                  tentry->distance = eigrp_calculate_total_metrics(tentry);
                   tentry->prefix = tnode;
                   tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 

@@ -346,13 +346,7 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
               < eigrp_calculate_metrics(&int_data->metric) ? 1 : 2; // Increase : Decrease/No change
       entry->reported_metric = int_data->metric;
       entry->reported_distance = eigrp_calculate_metrics(&int_data->metric);
-      entry->total_metric = int_data->metric;
-      u_int32_t bw = EIGRP_IF_PARAM(entry->ei,bandwidth);
-      entry->total_metric.bandwith =
-          entry->total_metric.bandwith > bw ?
-              bw : entry->total_metric.bandwith;
-      entry->total_metric.delay += EIGRP_IF_PARAM(entry->ei, delay);
-      entry->distance = eigrp_calculate_metrics(&entry->total_metric);
+      entry->distance = eigrp_calculate_total_metrics(entry);
     }
   else
     {
