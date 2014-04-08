@@ -252,10 +252,14 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tnode->fdistance = tnode->distance = tnode->rdistance =
                       tentry->distance;
                   tentry->prefix = tnode;
+                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
                   eigrp_prefix_entry_add(eigrp->topology_table, tnode);
                   eigrp_neighbor_entry_add(tnode, tentry);
-                  eigrp_topology_update_node(tnode);
+                  tnode->distance = tnode->fdistance = tnode->rdistance =
+                      tentry->distance;
+                  tnode->reported_metric = tentry->total_metric;
+                  eigrp_topology_update_node_flags(tnode);
                   eigrp_update_send_all(tnode, ei);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
@@ -323,18 +327,23 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
+                  u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
                   tentry->total_metric.bandwith =
-                      (tentry->total_metric.bandwith > EIGRP_IF_PARAM(tentry->ei,bandwidth)) ?
-                          EIGRP_IF_PARAM(tentry->ei,bandwidth) : tentry->total_metric.bandwith;
-                  tentry->total_metric.delay += EIGRP_IF_PARAM(tentry->ei, delay);
-                  tentry->distance = eigrp_calculate_metrics(&tentry->total_metric);
+                      tentry->total_metric.bandwith > bw ?
+                          bw : tentry->total_metric.bandwith;
+                  tentry->total_metric.delay +=
+                      EIGRP_IF_PARAM(tentry->ei, delay);
+                  tentry->distance = eigrp_calculate_metrics(
+                      &tentry->total_metric);
                   tentry->prefix = tnode;
-
-                  tnode->fdistance = tentry->distance;
+                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
                   eigrp_prefix_entry_add(eigrp->topology_table, tnode);
                   eigrp_neighbor_entry_add(tnode, tentry);
-                  eigrp_topology_update_node(tnode);
+                  tnode->distance = tnode->fdistance = tnode->rdistance =
+                      tentry->distance;
+                  tnode->reported_metric = tentry->total_metric;
+                  eigrp_topology_update_node_flags(tnode);
                   eigrp_update_send_all(tnode, ei);
 
                 }

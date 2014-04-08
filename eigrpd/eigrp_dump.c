@@ -187,10 +187,10 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty)
 {
-	vty_out (vty, "%s%s%s%s%s%s%s",
-	           VTY_NEWLINE,
-	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
-	           "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
+        vty_out (vty, "%s%s%s%s%s%s%s",
+                   VTY_NEWLINE,
+                   "Codes: P - Passive, A - Active, U - Update, Q - Query, "
+                   "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }
 
 void
@@ -198,7 +198,7 @@ show_ip_eigrp_prefix_entry (struct vty *vty, struct eigrp_prefix_entry *tn)
 {
     vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
     vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
-    vty_out (vty, "%d successors, ",1);
+    vty_out (vty, "%d successors, ",eigrp_topology_get_successor_count(tn));
     vty_out (vty, "FD is %d%s",tn->fdistance, VTY_NEWLINE);
 
 }
