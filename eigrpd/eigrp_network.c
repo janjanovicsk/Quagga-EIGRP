@@ -396,26 +396,28 @@ u_int32_t
 eigrp_calculate_metrics (struct eigrp_metrics *metric)
 {
   struct eigrp *eigrp;
-  u_int32_t final_metric;
-  final_metric=0;
+  u_int64_t temp_metric;
+  temp_metric=0;
   eigrp = eigrp_lookup ();
 
   // EIGRP Metric = {K1*BW+[(K2*BW)/(256-load)]+(K3*delay)}*{K5/(reliability+K4)}
 
   if(eigrp->k_values[0])
-    final_metric+=(eigrp->k_values[0]*metric->bandwith);
+    temp_metric+=(eigrp->k_values[0]*metric->bandwith);
   if(eigrp->k_values[1])
-    final_metric+=((eigrp->k_values[1]*metric->bandwith)/(256-metric->load));
+    temp_metric+=((eigrp->k_values[1]*metric->bandwith)/(256-metric->load));
   if(eigrp->k_values[2])
-    final_metric+=(eigrp->k_values[2]*metric->delay);
+    temp_metric+=(eigrp->k_values[2]*metric->delay);
   if(eigrp->k_values[3]&& !eigrp->k_values[4])
-    final_metric*=eigrp->k_values[3];
+    temp_metric*=eigrp->k_values[3];
   if(!eigrp->k_values[3]&& eigrp->k_values[4])
-    final_metric*=(eigrp->k_values[4]/metric->reliability);
+    temp_metric*=(eigrp->k_values[4]/metric->reliability);
   if(eigrp->k_values[3]&& eigrp->k_values[4])
-    final_metric*=((eigrp->k_values[4]/metric->reliability)+eigrp->k_values[3]);
+    temp_metric*=((eigrp->k_values[4]/metric->reliability)+eigrp->k_values[3]);
 
-
-  return final_metric;
+  if(temp_metric <= EIGRP_MAX_METRIC)
+    return (u_int32_t)temp_metric;
+  else
+    return EIGRP_MAX_METRIC;
 }
 

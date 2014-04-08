@@ -68,14 +68,14 @@ void
 eigrp_ip_header_dump (struct ip *iph)
 {
   /* IP Header dump. */
-  zlog_debug ("ip_v %d", iph->ip_v);
-  zlog_debug ("ip_hl %d", iph->ip_hl);
-  zlog_debug ("ip_tos %d", iph->ip_tos);
-  zlog_debug ("ip_len %d", iph->ip_len);
+  zlog_debug ("ip_v %u", iph->ip_v);
+  zlog_debug ("ip_hl %u", iph->ip_hl);
+  zlog_debug ("ip_tos %u", iph->ip_tos);
+  zlog_debug ("ip_len %u", iph->ip_len);
   zlog_debug ("ip_id %u", (u_int32_t) iph->ip_id);
   zlog_debug ("ip_off %u", (u_int32_t) iph->ip_off);
-  zlog_debug ("ip_ttl %d", iph->ip_ttl);
-  zlog_debug ("ip_p %d", iph->ip_p);
+  zlog_debug ("ip_ttl %u", iph->ip_ttl);
+  zlog_debug ("ip_p %u", iph->ip_p);
   zlog_debug ("ip_sum 0x%x", (u_int32_t) iph->ip_sum);
   zlog_debug ("ip_src %s",  inet_ntoa (iph->ip_src));
   zlog_debug ("ip_dst %s", inet_ntoa (iph->ip_dst));
@@ -102,7 +102,7 @@ eigrp_topology_ip_string (struct eigrp_prefix_entry *tn)
 
   ifaddr = ntohl (tn->destination->prefix.s_addr);
   snprintf (buf, EIGRP_IF_STRING_MAXLEN,
-            "%d.%d.%d.%d",
+            "%u.%u.%u.%u",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
   return buf;
@@ -120,7 +120,7 @@ eigrp_if_ip_string (struct eigrp_interface *ei)
 
   ifaddr = ntohl (ei->address->u.prefix4.s_addr);
   snprintf (buf, EIGRP_IF_STRING_MAXLEN,
-            "%d.%d.%d.%d",
+            "%u.%u.%u.%u",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
   return buf;
@@ -134,7 +134,7 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 
   ifaddr = ntohl (nbr->src.s_addr);
   snprintf (buf, EIGRP_IF_STRING_MAXLEN,
-            "%d.%d.%d.%d",
+            "%u.%u.%u.%u",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
   return buf;
@@ -143,10 +143,10 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_interface_header (struct vty *vty)
 {
-  vty_out (vty, "%s %-15s %-12s %-12s %-6s %-12s %-7s %-14s %-12s %-10s%s %-48s %-13s %-7s %-14s %-12s %-8s%s",
+  vty_out (vty, "%s %-10s %-10s %-10s %-6s %-12s %-7s %-14s %-12s %-8s %-8s %-8s%s %-39s %-12s %-7s %-14s %-12s %-8s%s",
            VTY_NEWLINE,
            "Interface", "Bandwidth", "Delay", "Peers", "Xmit Queue", "Mean",
-           "Pacing Time", "Multicast", "Pending",
+           "Pacing Time", "Multicast", "Pending", "Hello", "Holdtime",
            VTY_NEWLINE,"","Un/Reliable","SRTT","Un/Reliable","Flow Timer","Routes"
            ,VTY_NEWLINE);
 }
@@ -155,12 +155,14 @@ void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 struct eigrp_interface *ei)
 {
-  vty_out (vty, "%-16s ", eigrp_if_name_string(ei));
-  vty_out (vty, "%-13lu",IF_DEF_PARAMS (ei->ifp)->bandwidth);
-  vty_out (vty, "%-13lu",IF_DEF_PARAMS (ei->ifp)->delay);
-  vty_out (vty, "%-7lu", route_table_count(ei->nbrs));
-  vty_out (vty, "%d %c %-10d",0,'/',eigrp_neighbor_packet_queue_sum(ei));
-  vty_out (vty, "%-7d %-14d %-12d %d%s",0,0,0,0,VTY_NEWLINE);
+  vty_out (vty, "%-11s ", eigrp_if_name_string(ei));
+  vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->bandwidth);
+  vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->delay);
+  vty_out (vty, "%-7u", ei->nbrs->count);
+  vty_out (vty, "%u %c %-10u",0,'/',eigrp_neighbor_packet_queue_sum(ei));
+  vty_out (vty, "%-7u %-14u %-12u %-8u",0,0,0,0);
+  vty_out (vty, "%-8u %-8u %s",IF_DEF_PARAMS (ei->ifp)->v_hello,IF_DEF_PARAMS (ei->ifp)->v_wait,VTY_NEWLINE);
+
 }
 
 void
@@ -177,11 +179,11 @@ void
 show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 {
 
-  vty_out (vty, "%-3d %-17s %-21s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
+  vty_out (vty, "%-3u %-17s %-21s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
   vty_out (vty,"%-7lu",thread_timer_remain_second(nbr->t_holddown));
-  vty_out (vty,"%-8d %-6d %-5d",0,0,EIGRP_PACKET_RETRANS_TIME);
+  vty_out (vty,"%-8u %-6u %-5u",0,0,EIGRP_PACKET_RETRANS_TIME);
   vty_out (vty,"%-7lu",nbr->retrans_queue->count);
-  vty_out (vty,"%d%s",nbr->recv_sequence_number,VTY_NEWLINE);
+  vty_out (vty,"%u%s",nbr->recv_sequence_number,VTY_NEWLINE);
 }
 
 void
@@ -197,10 +199,9 @@ void
 show_ip_eigrp_prefix_entry (struct vty *vty, struct eigrp_prefix_entry *tn)
 {
     vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
-    vty_out (vty, "%s/%d, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
-    vty_out (vty, "%d successors, ",1);
-    vty_out (vty, "FD is %d%s",tn->fdistance, VTY_NEWLINE);
-
+    vty_out (vty, "%s/%u, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
+    vty_out (vty, "%u successors, ",1);
+    vty_out (vty, "FD is %u%s",tn->fdistance, VTY_NEWLINE);
 }
 
 void
