@@ -205,9 +205,9 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty)
 {
-	vty_out (vty, "%s%s%s%s%s%s%s",
+	vty_out (vty, "%s%s%s%s%s%s%s%s%s%s",
 	           VTY_NEWLINE,
-//	           "IP-EIGRP Topology Table for AS(1)/ID(10.0.0.1)",VTY_NEWLINE,VTY_NEWLINE,
+	           "IP-EIGRP Topology Table for AS(1)/ID(0.0.0.0)",VTY_NEWLINE,VTY_NEWLINE,
 	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
 	           "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }

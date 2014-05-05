@@ -139,13 +139,12 @@
 #define EIGRP_FSM_KEEP_STATE                    7 /*state not changed, usually by receiving not last reply */
 
 #define INT_TYPES_CMD_STR                                                \
-	"Detail|FastEthernet|Loopback|Serial|Static"								 												 \
+	"detail|fastethernet|loopback|static"
 
 #define INT_TYPES_DESC													 \
 	"Show detailed peer information\n"									 \
 	"FastEthernet IEEE 802.3\n"											 \
 	"Loopback interface\n"												 \
-	"Serial\n"															 \
 	"Show static peer information\n"
 
 

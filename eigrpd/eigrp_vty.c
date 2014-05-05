@@ -148,11 +148,6 @@ DEFUN (show_ip_eigrp_topology,
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
   {
-	show_ip_eigrp_topology_header (vty);
-
-    show_ip_eigrp_prefix_entry(vty,tn);
-    for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
-    {
       show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
@@ -161,6 +156,7 @@ DEFUN (show_ip_eigrp_topology,
             show_ip_eigrp_neighbor_entry(vty,te);
         }
     }
+
   return CMD_SUCCESS;
 }
 
@@ -229,14 +225,14 @@ DEFUN (show_ip_eigrp_interfaces,
     return CMD_SUCCESS;
   }
 
-  if( strncmp (argv[0], "d", 1) != 0  )
+  if(!argc)
   {
 	show_ip_eigrp_interface_header (vty);
   }
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
   {
-	if( strncmp (argv[0], "d", 1) == 0 )
+	if((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
 	{
 	  show_ip_eigrp_interface_header (vty);
 	}
@@ -248,7 +244,7 @@ DEFUN (show_ip_eigrp_interfaces,
 		show_ip_eigrp_interface_sub (vty, eigrp, ei);
 	//}
 
-	if( strncmp (argv[0], "d", 1) == 0 )
+	if((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
 	{
 	  show_ip_eigrp_interface_detail (vty, eigrp, ei);
 	}
@@ -328,6 +324,7 @@ DEFUN (eigrp_if_delay,
   if (eigrp == NULL)
     {
       vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+
       return CMD_SUCCESS;
     }
 
@@ -337,6 +334,7 @@ DEFUN (eigrp_if_delay,
   if ((delay < 1 )|| (delay > 16777215))
     {
       vty_out (vty, "Interface delay is invalid%s", VTY_NEWLINE);
+
       return CMD_WARNING;
     }
 
@@ -345,7 +343,7 @@ DEFUN (eigrp_if_delay,
 
   for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei))
     {
-      if(ei->ifp == ifp)
+      if (ei->ifp == ifp)
         break;
     }
 
@@ -431,7 +429,7 @@ DEFUN (eigrp_if_ip_hellointerval,
       return CMD_SUCCESS;
     }
 
-  hello = atoi(argv[0]);
+  hello = atoi (argv[0]);
 
   /* hello range is <1-65535> */
   if ((hello < 1) || (hello > 65535))
@@ -445,7 +443,7 @@ DEFUN (eigrp_if_ip_hellointerval,
 
   for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
     {
-      if(ei->ifp == ifp)
+      if (ei->ifp == ifp)
         {
           THREAD_TIMER_OFF(ei->t_hello);
           THREAD_TIMER_ON(master,ei->t_hello,eigrp_hello_timer,ei,1);
@@ -610,25 +608,26 @@ void
 eigrp_vty_show_init (void)
 {
   install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
-<<<<<<< HEAD
-=======
-  install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
->>>>>>> branch 'EIGRP-Development' of https://github.com/janovic/Quagga-EIGRP.git
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_detail_cmd);
-
-  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_detail_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_detail_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
+
+  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_topology_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_interfaces_detail_cmd);
 
   install_element(VIEW_NODE, &show_ip_eigrp_neighbors_detail_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_detail_cmd);
+
+  install_element(VIEW_NODE, &show_ip_eigrp_interfaces_detail_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_detail_cmd);
+
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
+
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_detail_cmd);
   install_element(VIEW_NODE, &show_ip_eigrp_topology_detail_cmd);
+
 }
 
 /* eigrpd's interface node. */
