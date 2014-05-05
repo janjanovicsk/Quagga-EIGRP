@@ -47,6 +47,24 @@
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_const.h"
 
+
+static int
+config_write_network (struct vty *vty, struct eigrp *eigrp)
+{
+  struct route_node *rn;
+
+  /* `network area' print. */
+  for (rn = route_top (eigrp->networks); rn; rn = route_next (rn))
+    if (rn->info)
+      {
+        /* Network print. */
+        vty_out (vty, " network %s/%d %s",
+                 inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen, VTY_NEWLINE);
+      }
+
+  return 0;
+}
+
 DEFUN (router_eigrp,
        router_eigrp_cmd,
        "router eigrp <1-65535>",
@@ -135,9 +153,48 @@ DEFUN (show_ip_eigrp_topology,
     show_ip_eigrp_prefix_entry(vty,tn);
     for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
     {
-      show_ip_eigrp_neighbor_entry(vty,te);
+      show_ip_eigrp_prefix_entry(vty,tn);
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+        {
+          if (((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
+              ((te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
+            show_ip_eigrp_neighbor_entry(vty,te);
+        }
     }
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_ip_eigrp_topology_all_links,
+       show_ip_eigrp_topology_all_links_cmd,
+       "show ip eigrp topology all-links",
+       SHOW_STR
+       IP_STR
+       "IP-EIGRP show commands\n"
+       "IP-EIGRP topology\n"
+       "Show all links in topology table\n")
+{
+  struct eigrp *eigrp;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_prefix_entry *tn;
+  struct eigrp_neighbor_entry *te;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+  {
+        vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+    return CMD_SUCCESS;
   }
+
+  show_ip_eigrp_topology_header (vty);
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
+    {
+      show_ip_eigrp_prefix_entry(vty,tn);
+      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+        {
+          show_ip_eigrp_neighbor_entry(vty,te);
+        }
+    }
   return CMD_SUCCESS;
 }
 
@@ -222,7 +279,6 @@ DEFUN (show_ip_eigrp_neighbors,
   struct eigrp_interface *ei;
   struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
-  struct route_node *rn;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -257,11 +313,16 @@ ALIAS (show_ip_eigrp_neighbors,
 DEFUN (eigrp_if_delay,
        eigrp_if_delay_cmd,
        "delay <1-16777215>",
-       "IP-EIGRP neighbors\n")
+       "Specify interface throughput delay\n"
+       "Throughput delay (tens of microseconds)\n")
 {
   struct eigrp *eigrp;
   u_int32_t delay;
+  struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -270,11 +331,30 @@ DEFUN (eigrp_if_delay,
       return CMD_SUCCESS;
     }
 
+  delay = atoi(argv[0]);
+
   /* delay range is <1-16777215>. */
-  if (delay < 1 || delay > 16777215)
+  if ((delay < 1 )|| (delay > 16777215))
     {
       vty_out (vty, "Interface delay is invalid%s", VTY_NEWLINE);
       return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->delay = delay;
+
+  for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
     }
 
   return CMD_SUCCESS;
@@ -282,12 +362,17 @@ DEFUN (eigrp_if_delay,
 
 DEFUN (eigrp_if_bandwidth,
        eigrp_if_bandwidth_cmd,
-       "delay <1-10000000>",
-       "IP-EIGRP neighbors\n")
+       "bandwidth <1-10000000>",
+       "Set bandwidth informational parameter\n"
+       "Bandwidth in kilobits\n")
 {
   u_int32_t bandwidth;
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -296,12 +381,111 @@ DEFUN (eigrp_if_bandwidth,
       return CMD_SUCCESS;
     }
 
+  bandwidth = atoi(argv[0]);
+
   /* bandwidth range is <1-10000000>. */
-  if (bandwidth < 1 || bandwidth > 10000000)
+  if ((bandwidth < 1) || (bandwidth > 10000000))
     {
       vty_out (vty, "Interface bandwidth is invalid%s", VTY_NEWLINE);
       return CMD_WARNING;
     }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_if_ip_hellointerval,
+       eigrp_if_ip_hellointerval_cmd,
+       "ip hello-interval eigrp <1-65535>",
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds between hello transmissions\n")
+{
+  u_int32_t hello;
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct listnode *node, *nnode;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  hello = atoi(argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((hello < 1) || (hello > 65535))
+    {
+      vty_out (vty, "Hello-interval value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_hello = hello;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if(ei->ifp == ifp)
+        {
+          THREAD_TIMER_OFF(ei->t_hello);
+          THREAD_TIMER_ON(master,ei->t_hello,eigrp_hello_timer,ei,1);
+          break;
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_if_ip_holdinterval,
+       eigrp_if_ip_holdinterval_cmd,
+       "ip hold-time eigrp <1-65535>",
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds before neighbor is considered down\n")
+{
+  u_int32_t hold;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  hold = atoi(argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((hold < 1) || (hold > 65535))
+    {
+      vty_out (vty, "Hello-interval value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_wait = hold;
 
   return CMD_SUCCESS;
 }
@@ -317,7 +501,107 @@ static struct cmd_node eigrp_node =
 static int
 eigrp_config_write (struct vty *vty)
 {
+  struct eigrp *eigrp;
+
   int write = 0;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp != NULL)
+    {
+      /* `router eigrp' print. */
+      vty_out (vty, "router eigrp %d%s", eigrp->AS, VTY_NEWLINE);
+
+      write++;
+
+      if (!eigrp->networks)
+        return write;
+
+      /* Router ID print. */
+      if (eigrp->router_id_static.s_addr != 0)
+        vty_out (vty, " eigrp router-id %s%s",
+                 inet_ntoa (eigrp->router_id_static), VTY_NEWLINE);
+
+//      /* log-adjacency-changes flag print. */
+//      if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_CHANGES))
+//        {
+//          vty_out(vty, " log-adjacency-changes");
+//          if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_DETAIL))
+//            vty_out(vty, " detail");
+//          vty_out(vty, "%s", VTY_NEWLINE);
+//        }
+
+      /* SPF timers print. */
+//      if (ospf->spf_delay != OSPF_SPF_DELAY_DEFAULT ||
+//          ospf->spf_holdtime != OSPF_SPF_HOLDTIME_DEFAULT ||
+//          ospf->spf_max_holdtime != OSPF_SPF_MAX_HOLDTIME_DEFAULT)
+//        vty_out (vty, " timers throttle spf %d %d %d%s",
+//                 ospf->spf_delay, ospf->spf_holdtime,
+//                 ospf->spf_max_holdtime, VTY_NEWLINE);
+
+//      /* Max-metric router-lsa print */
+//      config_write_stub_router (vty, ospf);
+
+//      /* SPF refresh parameters print. */
+//      if (ospf->lsa_refresh_interval != OSPF_LSA_REFRESH_INTERVAL_DEFAULT)
+//        vty_out (vty, " refresh timer %d%s",
+//                 ospf->lsa_refresh_interval, VTY_NEWLINE);
+//
+//      /* Redistribute information print. */
+//      config_write_ospf_redistribute (vty, ospf);
+//
+//      /* passive-interface print. */
+//      if (ospf->passive_interface_default == OSPF_IF_PASSIVE)
+//        vty_out (vty, " passive-interface default%s", VTY_NEWLINE);
+//
+//      for (ALL_LIST_ELEMENTS_RO (om->iflist, node, ifp))
+//        if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (ifp), passive_interface)
+//            && IF_DEF_PARAMS (ifp)->passive_interface !=
+//                              ospf->passive_interface_default)
+//          {
+//            vty_out (vty, " %spassive-interface %s%s",
+//                     IF_DEF_PARAMS (ifp)->passive_interface ? "" : "no ",
+//                     ifp->name, VTY_NEWLINE);
+//          }
+//      for (ALL_LIST_ELEMENTS_RO (ospf->oiflist, node, oi))
+//        {
+//          if (!OSPF_IF_PARAM_CONFIGURED (oi->params, passive_interface))
+//            continue;
+//          if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (oi->ifp),
+//                                        passive_interface))
+//            {
+//              if (oi->params->passive_interface == IF_DEF_PARAMS (oi->ifp)->passive_interface)
+//                continue;
+//            }
+//          else if (oi->params->passive_interface == ospf->passive_interface_default)
+//            continue;
+//
+//          vty_out (vty, " %spassive-interface %s %s%s",
+//                   oi->params->passive_interface ? "" : "no ",
+//                   oi->ifp->name,
+//                   inet_ntoa (oi->address->u.prefix4), VTY_NEWLINE);
+//        }
+
+      /* Network area print. */
+      config_write_network (vty, eigrp);
+
+//      /* Area config print. */
+//      config_write_ospf_area (vty, ospf);
+//
+//      /* static neighbor print. */
+//      config_write_ospf_nbr_nbma (vty, ospf);
+//
+//      /* Virtual-Link print. */
+//      config_write_virtual_link (vty, ospf);
+//
+//      /* Default metric configuration.  */
+//      config_write_ospf_default_metric (vty, ospf);
+//
+//      /* Distribute-list and default-information print. */
+//      config_write_ospf_distribute (vty, ospf);
+//
+//      /* Distance configuration. */
+//      config_write_ospf_distance (vty, ospf)
+    }
 
   return write;
 }
@@ -327,6 +611,12 @@ eigrp_vty_show_init (void)
 {
   install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
+<<<<<<< HEAD
+=======
+  install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
+>>>>>>> branch 'EIGRP-Development' of https://github.com/janovic/Quagga-EIGRP.git
   install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
   install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_detail_cmd);
 
@@ -368,6 +658,10 @@ eigrp_vty_if_init (void)
   /* Delay and bandwidth configuration commands*/
   install_element(INTERFACE_NODE, &eigrp_if_delay_cmd);
   install_element(INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
+
+  /*Hello-interval and hold-time interval configuration commands*/
+  install_element(INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
+  install_element(INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
 
   /* "description" commands. */
   install_element (INTERFACE_NODE, &interface_desc_cmd);

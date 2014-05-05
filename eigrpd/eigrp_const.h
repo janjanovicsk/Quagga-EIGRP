@@ -95,7 +95,7 @@
 
 #define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
 
-#define EIGRP_MAX_METRIC                   0xffffffff    /*8589934591*/
+#define EIGRP_MAX_METRIC                   0xffffffffU    /*8589934591*/
 
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
@@ -136,7 +136,7 @@
 #define EIGRP_FSM_EVENT_DINC                    4 /*distance increase while in active state*/
 #define EIGRP_FSM_EVENT_QACT                    5 /*query from succ while in active state*/
 #define EIGRP_FSM_EVENT_LR_FCN                  6 /*last reply, FC not satisfied with current value of FDij*/
-#define EIGRP_FSM_KEEP_STATE                     7 /*state not changed, usually by receiving not last reply */
+#define EIGRP_FSM_KEEP_STATE                    7 /*state not changed, usually by receiving not last reply */
 
 #define INT_TYPES_CMD_STR                                                \
 	"Detail|FastEthernet|Loopback|Serial|Static"								 												 \

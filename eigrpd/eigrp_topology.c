@@ -114,6 +114,7 @@ eigrp_prefix_entry_new()
   new->rij = list_new();
   new->entries->cmp = (int
   (*)(void *, void *)) eigrp_neighbor_entry_cmp;
+  new->distance = new->fdistance = new->rdistance = EIGRP_MAX_METRIC;
 
   return new;
 }
@@ -144,6 +145,8 @@ eigrp_neighbor_entry_new()
 
   new = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
       sizeof(struct eigrp_neighbor_entry));
+  new->reported_distance = EIGRP_MAX_METRIC;
+  new->distance = EIGRP_MAX_METRIC;
 
   return new;
 }
@@ -316,12 +319,12 @@ eigrp_prefix_entry_lookup(struct list *entries, struct eigrp_neighbor *nbr)
   return NULL;
 }
 
-void
+int
 eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
 {
   struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *entry = msg->entry;
-
+  int change = 0;
   assert(entry);
 
   struct TLV_IPv4_External_type *ext_data = NULL;
@@ -329,15 +332,21 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
   if (msg->data_type == TLV_INTERNAL_TYPE)
     {
       int_data = msg->data.ipv4_int_type;
+          if (int_data->metric.bandwith == entry->reported_metric.bandwith
+          && int_data->metric.delay == entry->reported_metric.delay
+          /*
+           * Add more to react on change of additional parameters
+           */
+          )
+        {
+          return 0; // No change
+        }
+      change =
+          entry->reported_distance
+              < eigrp_calculate_metrics(&int_data->metric) ? 1 : 2; // Increase : Decrease/No change
       entry->reported_metric = int_data->metric;
       entry->reported_distance = eigrp_calculate_metrics(&int_data->metric);
-      entry->total_metric = int_data->metric;
-      u_int32_t bw = EIGRP_IF_PARAM(entry->ei,bandwidth);
-      entry->total_metric.bandwith =
-          entry->total_metric.bandwith > bw ?
-              bw : entry->total_metric.bandwith;
-      entry->total_metric.delay += EIGRP_IF_PARAM(entry->ei, delay);
-      entry->distance = eigrp_calculate_metrics(&entry->total_metric);
+      entry->distance = eigrp_calculate_total_metrics(entry);
     }
   else
     {
@@ -346,45 +355,73 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
   /*
    * Move to correct position in list according to new distance
    */
-  listnode_delete(prefix->entries,entry);
-  listnode_add_sort(prefix->entries,entry);
+  listnode_delete(prefix->entries, entry);
+  listnode_add_sort(prefix->entries, entry);
+
+  return change;
 
 }
 
 void
-eigrp_topology_update_all_nodes()
+eigrp_topology_update_all_node_flags()
 {
   struct list *table = eigrp_lookup()->topology_table;
   struct eigrp_prefix_entry *data;
   struct listnode *node, *nnode;
   for (ALL_LIST_ELEMENTS(table, node, nnode, data))
     {
-      eigrp_topology_update_node(data);
+      eigrp_topology_update_node_flags(data);
     }
 }
 
 void
-eigrp_topology_update_node(struct eigrp_prefix_entry *dest)
+eigrp_topology_update_node_flags(struct eigrp_prefix_entry *dest)
 {
   struct listnode *node;
-  struct eigrp_neighbor_entry *entry;
-  entry =dest->entries->head->data;
-  dest->rdistance = dest->fdistance = dest->distance = entry->distance;
+  struct eigrp_neighbor_entry *entry, *entry_top;
+  entry_top = entry = dest->entries->head->data;
 
-  for(ALL_LIST_ELEMENTS_RO(dest->entries,node,entry))
+  for (ALL_LIST_ELEMENTS_RO(dest->entries, node, entry))
     {
-      if(entry->distance == dest->fdistance)
+      if (entry->reported_distance < dest->fdistance
+          && (entry == dest->entries->head->data
+              || (entry->distance == entry_top->distance
+                  && entry_top->flags == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)))
         {
           entry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
         }
-      else if(entry->distance < dest->fdistance)
+      else if (entry->distance < dest->fdistance)
         {
           zlog_err("ERROR: Bad sorting");
         }
-      else if(entry->reported_distance < dest->fdistance)
+      else if (entry->reported_distance < dest->fdistance)
         {
           entry->flags = EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG;
         }
+      else
+        {
+          entry->flags = 0;
+        }
     }
 
+}
+
+int
+eigrp_topology_get_successor_count(struct eigrp_prefix_entry *prefix)
+{
+
+  struct listnode *node;
+  struct eigrp_neighbor_entry *entry;
+
+  int count = 0;
+
+  for(ALL_LIST_ELEMENTS_RO(prefix->entries,node,entry))
+    {
+      if ((entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
+        {
+          count ++;
+        }
+    }
+
+  return count;
 }

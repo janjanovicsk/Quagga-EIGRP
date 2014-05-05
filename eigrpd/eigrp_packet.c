@@ -237,26 +237,23 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
 
-                  u_int32_t bw = EIGRP_IF_PARAM(tentry->ei,bandwidth);
-                  tentry->total_metric.bandwith =
-                      tentry->total_metric.bandwith > bw ?
-                          bw : tentry->total_metric.bandwith;
-                  tentry->total_metric.delay +=
-                      EIGRP_IF_PARAM(tentry->ei, delay);
-                  tentry->distance = eigrp_calculate_metrics(
-                      &tentry->total_metric);
+                  tentry->distance = eigrp_calculate_total_metrics(tentry);
+
                   tnode->fdistance = tnode->distance = tnode->rdistance =
                       tentry->distance;
                   tentry->prefix = tnode;
+                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
                   eigrp_prefix_entry_add(eigrp->topology_table, tnode);
                   eigrp_neighbor_entry_add(tnode, tentry);
-                  eigrp_topology_update_node(tnode);
-                  eigrp_update_send_all(tentry, ei);
+                  tnode->distance = tnode->fdistance = tnode->rdistance =
+                      tentry->distance;
+                  tnode->reported_metric = tentry->total_metric;
+                  eigrp_topology_update_node_flags(tnode);
+                  eigrp_update_send_all(tnode, ei);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -317,18 +314,22 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
                   tentry = eigrp_neighbor_entry_new();
+                  tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->total_metric = tentry->reported_metric;
                   tentry->reported_distance = eigrp_calculate_metrics(
                       &tlv->metric);
-                  tentry->distance = tentry->reported_distance;
-                  tentry->ei = ei;
+                  tentry->distance = eigrp_calculate_total_metrics(tentry);
                   tentry->prefix = tnode;
+                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
                   eigrp_prefix_entry_add(eigrp->topology_table, tnode);
                   eigrp_neighbor_entry_add(tnode, tentry);
-                  eigrp_topology_update_node(tnode);
+                  tnode->distance = tnode->fdistance = tnode->rdistance =
+                      tentry->distance;
+                  tnode->reported_metric = tentry->total_metric;
+                  eigrp_topology_update_node_flags(tnode);
+                  eigrp_update_send_all(tnode, ei);
 
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
@@ -392,6 +393,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_PENDING:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -400,6 +402,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_PENDING_INIT:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -408,6 +411,7 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
       case EIGRP_NEIGHBOR_UP:
         {
           /*Reset Hold Down Timer for neighbor*/
+          nbr->v_holddown = ntohs(hello->hold_time);
           THREAD_OFF(nbr->t_holddown);
           THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
               nbr->v_holddown);
@@ -1469,7 +1473,7 @@ eigrp_make_hello(struct eigrp_interface *ei, struct stream *s)
   stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
   stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
   stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
-  stream_putw(s, (u_int16_t) 15);
+  stream_putw(s, IF_DEF_PARAMS (ei->ifp)->v_wait);
 
   return length;
 }
@@ -1632,12 +1636,6 @@ eigrp_unack_packet_retrans(struct thread *thread)
       ep->t_retrans_timer =
           thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
 
-      /*This ack number we await from neighbor*/
-      ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
-      /*Increment sequence number counter*/
-      nbr->ei->eigrp->sequence_number++;
-
       /* Hook thread to write packet. */
       if (nbr->ei->on_write_q == 0)
         {
@@ -1671,12 +1669,6 @@ eigrp_unack_multicast_packet_retrans(struct thread *thread)
       /*Start retransmission timer*/
       ep->t_retrans_timer =
           thread_add_timer(master, eigrp_unack_multicast_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
-
-      /*This ack number we await from neighbor*/
-      ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
-      /*Increment sequence number counter*/
-      nbr->ei->eigrp->sequence_number++;
 
       /* Hook thread to write packet. */
       if (nbr->ei->on_write_q == 0)
@@ -1864,11 +1856,12 @@ eigrp_add_internalTLV_to_stream(struct stream *s,
 }
 
 void
-eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
+eigrp_update_send(struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
 {
   struct eigrp_packet *ep, *duplicate;
-  struct listnode *node, *nnode;
+  struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
+  struct eigrp_neighbor_entry *entry;
 
 
   u_int16_t length = EIGRP_HEADER_SIZE;
@@ -1879,7 +1872,11 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
   eigrp_make_header(EIGRP_MSG_UPDATE, ei, ep->s, 0, ei->eigrp->sequence_number,
       0);
 
-  length += eigrp_add_internalTLV_to_stream(ep->s, te);
+  for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, entry))
+    {
+      if((entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
+        length += eigrp_add_internalTLV_to_stream(ep->s, entry);
+    }
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(ei, ep->s, length);
@@ -1926,7 +1923,7 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_neighbor_entry *te)
 }
 
 void
-eigrp_update_send_all(struct eigrp_neighbor_entry *te,
+eigrp_update_send_all(struct eigrp_prefix_entry *pe,
     struct eigrp_interface *exception)
 {
   struct eigrp_interface *iface;
@@ -1935,7 +1932,7 @@ eigrp_update_send_all(struct eigrp_neighbor_entry *te,
   for (ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
     {
       if (iface != exception)
-        eigrp_update_send(iface, te);
+        eigrp_update_send(iface, pe);
     }
 }
 

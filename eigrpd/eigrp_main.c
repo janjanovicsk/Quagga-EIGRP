@@ -176,12 +176,13 @@ main (int argc, char **argv)
 
   sort_node ();
   /* Get configuration file. */
-  vty_read_config (config_file, config_default);
-
   /* EIGRP VTY inits */
   eigrp_vty_init ();
   eigrp_vty_show_init ();
   eigrp_vty_if_init ();
+
+  vty_read_config (config_file, config_default);
+
 
   /* Start execution only if not in dry-run mode */
   if (dryrun)

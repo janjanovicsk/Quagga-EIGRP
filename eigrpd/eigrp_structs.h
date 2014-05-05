@@ -331,6 +331,7 @@ struct eigrp_prefix_entry
   u_int32_t fdistance;
   u_int32_t rdistance;
   u_int32_t distance;
+  struct eigrp_metrics reported_metric;
   u_char state; //route fsm state
   u_char dest_type;
 };
