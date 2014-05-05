@@ -138,4 +138,15 @@
 #define EIGRP_FSM_EVENT_LR_FCN                  6 /*last reply, FC not satisfied with current value of FDij*/
 #define EIGRP_FSM_KEEP_STATE                     7 /*state not changed, usually by receiving not last reply */
 
+#define INT_TYPES_CMD_STR                                                \
+	"Detail|FastEthernet|Loopback|Serial|Static"								 												 \
+
+#define INT_TYPES_DESC													 \
+	"Show detailed peer information\n"									 \
+	"FastEthernet IEEE 802.3\n"											 \
+	"Loopback interface\n"												 \
+	"Serial\n"															 \
+	"Show static peer information\n"
+
+
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

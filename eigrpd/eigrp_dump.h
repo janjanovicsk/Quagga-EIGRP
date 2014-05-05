@@ -40,6 +40,8 @@ extern void eigrp_ip_header_dump (struct ip *);
 extern void show_ip_eigrp_interface_header (struct vty *);
 extern void show_ip_eigrp_neighbor_header (struct vty *);
 extern void show_ip_eigrp_topology_header (struct vty *);
+extern void show_ip_eigrp_interface_detail (struct vty *, struct eigrp *,
+		 	 	 	 struct eigrp_interface *);
 extern void show_ip_eigrp_interface_sub (struct vty *, struct eigrp *,
 					 struct eigrp_interface *);
 extern void show_ip_eigrp_neighbor_sub (struct vty *, struct eigrp_neighbor *);

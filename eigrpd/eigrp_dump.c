@@ -144,8 +144,9 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_interface_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-20s %-7s %-12s %-7s %-14s %-12s %-10s%s %-26s %-13s %-7s %-14s %-12s %-8s%s",
+  vty_out (vty, "%s%s%s%s%-20s %-7s %-12s %-7s %-14s %-12s %-10s%s %-26s %-13s %-7s %-14s %-12s %-8s%s",
            VTY_NEWLINE,
+           "IP-EIGRP interfaces for process 1",VTY_NEWLINE,VTY_NEWLINE,
            "Interface", "Peers", "Xmit Queue", "Mean",
            "Pacing Time", "Multicast", "Pending",
            VTY_NEWLINE,"","Un/Reliable","SRTT","Un/Reliable","Flow Timer","Routes"
@@ -154,7 +155,7 @@ show_ip_eigrp_interface_header (struct vty *vty)
 
 void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
-struct eigrp_interface *ei)
+		struct eigrp_interface *ei)
 {
   vty_out (vty, "%-20s ", eigrp_if_name_string(ei));
   vty_out (vty, "%-7lu", route_table_count(ei->nbrs));
@@ -163,10 +164,24 @@ struct eigrp_interface *ei)
 }
 
 void
+show_ip_eigrp_interface_detail (struct vty *vty, struct eigrp *eigrp,
+		struct eigrp_interface *ei)
+{
+	vty_out (vty, "%-2s %s %d %-3s %s","","Hello interval is ",0," sec",VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %s %s","","Next xmit serial","<none>",VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %d %s %d %s %d %s %d %s","","Un/reliable mcasts: ",0,"/",0,"Un/reliable ucasts: ",0,"/",0,VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %d %s %d %s %d %s","","Mcast exceptions: ",0,"  CR packets: ",0,"  ACKs supressed: ",0,VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %d %s %d %s","","Retransmissions sent: ",0,"Out-of-sequence rcvd: ",0,VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %s %s %s","","Authentication mode is ","not","set",VTY_NEWLINE);
+	vty_out (vty, "%-2s %s %s","","Use multicast",VTY_NEWLINE);
+}
+
+void
 show_ip_eigrp_neighbor_header (struct vty *vty)
 {
-  vty_out (vty, "%s%-3s %-17s %-20s %-6s %-8s %-6s %-5s %-5s %-5s%s %-41s %-6s %-8s %-6s %-4s %-6s %-5s %s",
+  vty_out (vty, "%s%s%s%s%-3s %-17s %-20s %-6s %-8s %-6s %-5s %-5s %-5s%s %-41s %-6s %-8s %-6s %-4s %-6s %-5s %s",
            VTY_NEWLINE,
+           "IP-EIGRP neighbors for process 1",VTY_NEWLINE,VTY_NEWLINE,
            "H", "Address", "Interface", "Hold", "Uptime",
            "SRTT", "RTO", "Q", "Seq", VTY_NEWLINE
            ,"","(sec)","","(ms)","","Cnt","Num", VTY_NEWLINE);
@@ -186,8 +201,9 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty)
 {
-	vty_out (vty, "%s%s%s%s%s%s%s",
+	vty_out (vty, "%s%s%s%s%s%s%s%s%s%s",
 	           VTY_NEWLINE,
+	           "IP-EIGRP Topology Table for AS(1)/ID(10.0.0.1)",VTY_NEWLINE,VTY_NEWLINE,
 	           "Codes: P - Passive, A - Active, U - Update, Q - Query, "
 	           "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }
