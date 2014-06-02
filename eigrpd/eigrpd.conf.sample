@@ -7,7 +7,7 @@ hostname eigrpd
 password zebra
 !enable password please-set-at-here
 !
-!router ospf
-!  network 192.168.1.0/24 area 0
+!router eigrp 4453
+!  network 192.168.1.0/24
 !
 log stdout
