@@ -322,6 +322,7 @@ eigrp_prefix_entry_lookup(struct list *entries, struct eigrp_neighbor *nbr)
 int
 eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
 {
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *entry = msg->entry;
   int change = 0;
@@ -343,10 +344,10 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
         }
       change =
           entry->reported_distance
-              < eigrp_calculate_metrics(&int_data->metric) ? 1 : 2; // Increase : Decrease/No change
+	  < eigrp_calculate_metrics(eigrp, &int_data->metric) ? 1 : 2; // Increase : Decrease/No change
       entry->reported_metric = int_data->metric;
-      entry->reported_distance = eigrp_calculate_metrics(&int_data->metric);
-      entry->distance = eigrp_calculate_total_metrics(entry);
+      entry->reported_distance = eigrp_calculate_metrics(eigrp, &int_data->metric);
+      entry->distance = eigrp_calculate_total_metrics(eigrp, entry);
     }
   else
     {
@@ -363,9 +364,9 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
 }
 
 void
-eigrp_topology_update_all_node_flags()
+eigrp_topology_update_all_node_flags(struct eigrp *eigrp)
 {
-  struct list *table = eigrp_lookup()->topology_table;
+  struct list *table = eigrp->topology_table;
   struct eigrp_prefix_entry *data;
   struct listnode *node, *nnode;
   for (ALL_LIST_ELEMENTS(table, node, nnode, data))

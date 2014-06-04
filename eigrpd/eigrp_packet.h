@@ -47,8 +47,8 @@ extern void eigrp_send_EOT_update(struct eigrp_neighbor *);
 extern void eigrp_send_packet_reliably(struct eigrp_neighbor *);
 extern void eigrp_send_reply(struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
 extern void eigrp_send_query(struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
-extern void eigrp_update_send_all (struct eigrp_prefix_entry *, struct eigrp_interface *);
-extern void eigrp_query_send_all (struct eigrp_neighbor_entry *);
+extern void eigrp_update_send_all (struct eigrp *, struct eigrp_prefix_entry *, struct eigrp_interface *);
+extern void eigrp_query_send_all (struct eigrp *, struct eigrp_neighbor_entry *);
 extern struct eigrp_packet *eigrp_packet_duplicate(struct eigrp_packet *,
                                                    struct eigrp_neighbor *);
 extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv(struct stream *);

@@ -327,23 +327,27 @@ eigrp_hello_timer(struct thread *thread)
 }
 
 void
-eigrp_if_update(struct eigrp *eigrp, struct interface *ifp)
+eigrp_if_update(struct interface *ifp)
 {
+  struct listnode *node, *nnode;
   struct route_node *rn;
+  struct eigrp *eigrp;
 
-  if (!eigrp)
-    eigrp = eigrp_lookup();
+  /*
+   * In the event there are multiple eigrp autonymnous systems running,
+   * we need to check eac one and add the interface as approperate
+   */
+  for (ALL_LIST_ELEMENTS (eigrp_om->eigrp, node, nnode, eigrp)) {
+      /* EIGRP must be on and Router-ID must be configured. */
+      if (!eigrp || eigrp->router_id.s_addr == 0)
+	  continue;
 
-  /* EIGRP must be on and Router-ID must be configured. */
-  if (!eigrp || eigrp->router_id.s_addr == 0)
-    return;
-
-  /* Run each network for this interface. */
-  for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
-    if (rn->info != NULL)
-      {
-        eigrp_network_run_interface(eigrp, &rn->p, ifp);
-      }
+      /* Run each network for this interface. */
+      for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
+	  if (rn->info != NULL) {
+	      eigrp_network_run_interface(eigrp, &rn->p, ifp);
+	  }
+  }
 }
 
 int
@@ -387,12 +391,10 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
 }
 
 u_int32_t
-eigrp_calculate_metrics(struct eigrp_metrics *metric)
+eigrp_calculate_metrics(struct eigrp *eigrp, struct eigrp_metrics *metric)
 {
-  struct eigrp *eigrp;
   u_int64_t temp_metric;
   temp_metric = 0;
-  eigrp = eigrp_lookup();
 
   // EIGRP Metric = {K1*BW+[(K2*BW)/(256-load)]+(K3*delay)}*{K5/(reliability+K4)}
 
@@ -418,7 +420,7 @@ eigrp_calculate_metrics(struct eigrp_metrics *metric)
 }
 
 u_int32_t
-eigrp_calculate_total_metrics(struct eigrp_neighbor_entry *entry)
+eigrp_calculate_total_metrics(struct eigrp *eigrp, struct eigrp_neighbor_entry *entry)
 {
   entry->total_metric = entry->reported_metric;
   u_int64_t temp_delay = (u_int64_t) entry->total_metric.delay
@@ -431,5 +433,5 @@ eigrp_calculate_total_metrics(struct eigrp_neighbor_entry *entry)
             entry->total_metric.bandwith > bw ?
                 bw : entry->total_metric.bandwith;
 
-  return eigrp_calculate_metrics(&entry->total_metric);
+  return eigrp_calculate_metrics(eigrp, &entry->total_metric);
 }

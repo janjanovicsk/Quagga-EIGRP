@@ -96,7 +96,7 @@ eigrp_router_id_update (struct eigrp *eigrp)
     {
       /* update eigrp_interface's */
       for (ALL_LIST_ELEMENTS_RO (eigrp_om->iflist, node, ifp))
-        eigrp_if_update (eigrp, ifp);
+        eigrp_if_update (ifp);
     }
 }
 

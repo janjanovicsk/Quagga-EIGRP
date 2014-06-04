@@ -143,8 +143,7 @@ DEFUN (show_ip_eigrp_topology,
     return CMD_SUCCESS;
   }
 
-  show_ip_eigrp_topology_header (vty);
-
+  show_ip_eigrp_topology_header (vty, eigrp);
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
   {
@@ -153,7 +152,7 @@ DEFUN (show_ip_eigrp_topology,
         {
           if (((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
               ((te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
-            show_ip_eigrp_neighbor_entry(vty,te);
+            show_ip_eigrp_neighbor_entry(vty, eigrp, te);
         }
     }
 
@@ -181,14 +180,14 @@ DEFUN (show_ip_eigrp_topology_all_links,
     return CMD_SUCCESS;
   }
 
-  show_ip_eigrp_topology_header (vty);
+  show_ip_eigrp_topology_header (vty, eigrp);
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
     {
       show_ip_eigrp_prefix_entry(vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
-          show_ip_eigrp_neighbor_entry(vty,te);
+          show_ip_eigrp_neighbor_entry(vty, eigrp, te);
         }
     }
   return CMD_SUCCESS;
@@ -227,14 +226,14 @@ DEFUN (show_ip_eigrp_interfaces,
 
   if(!argc)
   {
-	show_ip_eigrp_interface_header (vty);
+      show_ip_eigrp_interface_header (vty, eigrp);
   }
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
   {
 	if((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
 	{
-	  show_ip_eigrp_interface_header (vty);
+	    show_ip_eigrp_interface_header (vty, eigrp);
 	}
 
 //	if((strncmp (argv[1], "f", 1) == 0 && strncmp (eigrp_if_name_string(ei), "F",1) == 0) ||
@@ -283,7 +282,7 @@ DEFUN (show_ip_eigrp_neighbors,
     return CMD_SUCCESS;
   }
 
-  show_ip_eigrp_neighbor_header (vty);
+  show_ip_eigrp_neighbor_header (vty, eigrp);
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
     {

@@ -195,6 +195,7 @@ int
 eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
 {
   // Loading base information from message
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *entry = msg->entry;
   u_char actual_state = prefix->state;
@@ -234,7 +235,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                       entry->distance < prefix->fdistance ?
                           entry->distance : prefix->fdistance;
                   //TO DO: insert new successor route to route table
-                  eigrp_update_send_all(prefix, msg->adv_router->ei);
+                  eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
                 }
               //If not just set correct flags
               else
@@ -278,7 +279,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                 {
                   prefix->rdistance = prefix->distance = entry->distance;
                   prefix->reported_metric = entry->total_metric;
-                  eigrp_update_send_all(prefix, msg->adv_router->ei);
+                  eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
                 }
               //TO DO: insert possible new successor to route table
 
@@ -299,7 +300,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                   prefix->rdistance = prefix->distance = head->distance;
                   prefix->reported_metric = head->total_metric;
                   //TO DO: insert possible new successor/s to route table
-                  eigrp_update_send_all(prefix, msg->adv_router->ei);
+                  eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
 
                   return EIGRP_FSM_KEEP_STATE;
                 }
@@ -473,7 +474,7 @@ eigrp_get_fsm_event(struct eigrp_fsm_action_message *msg)
                     //TO DO: remove current successor/s from route table
                     eigrp_topology_update_node_flags(prefix);
                     //TO DO: insert new successor route to route table
-                    eigrp_update_send_all(prefix, msg->adv_router->ei);
+                    eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
                   }
                 //If not just set correct flags
                 else
@@ -516,8 +517,9 @@ eigrp_fsm_event(struct thread *thread)
   struct eigrp_fsm_action_message *msg;
   msg = (struct eigrp_fsm_action_message *) THREAD_ARG(thread);
   event = THREAD_VAL(thread);
-  zlog_info("State: %d  Event: %d Network: %s\n", msg->prefix->state, event,
-      eigrp_topology_ip_string(msg->prefix));
+  zlog_info("EIGRP AS: %d State: %d  Event: %d Network: %s\n",
+	    msg->eigrp->AS, msg->prefix->state, event,
+	    eigrp_topology_ip_string(msg->prefix));
   (*(NSM[msg->prefix->state][event].func))(msg);
 
   return 1;
@@ -529,7 +531,7 @@ eigrp_fsm_event(struct thread *thread)
 int
 eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
 {
-
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *best_successor = eigrp_topology_get_successor(
       prefix);
@@ -537,7 +539,7 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
   prefix->rdistance = prefix->distance = prefix->fdistance =
       best_successor->distance;
   prefix->reported_metric = best_successor->total_metric;
-  eigrp_query_send_all(msg->entry);
+  eigrp_query_send_all(eigrp, msg->entry);
 
   return 1;
 }
@@ -545,7 +547,7 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
 int
 eigrp_fsm_event_q_fcn(struct eigrp_fsm_action_message *msg)
 {
-
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   struct eigrp_neighbor_entry *best_successor = eigrp_topology_get_successor(
       prefix);
@@ -553,7 +555,7 @@ eigrp_fsm_event_q_fcn(struct eigrp_fsm_action_message *msg)
   prefix->rdistance = prefix->distance = prefix->fdistance =
       best_successor->distance;
   prefix->reported_metric = best_successor->total_metric;
-  eigrp_query_send_all(msg->entry);
+  eigrp_query_send_all(eigrp, msg->entry);
 
   return 1;
 }
@@ -567,7 +569,7 @@ eigrp_fsm_event_keep_state(struct eigrp_fsm_action_message *msg)
 int
 eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
 {
-
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   prefix->state = EIGRP_FSM_STATE_PASSIVE;
   prefix->fdistance = prefix->distance = prefix->rdistance =
@@ -577,7 +579,7 @@ eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
   //TO DO: remove current successor route from route table
   eigrp_topology_update_node_flags(prefix);
   //TO DO: insert new successor route to route table
-  eigrp_update_send_all(msg->prefix, msg->adv_router->ei);
+  eigrp_update_send_all(eigrp, msg->prefix, msg->adv_router->ei);
 
   return 1;
 }
@@ -601,7 +603,7 @@ eigrp_fsm_event_dinc(struct eigrp_fsm_action_message *msg)
 int
 eigrp_fsm_event_lr_fcs(struct eigrp_fsm_action_message *msg)
 {
-
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   prefix->state = EIGRP_FSM_STATE_PASSIVE;
   prefix->distance = prefix->rdistance =
@@ -615,7 +617,7 @@ eigrp_fsm_event_lr_fcs(struct eigrp_fsm_action_message *msg)
   //TO DO: remove current successor route from route table
   eigrp_topology_update_node_flags(prefix);
   //TO DO: insert new successor route to route table
-  eigrp_update_send_all(prefix, msg->adv_router->ei);
+  eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
 
   return 1;
 }
@@ -623,7 +625,7 @@ eigrp_fsm_event_lr_fcs(struct eigrp_fsm_action_message *msg)
 int
 eigrp_fsm_event_lr_fcn(struct eigrp_fsm_action_message *msg)
 {
-
+  struct eigrp *eigrp = msg->eigrp;
   struct eigrp_prefix_entry *prefix = msg->prefix;
   prefix->state =
       prefix->state == EIGRP_FSM_STATE_ACTIVE_0 ?
@@ -632,7 +634,7 @@ eigrp_fsm_event_lr_fcn(struct eigrp_fsm_action_message *msg)
       prefix);
   prefix->rdistance = prefix->distance = best_successor->distance;
   prefix->reported_metric = best_successor->total_metric;
-  eigrp_query_send_all(msg->entry);
+  eigrp_query_send_all(eigrp, msg->entry);
 
   return 1;
 }

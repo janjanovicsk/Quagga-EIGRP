@@ -360,6 +360,7 @@ struct eigrp_neighbor_entry
 struct eigrp_fsm_action_message
 {
   u_char packet_type; //UPDATE, QUERY, SIAQUERY, SIAREPLY
+  struct eigrp *eigrp;		// which thread sent mesg
   struct eigrp_neighbor *adv_router; //advertising neighbor
   struct eigrp_neighbor_entry *entry;
   struct eigrp_prefix_entry *prefix;

@@ -125,7 +125,7 @@ eigrp_interface_add (int command, struct zclient *zclient, zebra_size_t length)
       IF_DEF_PARAMS (ifp)->type = eigrp_default_iftype(ifp);
     }
 
-  eigrp_if_update (NULL, ifp);
+  eigrp_if_update (ifp);
 
   return 0;
 }
@@ -180,7 +180,7 @@ eigrp_interface_address_add (int command, struct zclient *zclient,
 //      zlog_debug("Zebra: interface %s address add %s", c->ifp->name, buf);
 //    }
 
-  eigrp_if_update (NULL, c->ifp);
+  eigrp_if_update (c->ifp);
 
   return 0;
 }

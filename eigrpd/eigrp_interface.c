@@ -230,11 +230,11 @@ eigrp_if_up(struct eigrp_interface *ei)
   struct eigrp_metrics metric;
   struct eigrp_interface *ei2;
   struct listnode *node, *nnode;
+  struct eigrp *eigrp = eigrp_lookup();
 
   if (ei == NULL)
     return 0;
 
-  struct eigrp *eigrp = eigrp_lookup();
   if (eigrp != NULL)
     eigrp_adjust_sndbuflen(eigrp, ei->ifp->mtu);
   else
@@ -276,14 +276,14 @@ eigrp_if_up(struct eigrp_interface *ei)
       tn->dest_type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
 
       tn->state = EIGRP_FSM_STATE_PASSIVE;
-      tn->fdistance = eigrp_calculate_metrics(&metric);
+      tn->fdistance = eigrp_calculate_metrics(eigrp, &metric);
       eigrp_prefix_entry_add(eigrp->topology_table, tn);
     }
   te = eigrp_neighbor_entry_new();
   te->ei = ei;
   te->reported_metric = metric;
   te->total_metric = metric;
-  te->distance = eigrp_calculate_metrics(&metric);
+  te->distance = eigrp_calculate_metrics(eigrp, &metric);
   te->reported_distance = 0;
   te->prefix = tn;
   te->adv_router = eigrp->neighbor_self;

@@ -99,20 +99,18 @@ eigrp_check_network_mask(struct eigrp_interface *, struct in_addr);
 //}
 /*EIGRP UPDATE read function*/
 static void
-eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
+eigrp_update(struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
     struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
   struct eigrp_prefix_entry *tnode;
   struct eigrp_neighbor_entry *tentry;
-  struct eigrp *eigrp;
   u_int16_t type;
 
   /* increment statistics. */
   ei->update_in++;
 
-  eigrp = eigrp_lookup();
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
@@ -215,6 +213,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       eigrp_prefix_entry_lookup(dest->entries, nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
+                  msg->eigrp = eigrp;
                   msg->data_type = TLV_INTERNAL_TYPE;
                   msg->adv_router = nbr;
                   msg->data.ipv4_int_type = tlv;
@@ -237,10 +236,10 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->reported_distance = eigrp_calculate_metrics(
+                  tentry->reported_distance = eigrp_calculate_metrics(eigrp, 
                       &tlv->metric);
 
-                  tentry->distance = eigrp_calculate_total_metrics(tentry);
+                  tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
 
                   tnode->fdistance = tnode->distance = tnode->rdistance =
                       tentry->distance;
@@ -253,7 +252,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       tentry->distance;
                   tnode->reported_metric = tentry->total_metric;
                   eigrp_topology_update_node_flags(tnode);
-                  eigrp_update_send_all(tnode, ei);
+                  eigrp_update_send_all(eigrp, tnode, ei);
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
             }
@@ -295,6 +294,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       eigrp_prefix_entry_lookup(dest->entries, nbr);
 
                   msg->packet_type = EIGRP_MSG_UPDATE;
+                  msg->eigrp = eigrp;
                   msg->data_type = TLV_INTERNAL_TYPE;
                   msg->adv_router = nbr;
                   msg->data.ipv4_int_type = tlv;
@@ -317,9 +317,9 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   tentry->ei = ei;
                   tentry->adv_router = nbr;
                   tentry->reported_metric = tlv->metric;
-                  tentry->reported_distance = eigrp_calculate_metrics(
+                  tentry->reported_distance = eigrp_calculate_metrics(eigrp, 
                       &tlv->metric);
-                  tentry->distance = eigrp_calculate_total_metrics(tentry);
+                  tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
                   tentry->prefix = tnode;
                   tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
@@ -329,7 +329,7 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                       tentry->distance;
                   tnode->reported_metric = tentry->total_metric;
                   eigrp_topology_update_node_flags(tnode);
-                  eigrp_update_send_all(tnode, ei);
+                  eigrp_update_send_all(eigrp, tnode, ei);
 
                 }
               XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
@@ -343,8 +343,8 @@ eigrp_update(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 
 /*EIGRP hello read function*/
 static void
-eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
-    struct eigrp_interface *ei, int size)
+eigrp_hello(struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph,
+	    struct stream * s, struct eigrp_interface *ei, int size)
 {
   struct TLV_Parameter_Type *hello;
   struct eigrp_neighbor *nbr;
@@ -461,13 +461,11 @@ eigrp_hello(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 
 /*EIGRP QUERY read function*/
 static void
-eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
-    struct eigrp_interface *ei, int size)
+eigrp_query(struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph, 
+	    struct stream * s, struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
-  struct eigrp *eigrp;
-
   struct eigrp_prefix_entry *temp_tn;
   struct eigrp_neighbor_entry *temp_te;
 
@@ -476,7 +474,6 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
   /* increment statistics. */
   ei->query_in++;
 
-  eigrp = eigrp_lookup();
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
@@ -527,7 +524,8 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
                   sizeof(struct eigrp_fsm_action_message));
               struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
                   dest->entries, nbr);
-              msg->packet_type = EIGRP_MSG_QUERY;
+              msg->packet_type = EIGRP_MSG_QUERY; 
+              msg->eigrp = eigrp;
               msg->data_type = TLV_INTERNAL_TYPE;
               msg->adv_router = nbr;
               msg->data.ipv4_int_type = tlv;
@@ -545,19 +543,17 @@ eigrp_query(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
 
 /*EIGRP QUERY read function*/
 static void
-eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
-    struct eigrp_interface *ei, int size)
+eigrp_reply(struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph,
+	    struct stream * s, struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
-  struct eigrp *eigrp;
 
   u_int16_t type;
 
   /* increment statistics. */
   ei->reply_in++;
 
-  eigrp = eigrp_lookup();
   /* If Hello is myself, silently discard. */
   if (IPV4_ADDR_SAME (&iph->ip_src.s_addr, &ei->address->u.prefix4))
     {
@@ -617,6 +613,7 @@ eigrp_reply(struct ip *iph, struct eigrp_header *eigrph, struct stream * s,
           assert(entry); //testing
 
           msg->packet_type = EIGRP_MSG_REPLY;
+          msg->eigrp = eigrp;
           msg->data_type = TLV_INTERNAL_TYPE;
           msg->adv_router = nbr;
           msg->data.ipv4_int_type = tlv;
@@ -912,28 +909,28 @@ eigrp_read(struct thread *thread)
   switch (eigrph->opcode)
     {
   case EIGRP_MSG_HELLO:
-    eigrp_hello(iph, eigrph, ibuf, ei, length);
+      eigrp_hello(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   case EIGRP_MSG_PROBE:
-//      ospf_db_desc (iph, ospfh, ibuf, oi, length);
+//      eigrp_probe(eigrp, iph, ospfh, ibuf, oi, length);
     break;
   case EIGRP_MSG_QUERY:
-    eigrp_query(iph, eigrph, ibuf, ei, length);
+      eigrp_query(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   case EIGRP_MSG_REPLY:
-    eigrp_reply(iph, eigrph, ibuf, ei, length);
+      eigrp_reply(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   case EIGRP_MSG_REQUEST:
-//      ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+//      eigrp_request(eigrp, iph, ospfh, ibuf, oi, length);
     break;
   case EIGRP_MSG_SIAQUERY:
-//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+//      eigrp_query(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   case EIGRP_MSG_SIAREPLY:
-//          ospf_ls_ack (iph, ospfh, ibuf, oi, length);
+//      eigrp_reply(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   case EIGRP_MSG_UPDATE:
-    eigrp_update(iph, eigrph, ibuf, ei, length);
+      eigrp_update(eigrp, iph, eigrph, ibuf, ei, length);
     break;
   default:
     zlog(NULL, LOG_WARNING,
@@ -1923,13 +1920,13 @@ eigrp_update_send(struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
 }
 
 void
-eigrp_update_send_all(struct eigrp_prefix_entry *pe,
+eigrp_update_send_all(struct eigrp *eigrp, struct eigrp_prefix_entry *pe,
     struct eigrp_interface *exception)
 {
   struct eigrp_interface *iface;
   struct listnode *node;
 
-  for (ALL_LIST_ELEMENTS_RO(eigrp_lookup()->eiflist, node, iface))
+  for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
     {
       if (iface != exception)
         eigrp_update_send(iface, pe);
@@ -1937,14 +1934,12 @@ eigrp_update_send_all(struct eigrp_prefix_entry *pe,
 }
 
 void
-eigrp_query_send_all(struct eigrp_neighbor_entry *te)
+eigrp_query_send_all(struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_interface *iface;
   struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
-  struct eigrp *eigrp;
 
-  eigrp = eigrp_lookup ();
   if (eigrp == NULL)
     {
       zlog_debug("EIGRP Routing Process not enabled");
