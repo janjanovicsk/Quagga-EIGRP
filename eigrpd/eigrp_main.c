@@ -64,15 +64,15 @@ zebra_capabilities_t _caps_p [] =
 
 struct zebra_privs_t eigrpd_privs =
 {
-#if defined(QUAGGA_USER) && defined(QUAGGA_GROUP)
+#if defined (QUAGGA_USER) && defined (QUAGGA_GROUP)
   .user = QUAGGA_USER,
   .group = QUAGGA_GROUP,
 #endif
-#if defined(VTY_GROUP)
+#if defined (VTY_GROUP)
   .vty_group = VTY_GROUP,
 #endif
   .caps_p = _caps_p,
-  .cap_num_p = array_size(_caps_p),
+  .cap_num_p = array_size (_caps_p),
   .cap_num_i = 0
 };
 
@@ -164,7 +164,7 @@ main (int argc, char **argv)
   
   /* Library inits. */
   zprivs_init (&eigrpd_privs);
-  signal_init (master, array_size(eigrp_signals), eigrp_signals);
+  signal_init (master, array_size (eigrp_signals), eigrp_signals);
   cmd_init (1);
   vty_init (master);
   memory_init ();
@@ -186,12 +186,12 @@ main (int argc, char **argv)
 
   /* Start execution only if not in dry-run mode */
   if (dryrun)
-    return(0);
+    return (0);
   
   /* Change to the daemon program. */
   if (daemon_mode && daemon (0, 0) < 0)
     {
-      zlog_err("EIGRPd daemon failed: %s", strerror(errno));
+      zlog_err ("EIGRPd daemon failed: %s", strerror (errno));
       exit (1);
     }
 

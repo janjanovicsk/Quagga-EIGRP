@@ -121,28 +121,28 @@ eigrp_new (const char *AS)
 
   new->eiflist = list_new ();
   new->passive_interface_default = EIGRP_IF_ACTIVE;
-  new->AS = atoi(AS);
+  new->AS = atoi (AS);
 
-  new->networks = route_table_init();
+  new->networks = route_table_init ();
 
   new->router_id.s_addr = htonl (0);
   new->router_id_static.s_addr = htonl (0);
 
-  if ((new->fd = eigrp_sock_init()) < 0)
+  if ((new->fd = eigrp_sock_init ()) < 0)
     {
-      zlog_err("eigrp_new: fatal error: eigrp_sock_init was unable to open "
+      zlog_err ("eigrp_new: fatal error: eigrp_sock_init was unable to open "
                "a socket");
-      exit(1);
+      exit (1);
     }
 
   new->maxsndbuflen = getsockopt_so_sendbuf (new->fd);
 
-  if ((new->ibuf = stream_new(EIGRP_MAX_PACKET_SIZE+1)) == NULL)
-      {
-        zlog_err("eigrp_new: fatal error: stream_new(%u) failed allocating ibuf",
-                 EIGRP_MAX_PACKET_SIZE+1);
-        exit(1);
-      }
+  if ((new->ibuf = stream_new (EIGRP_MAX_PACKET_SIZE+1)) == NULL)
+    {
+      zlog_err ("eigrp_new: fatal error: stream_new (%u) failed allocating ibuf",
+               EIGRP_MAX_PACKET_SIZE+1);
+      exit (1);
+    }
 
   new->t_read = thread_add_read (master, eigrp_read, new, new->fd);
   new->oi_write_q = list_new ();
@@ -156,10 +156,10 @@ eigrp_new (const char *AS)
   new->k_values[4] = 0;
   new->k_values[5] = 0;
 
-  new->topology_table = eigrp_topology_new();
+  new->topology_table = eigrp_topology_new ();
 
-  new->neighbor_self = eigrp_nbr_new(NULL);
-  inet_aton("127.0.0.1",&new->neighbor_self->src);
+  new->neighbor_self = eigrp_nbr_new (NULL);
+  inet_aton ("127.0.0.1",&new->neighbor_self->src);
 
   return new;
 }
@@ -187,6 +187,7 @@ eigrp_get (const char *AS)
       eigrp = eigrp_new (AS);
       eigrp_add (eigrp);
     }
+
   return eigrp;
 }
 
@@ -201,14 +202,14 @@ eigrp_terminate (void)
     if (CHECK_FLAG (eigrp_om->options, EIGRP_MASTER_SHUTDOWN))
       return;
 
-    SET_FLAG(eigrp_om->options, EIGRP_MASTER_SHUTDOWN);
+    SET_FLAG (eigrp_om->options, EIGRP_MASTER_SHUTDOWN);
 
   /* exit immediately if EIGRP not actually running */
-  if (listcount(eigrp_om->eigrp) == 0)
-      exit(0);
+  if (listcount (eigrp_om->eigrp) == 0)
+    exit (0);
 
   for (ALL_LIST_ELEMENTS (eigrp_om->eigrp, node, nnode, eigrp))
-      eigrp_finish (eigrp);
+    eigrp_finish (eigrp);
 }
 
 void
@@ -221,8 +222,8 @@ eigrp_finish (struct eigrp *eigrp)
     if (CHECK_FLAG (eigrp_om->options, EIGRP_MASTER_SHUTDOWN)
         && (listcount (eigrp_om->eigrp) == 0))
       exit (0);
-  return;
 
+  return;
 }
 
 /* Final cleanup of eigrp instance */
@@ -233,16 +234,16 @@ eigrp_finish_final (struct eigrp *eigrp)
   close (eigrp->fd);
 
 
-  if(zclient)
-    zclient_free(zclient);
+  if (zclient)
+    zclient_free (zclient);
 
   list_free (eigrp->eiflist);
   list_free (eigrp->oi_write_q);
 
-  eigrp_topology_cleanup(eigrp->topology_table);
-  eigrp_topology_free(eigrp->topology_table);
+  eigrp_topology_cleanup (eigrp->topology_table);
+  eigrp_topology_free (eigrp->topology_table);
 
-  eigrp_nbr_delete(eigrp->neighbor_self);
+  eigrp_nbr_delete (eigrp->neighbor_self);
 
   eigrp_delete (eigrp);
 

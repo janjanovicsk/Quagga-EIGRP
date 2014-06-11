@@ -48,7 +48,7 @@
 #include "eigrpd/eigrp_topology.h"
 
 static int
-eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
+eigrp_neighbor_packet_queue_sum (struct eigrp_interface *ei)
 {
   struct eigrp_neighbor *nbr;
   struct listnode *node, *nnode;
@@ -63,7 +63,9 @@ eigrp_neighbor_packet_queue_sum(struct eigrp_interface *ei)
   return sum;
 }
 
-/* Expects header to be in host order */
+/*
+ * Expects header to be in host order
+ */
 void
 eigrp_ip_header_dump (struct ip *iph)
 {
@@ -123,6 +125,7 @@ eigrp_if_ip_string (struct eigrp_interface *ei)
             "%u.%u.%u.%u",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
+
   return buf;
 }
 
@@ -137,6 +140,7 @@ eigrp_neigh_ip_string (struct eigrp_neighbor *nbr)
             "%u.%u.%u.%u",
             (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
             (ifaddr >> 8) & 0xff, ifaddr & 0xff);
+
   return buf;
 }
 
@@ -157,26 +161,26 @@ void
 show_ip_eigrp_interface_sub (struct vty *vty, struct eigrp *eigrp,
 			     struct eigrp_interface *ei)
 {
-    vty_out (vty, "%-11s ", eigrp_if_name_string(ei));
-    vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->bandwidth);
-    vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->delay);
-    vty_out (vty, "%-7u", ei->nbrs->count);
-    vty_out (vty, "%u %c %-10u",0,'/',eigrp_neighbor_packet_queue_sum(ei));
-    vty_out (vty, "%-7u %-14u %-12u %-8u",0,0,0,0);
-    vty_out (vty, "%-8u %-8u %s",IF_DEF_PARAMS (ei->ifp)->v_hello,IF_DEF_PARAMS (ei->ifp)->v_wait,VTY_NEWLINE);
+  vty_out (vty, "%-11s ", eigrp_if_name_string (ei));
+  vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->bandwidth);
+  vty_out (vty, "%-11u",IF_DEF_PARAMS (ei->ifp)->delay);
+  vty_out (vty, "%-7u", ei->nbrs->count);
+  vty_out (vty, "%u %c %-10u",0,'/',eigrp_neighbor_packet_queue_sum (ei));
+  vty_out (vty, "%-7u %-14u %-12u %-8u",0,0,0,0);
+  vty_out (vty, "%-8u %-8u %s",IF_DEF_PARAMS (ei->ifp)->v_hello,IF_DEF_PARAMS (ei->ifp)->v_wait,VTY_NEWLINE);
 }
 
 void
 show_ip_eigrp_interface_detail (struct vty *vty, struct eigrp *eigrp,
 				struct eigrp_interface *ei)
 {
-    vty_out (vty, "%-2s %s %d %-3s %s","","Hello interval is ",0," sec",VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %s %s","","Next xmit serial","<none>",VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %d %s %d %s %d %s %d %s","","Un/reliable mcasts: ",0,"/",0,"Un/reliable ucasts: ",0,"/",0,VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %d %s %d %s %d %s","","Mcast exceptions: ",0,"  CR packets: ",0,"  ACKs supressed: ",0,VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %d %s %d %s","","Retransmissions sent: ",0,"Out-of-sequence rcvd: ",0,VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %s %s %s","","Authentication mode is ","not","set",VTY_NEWLINE);
-    vty_out (vty, "%-2s %s %s","","Use multicast",VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %d %-3s %s","","Hello interval is ",0," sec",VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %s %s","","Next xmit serial","<none>",VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %d %s %d %s %d %s %d %s","","Un/reliable mcasts: ",0,"/",0,"Un/reliable ucasts: ",0,"/",0,VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %d %s %d %s %d %s","","Mcast exceptions: ",0,"  CR packets: ",0,"  ACKs supressed: ",0,VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %d %s %d %s","","Retransmissions sent: ",0,"Out-of-sequence rcvd: ",0,VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %s %s %s","","Authentication mode is ","not","set",VTY_NEWLINE);
+  vty_out (vty, "%-2s %s %s","","Use multicast",VTY_NEWLINE);
 }
 
 void
@@ -194,8 +198,8 @@ void
 show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 {
 
-  vty_out (vty, "%-3u %-17s %-21s",0,eigrp_neigh_ip_string(nbr),eigrp_if_name_string(nbr->ei));
-  vty_out (vty,"%-7lu",thread_timer_remain_second(nbr->t_holddown));
+  vty_out (vty, "%-3u %-17s %-21s",0,eigrp_neigh_ip_string (nbr),eigrp_if_name_string (nbr->ei));
+  vty_out (vty,"%-7lu",thread_timer_remain_second (nbr->t_holddown));
   vty_out (vty,"%-8u %-6u %-5u",0,0,EIGRP_PACKET_RETRANS_TIME);
   vty_out (vty,"%-7lu",nbr->retrans_queue->count);
   vty_out (vty,"%u%s",nbr->recv_sequence_number,VTY_NEWLINE);
@@ -207,9 +211,9 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty, struct eigrp *eigrp)
 {
-    vty_out (vty, "%s%s%d%s%s%s%s%s%s%s%s%s%s%s",
+  vty_out (vty, "%s%s%d%s%s%s%s%s%s%s%s%s%s%s",
 	     VTY_NEWLINE,
-	     "EIGRP Topology Table for AS(", eigrp->AS, ")/ID(", inet_ntoa(eigrp->router_id), ")", VTY_NEWLINE,VTY_NEWLINE,
+	     "EIGRP Topology Table for AS(", eigrp->AS, ")/ID(", inet_ntoa (eigrp->router_id), ")", VTY_NEWLINE,VTY_NEWLINE,
 	     "Codes: P - Passive, A - Active, U - Update, Q - Query, "
 	     "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }
@@ -217,10 +221,10 @@ show_ip_eigrp_topology_header (struct vty *vty, struct eigrp *eigrp)
 void
 show_ip_eigrp_prefix_entry (struct vty *vty, struct eigrp_prefix_entry *tn)
 {
-    vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
-    vty_out (vty, "%s/%u, ",inet_ntoa(tn->destination->prefix),tn->destination->prefixlen);
-    vty_out (vty, "%u successors, ",eigrp_topology_get_successor_count(tn));
-    vty_out (vty, "FD is %u%s",tn->fdistance, VTY_NEWLINE);
+  vty_out (vty, "%-3c",(tn->state > 0) ? 'A' : 'P');
+  vty_out (vty, "%s/%u, ",inet_ntoa (tn->destination->prefix),tn->destination->prefixlen);
+  vty_out (vty, "%u successors, ",eigrp_topology_get_successor_count (tn));
+  vty_out (vty, "FD is %u%s",tn->fdistance, VTY_NEWLINE);
 
 }
 
@@ -228,10 +232,10 @@ void
 show_ip_eigrp_neighbor_entry (struct vty *vty, struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
 {
   if (te->adv_router == eigrp->neighbor_self)
-    vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string(te->ei), VTY_NEWLINE);
+    vty_out (vty, "%-7s%s, %s%s"," ","via Connected",eigrp_if_name_string (te->ei), VTY_NEWLINE);
   else
     {
-      vty_out (vty, "%-7s%s%s (%u/%u), %s%s"," ","via ",inet_ntoa(te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string(te->ei), VTY_NEWLINE);
+      vty_out (vty, "%-7s%s%s (%u/%u), %s%s"," ","via ",inet_ntoa (te->adv_router->src),te->distance, te->reported_distance, eigrp_if_name_string (te->ei), VTY_NEWLINE);
     }
 }
 

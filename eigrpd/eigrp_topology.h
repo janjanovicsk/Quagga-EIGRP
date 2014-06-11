@@ -31,7 +31,7 @@
 
 /* EIGRP Topology table related functions. */
 extern struct list *eigrp_topology_new (void);
-extern void eigrp_topology_init(struct list*);
+extern void eigrp_topology_init (struct list*);
 extern struct eigrp_prefix_entry *eigrp_prefix_entry_new (void);
 extern struct eigrp_neighbor_entry *eigrp_neighbor_entry_new (void);
 extern void eigrp_topology_free (struct list *);
@@ -41,26 +41,26 @@ extern void eigrp_neighbor_entry_add (struct eigrp_prefix_entry *, struct eigrp_
 extern void eigrp_prefix_entry_delete (struct list *, struct eigrp_prefix_entry *);
 extern void eigrp_neighbor_entry_delete (struct eigrp_prefix_entry *, struct eigrp_neighbor_entry *);
 extern void eigrp_topology_delete_all (struct list *);
-extern unsigned int eigrp_topology_table_isempty(struct list *);
+extern unsigned int eigrp_topology_table_isempty (struct list *);
 extern struct eigrp_prefix_entry *eigrp_topology_table_lookup (struct list *, struct prefix_ipv4 *);
-extern struct eigrp_neighbor_entry *eigrp_topology_get_successor(struct eigrp_prefix_entry *);
-extern struct eigrp_neighbor_entry *eigrp_topology_get_fsuccessor(struct eigrp_prefix_entry *);
-extern struct eigrp_neighbor_entry *eigrp_prefix_entry_lookup(struct list *, struct eigrp_neighbor *);
-extern void eigrp_topology_update_all_node_flags(struct eigrp *);
-extern void eigrp_topology_update_node_flags(struct eigrp_prefix_entry *);
+extern struct eigrp_neighbor_entry *eigrp_topology_get_successor (struct eigrp_prefix_entry *);
+extern struct eigrp_neighbor_entry *eigrp_topology_get_fsuccessor (struct eigrp_prefix_entry *);
+extern struct eigrp_neighbor_entry *eigrp_prefix_entry_lookup (struct list *, struct eigrp_neighbor *);
+extern void eigrp_topology_update_all_node_flags (struct eigrp *);
+extern void eigrp_topology_update_node_flags (struct eigrp_prefix_entry *);
 extern int eigrp_topology_update_distance ( struct eigrp_fsm_action_message *);
-extern int eigrp_topology_get_successor_count(struct eigrp_prefix_entry *);
+extern int eigrp_topology_get_successor_count (struct eigrp_prefix_entry *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
-/*extern void ospf_lsdb_clean_stat (struct ospf_lsdb *lsdb);
-extern struct ospf_lsa *ospf_lsdb_lookup_by_id (struct ospf_lsdb *, u_char,
+/*extern void eigrp_lsdb_clean_stat (struct eigrp_lsdb *lsdb);
+extern struct eigrp_lsa *eigrp_lsdb_lookup_by_id (struct eigrp_lsdb *, u_char,
                                         struct in_addr, struct in_addr);
-extern struct ospf_lsa *ospf_lsdb_lookup_by_id_next (struct ospf_lsdb *, u_char,
+extern struct eigrp_lsa *eigrp_lsdb_lookup_by_id_next (struct eigrp_lsdb *, u_char,
                                              struct in_addr, struct in_addr,
                                              int);
-extern unsigned long ospf_lsdb_count_all (struct ospf_lsdb *);
-extern unsigned long ospf_lsdb_count (struct ospf_lsdb *, int);
-extern unsigned long ospf_lsdb_count_self (struct ospf_lsdb *, int);
-extern unsigned int ospf_lsdb_checksum (struct ospf_lsdb *, int);
-extern unsigned long ospf_lsdb_isempty (struct ospf_lsdb *);
+extern unsigned long eigrp_lsdb_count_all (struct eigrp_lsdb *);
+extern unsigned long eigrp_lsdb_count (struct eigrp_lsdb *, int);
+extern unsigned long eigrp_lsdb_count_self (struct eigrp_lsdb *, int);
+extern unsigned int eigrp_lsdb_checksum (struct eigrp_lsdb *, int);
+extern unsigned long eigrp_lsdb_isempty (struct eigrp_lsdb *);
 */
 #endif

@@ -60,13 +60,13 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
   /* Set default values. */
   nbr->state = EIGRP_NEIGHBOR_DOWN;
-  if(ei!=NULL)
-    nbr->v_holddown = EIGRP_IF_PARAM(ei,v_wait);
+  if (ei!=NULL)
+    nbr->v_holddown = EIGRP_IF_PARAM (ei,v_wait);
   else
     nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
-  nbr->retrans_queue = eigrp_fifo_new();
-  nbr->multicast_queue = eigrp_fifo_new();
+  nbr->retrans_queue = eigrp_fifo_new ();
+  nbr->multicast_queue = eigrp_fifo_new ();
 
   nbr->init_sequence_number = 0;
 
@@ -84,7 +84,7 @@ eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   nbr->src = iph->ip_src;
 
 //
-//  if (IS_DEBUG_OSPF_EVENT)
+//  if (IS_DEBUG_EIGRP_EVENT)
 //    zlog_debug ("NSM[%s:%s]: start", IF_NAME (nbr->oi),
 //               inet_ntoa (nbr->router_id));
 
@@ -100,14 +100,14 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
 
   for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
     {
-      if(iph->ip_src.s_addr == nbr->src.s_addr)
+      if (iph->ip_src.s_addr == nbr->src.s_addr)
         {
           return nbr;
         }
     }
 
   nbr = eigrp_nbr_add (ei, eigrph, iph);
-  listnode_add(ei->nbrs, nbr);
+  listnode_add (ei->nbrs, nbr);
 
   return nbr;
 }
@@ -118,11 +118,11 @@ eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 {
   /* Cancel all events. *//* Thread lookup cost would be negligible. */
   thread_cancel_event (master, nbr);
-  eigrp_fifo_free(nbr->multicast_queue);
-  eigrp_fifo_free(nbr->retrans_queue);
-  THREAD_OFF(nbr->t_holddown);
+  eigrp_fifo_free (nbr->multicast_queue);
+  eigrp_fifo_free (nbr->retrans_queue);
+  THREAD_OFF (nbr->t_holddown);
 
-  listnode_delete(nbr->ei->nbrs,nbr);
+  listnode_delete (nbr->ei->nbrs,nbr);
   XFREE (MTYPE_EIGRP_NEIGHBOR, nbr);
 }
 
@@ -131,19 +131,19 @@ holddown_timer_expired (struct thread *thread)
 {
   struct eigrp_neighbor *nbr;
 
-  nbr = THREAD_ARG(thread);
+  nbr = THREAD_ARG (thread);
 
-  zlog_info("Neighbor %s (%s) is down: holding time expired",inet_ntoa(nbr->src),ifindex2ifname(nbr->ei->ifp->ifindex));
-  eigrp_nbr_delete(nbr);
+  zlog_info ("Neighbor %s (%s) is down: holding time expired",inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
+  eigrp_nbr_delete (nbr);
 
   return 0;
 }
 
 int
-eigrp_neighborship_check(struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *param)
+eigrp_neighborship_check (struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *param)
 {
   struct eigrp *eigrp = nbr->ei->eigrp;
-  if(eigrp->k_values[0]!=param->K1)
+  if (eigrp->k_values[0]!=param->K1)
     {
       return -1;
 

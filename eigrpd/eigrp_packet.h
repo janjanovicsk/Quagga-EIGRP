@@ -41,7 +41,7 @@ extern struct eigrp_packet *eigrp_fifo_pop (struct eigrp_fifo *);
 extern void eigrp_packet_free (struct eigrp_packet *);
 extern void eigrp_fifo_free (struct eigrp_fifo *);
 extern void eigrp_fifo_reset (struct eigrp_fifo *);
-extern void eigrp_ack_send(struct eigrp_neighbor *);
+extern void eigrp_ack_send (struct eigrp_neighbor *);
 extern void eigrp_send_init_update (struct eigrp_neighbor *);
 extern void eigrp_send_EOT_update(struct eigrp_neighbor *);
 extern void eigrp_send_packet_reliably(struct eigrp_neighbor *);

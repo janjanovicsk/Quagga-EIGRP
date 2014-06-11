@@ -162,7 +162,7 @@ struct eigrp_neighbor
   /* This neighbor's parent eigrp interface. */
   struct eigrp_interface *ei;
 
-  /* OSPF neighbor Information */
+  /* EIGRP neighbor Information */
   u_char state; /* neigbor status. */
   u_int32_t recv_sequence_number; /* Last received sequence Number. */
 

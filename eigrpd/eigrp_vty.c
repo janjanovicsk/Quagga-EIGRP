@@ -147,13 +147,13 @@ DEFUN (show_ip_eigrp_topology,
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
   {
-      show_ip_eigrp_prefix_entry(vty,tn);
-      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
-        {
-          if (((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
-              ((te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
-            show_ip_eigrp_neighbor_entry(vty, eigrp, te);
-        }
+    show_ip_eigrp_prefix_entry (vty,tn);
+    for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
+      {
+        if (((te->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)||
+            ((te->flags & EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG))
+          show_ip_eigrp_neighbor_entry (vty, eigrp, te);
+      }
     }
 
   return CMD_SUCCESS;
@@ -175,21 +175,22 @@ DEFUN (show_ip_eigrp_topology_all_links,
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
-  {
-        vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
-    return CMD_SUCCESS;
-  }
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
 
   show_ip_eigrp_topology_header (vty, eigrp);
 
   for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, tn))
     {
-      show_ip_eigrp_prefix_entry(vty,tn);
+      show_ip_eigrp_prefix_entry (vty,tn);
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
-          show_ip_eigrp_neighbor_entry(vty, eigrp, te);
+          show_ip_eigrp_neighbor_entry (vty, eigrp, te);
         }
     }
+
   return CMD_SUCCESS;
 }
 
@@ -219,37 +220,37 @@ DEFUN (show_ip_eigrp_interfaces,
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
-  {
-    vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
-    return CMD_SUCCESS;
-  }
+    {
+      vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
 
-  if(!argc)
-  {
-      show_ip_eigrp_interface_header (vty, eigrp);
-  }
+  if (!argc)
+    {
+        show_ip_eigrp_interface_header (vty, eigrp);
+    }
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
   {
-	if((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
-	{
-	    show_ip_eigrp_interface_header (vty, eigrp);
-	}
+    if ((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
+      {
+        show_ip_eigrp_interface_header (vty, eigrp);
+      }
 
-//	if((strncmp (argv[1], "f", 1) == 0 && strncmp (eigrp_if_name_string(ei), "F",1) == 0) ||
-//		(strncmp (argv[1], "l", 1) == 0 && strncmp (eigrp_if_name_string(ei), "L",1) == 0) ||
-//		(strncmp (argv[1], "s", 1) == 0 && strncmp (eigrp_if_name_string(ei), "S",1) == 0))
-//	{
-		show_ip_eigrp_interface_sub (vty, eigrp, ei);
-	//}
+  //	if ((strncmp (argv[1], "f", 1) == 0 && strncmp (eigrp_if_name_string (ei), "F",1) == 0) ||
+  //		(strncmp (argv[1], "l", 1) == 0 && strncmp (eigrp_if_name_string (ei), "L",1) == 0) ||
+  //		(strncmp (argv[1], "s", 1) == 0 && strncmp (eigrp_if_name_string (ei), "S",1) == 0))
+  //	{
+        show_ip_eigrp_interface_sub (vty, eigrp, ei);
+    //}
 
-	if((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
-	{
-	  show_ip_eigrp_interface_detail (vty, eigrp, ei);
-	}
+    if ((argc > 0) && ( strncmp (argv[0], "d", 1) == 0))
+      {
+        show_ip_eigrp_interface_detail (vty, eigrp, ei);
+      }
   }
 
-    return CMD_SUCCESS;
+  return CMD_SUCCESS;
 }
 
 ALIAS (show_ip_eigrp_interfaces,
@@ -277,10 +278,10 @@ DEFUN (show_ip_eigrp_neighbors,
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
-  {
-    vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
-    return CMD_SUCCESS;
-  }
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
 
   show_ip_eigrp_neighbor_header (vty, eigrp);
 
@@ -288,8 +289,8 @@ DEFUN (show_ip_eigrp_neighbors,
     {
       for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
         {
-          if(nbr->state == EIGRP_NEIGHBOR_UP)
-            show_ip_eigrp_neighbor_sub(vty,nbr);
+          if (nbr->state == EIGRP_NEIGHBOR_UP)
+            show_ip_eigrp_neighbor_sub (vty,nbr);
         }
     }
 
@@ -327,7 +328,7 @@ DEFUN (eigrp_if_delay,
       return CMD_SUCCESS;
     }
 
-  delay = atoi(argv[0]);
+  delay = atoi (argv[0]);
 
   /* delay range is <1-16777215>. */
   if ((delay < 1 )|| (delay > 16777215))
@@ -340,7 +341,7 @@ DEFUN (eigrp_if_delay,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = delay;
 
-  for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei))
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
     {
       if (ei->ifp == ifp)
         break;
@@ -378,7 +379,7 @@ DEFUN (eigrp_if_bandwidth,
       return CMD_SUCCESS;
     }
 
-  bandwidth = atoi(argv[0]);
+  bandwidth = atoi (argv[0]);
 
   /* bandwidth range is <1-10000000>. */
   if ((bandwidth < 1) || (bandwidth > 10000000))
@@ -392,7 +393,7 @@ DEFUN (eigrp_if_bandwidth,
 
   for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
     {
-      if(ei->ifp == ifp)
+      if (ei->ifp == ifp)
         break;
     }
 
@@ -444,8 +445,8 @@ DEFUN (eigrp_if_ip_hellointerval,
     {
       if (ei->ifp == ifp)
         {
-          THREAD_TIMER_OFF(ei->t_hello);
-          THREAD_TIMER_ON(master,ei->t_hello,eigrp_hello_timer,ei,1);
+          THREAD_TIMER_OFF (ei->t_hello);
+          THREAD_TIMER_ON (master,ei->t_hello,eigrp_hello_timer,ei,1);
           break;
         }
     }
@@ -472,7 +473,7 @@ DEFUN (eigrp_if_ip_holdinterval,
       return CMD_SUCCESS;
     }
 
-  hold = atoi(argv[0]);
+  hold = atoi (argv[0]);
 
   /* hello range is <1-65535> */
   if ((hold < 1) || (hold > 65535))
@@ -490,7 +491,7 @@ DEFUN (eigrp_if_ip_holdinterval,
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
-  "%s(config-router)# ",
+  "%s (config-router)# ",
   1
 };
 
@@ -519,57 +520,57 @@ eigrp_config_write (struct vty *vty)
                  inet_ntoa (eigrp->router_id_static), VTY_NEWLINE);
 
 //      /* log-adjacency-changes flag print. */
-//      if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_CHANGES))
+//      if (CHECK_FLAG (eigrp->config, EIGRP_LOG_ADJACENCY_CHANGES))
 //        {
-//          vty_out(vty, " log-adjacency-changes");
-//          if (CHECK_FLAG(ospf->config, OSPF_LOG_ADJACENCY_DETAIL))
-//            vty_out(vty, " detail");
-//          vty_out(vty, "%s", VTY_NEWLINE);
+//          vty_out (vty, " log-adjacency-changes");
+//          if (CHECK_FLAG (eigrp->config, EIGRP_LOG_ADJACENCY_DETAIL))
+//            vty_out (vty, " detail");
+//          vty_out (vty, "%s", VTY_NEWLINE);
 //        }
 
       /* SPF timers print. */
-//      if (ospf->spf_delay != OSPF_SPF_DELAY_DEFAULT ||
-//          ospf->spf_holdtime != OSPF_SPF_HOLDTIME_DEFAULT ||
-//          ospf->spf_max_holdtime != OSPF_SPF_MAX_HOLDTIME_DEFAULT)
+//      if (eigrp->spf_delay != EIGRP_SPF_DELAY_DEFAULT ||
+//          eigrp->spf_holdtime != EIGRP_SPF_HOLDTIME_DEFAULT ||
+//          eigrp->spf_max_holdtime != EIGRP_SPF_MAX_HOLDTIME_DEFAULT)
 //        vty_out (vty, " timers throttle spf %d %d %d%s",
-//                 ospf->spf_delay, ospf->spf_holdtime,
-//                 ospf->spf_max_holdtime, VTY_NEWLINE);
+//                 eigrp->spf_delay, eigrp->spf_holdtime,
+//                 eigrp->spf_max_holdtime, VTY_NEWLINE);
 
 //      /* Max-metric router-lsa print */
-//      config_write_stub_router (vty, ospf);
+//      config_write_stub_router (vty, eigrp);
 
 //      /* SPF refresh parameters print. */
-//      if (ospf->lsa_refresh_interval != OSPF_LSA_REFRESH_INTERVAL_DEFAULT)
+//      if (eigrp->lsa_refresh_interval != EIGRP_LSA_REFRESH_INTERVAL_DEFAULT)
 //        vty_out (vty, " refresh timer %d%s",
-//                 ospf->lsa_refresh_interval, VTY_NEWLINE);
+//                 eigrp->lsa_refresh_interval, VTY_NEWLINE);
 //
 //      /* Redistribute information print. */
-//      config_write_ospf_redistribute (vty, ospf);
+//      config_write_eigrp_redistribute (vty, eigrp);
 //
 //      /* passive-interface print. */
-//      if (ospf->passive_interface_default == OSPF_IF_PASSIVE)
+//      if (eigrp->passive_interface_default == EIGRP_IF_PASSIVE)
 //        vty_out (vty, " passive-interface default%s", VTY_NEWLINE);
 //
 //      for (ALL_LIST_ELEMENTS_RO (om->iflist, node, ifp))
-//        if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (ifp), passive_interface)
+//        if (EIGRP_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (ifp), passive_interface)
 //            && IF_DEF_PARAMS (ifp)->passive_interface !=
-//                              ospf->passive_interface_default)
+//                              eigrp->passive_interface_default)
 //          {
 //            vty_out (vty, " %spassive-interface %s%s",
 //                     IF_DEF_PARAMS (ifp)->passive_interface ? "" : "no ",
 //                     ifp->name, VTY_NEWLINE);
 //          }
-//      for (ALL_LIST_ELEMENTS_RO (ospf->oiflist, node, oi))
+//      for (ALL_LIST_ELEMENTS_RO (eigrp->oiflist, node, oi))
 //        {
-//          if (!OSPF_IF_PARAM_CONFIGURED (oi->params, passive_interface))
+//          if (!EIGRP_IF_PARAM_CONFIGURED (oi->params, passive_interface))
 //            continue;
-//          if (OSPF_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (oi->ifp),
+//          if (EIGRP_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (oi->ifp),
 //                                        passive_interface))
 //            {
 //              if (oi->params->passive_interface == IF_DEF_PARAMS (oi->ifp)->passive_interface)
 //                continue;
 //            }
-//          else if (oi->params->passive_interface == ospf->passive_interface_default)
+//          else if (oi->params->passive_interface == eigrp->passive_interface_default)
 //            continue;
 //
 //          vty_out (vty, " %spassive-interface %s %s%s",
@@ -582,22 +583,22 @@ eigrp_config_write (struct vty *vty)
       config_write_network (vty, eigrp);
 
 //      /* Area config print. */
-//      config_write_ospf_area (vty, ospf);
+//      config_write_eigrp_area (vty, eigrp);
 //
 //      /* static neighbor print. */
-//      config_write_ospf_nbr_nbma (vty, ospf);
+//      config_write_eigrp_nbr_nbma (vty, eigrp);
 //
 //      /* Virtual-Link print. */
-//      config_write_virtual_link (vty, ospf);
+//      config_write_virtual_link (vty, eigrp);
 //
 //      /* Default metric configuration.  */
-//      config_write_ospf_default_metric (vty, ospf);
+//      config_write_eigrp_default_metric (vty, eigrp);
 //
 //      /* Distribute-list and default-information print. */
-//      config_write_ospf_distribute (vty, ospf);
+//      config_write_eigrp_distribute (vty, eigrp);
 //
 //      /* Distance configuration. */
-//      config_write_ospf_distance (vty, ospf)
+//      config_write_eigrp_distance (vty, eigrp)
     }
 
   return write;
@@ -606,26 +607,26 @@ eigrp_config_write (struct vty *vty)
 void
 eigrp_vty_show_init (void)
 {
-  install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_interfaces_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_interfaces_cmd);
 
-  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_neighbors_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_neighbors_cmd);
 
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_topology_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_topology_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_topology_cmd);
 
-  install_element(VIEW_NODE, &show_ip_eigrp_neighbors_detail_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_neighbors_detail_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_neighbors_detail_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_neighbors_detail_cmd);
 
-  install_element(VIEW_NODE, &show_ip_eigrp_interfaces_detail_cmd);
-  install_element(ENABLE_NODE, &show_ip_eigrp_interfaces_detail_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_interfaces_detail_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_interfaces_detail_cmd);
 
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_topology_all_links_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_topology_all_links_cmd);
 
-  install_element(ENABLE_NODE, &show_ip_eigrp_topology_detail_cmd);
-  install_element(VIEW_NODE, &show_ip_eigrp_topology_detail_cmd);
+  install_element (ENABLE_NODE, &show_ip_eigrp_topology_detail_cmd);
+  install_element (VIEW_NODE, &show_ip_eigrp_topology_detail_cmd);
 
 }
 
@@ -633,7 +634,7 @@ eigrp_vty_show_init (void)
 static struct cmd_node eigrp_interface_node =
 {
   INTERFACE_NODE,
-  "%s(config-if)# ",
+  "%s (config-if)# ",
   1
 };
 
@@ -654,22 +655,22 @@ eigrp_vty_if_init (void)
   install_element (CONFIG_NODE, &no_interface_cmd);
 
   /* Delay and bandwidth configuration commands*/
-  install_element(INTERFACE_NODE, &eigrp_if_delay_cmd);
-  install_element(INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
+  install_element (INTERFACE_NODE, &eigrp_if_delay_cmd);
+  install_element (INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
 
   /*Hello-interval and hold-time interval configuration commands*/
-  install_element(INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
-  install_element(INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
+  install_element (INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
+  install_element (INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
 
   /* "description" commands. */
   install_element (INTERFACE_NODE, &interface_desc_cmd);
   install_element (INTERFACE_NODE, &no_interface_desc_cmd);
 
-//  /* "ip ospf dead-interval" commands. */
-//  install_element (INTERFACE_NODE, &ip_ospf_dead_interval_cmd);
+//  /* "ip eigrp dead-interval" commands. */
+//  install_element (INTERFACE_NODE, &ip_eigrp_dead_interval_cmd);
 //
-//  /* "ip ospf hello-interval" commands. */
-//  install_element (INTERFACE_NODE, &ip_ospf_hello_interval_cmd);
+//  /* "ip eigrp hello-interval" commands. */
+//  install_element (INTERFACE_NODE, &ip_eigrp_hello_interval_cmd);
 }
 
 static void
@@ -686,8 +687,8 @@ eigrp_vty_init (void)
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
 
-  install_default(EIGRP_NODE);
+  install_default (EIGRP_NODE);
 
-  install_element(EIGRP_NODE, &eigrp_network_cmd);
-  install_element(EIGRP_NODE, &no_eigrp_network_cmd);
+  install_element (EIGRP_NODE, &eigrp_network_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_network_cmd);
 }
