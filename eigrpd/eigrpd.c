@@ -116,8 +116,8 @@ eigrp_master_init ()
 static struct eigrp *
 eigrp_new (const char *AS)
 {
-
   struct eigrp *new = XCALLOC (MTYPE_EIGRP_TOP, sizeof (struct eigrp));
+  int eigrp_socket;
 
   new->eiflist = list_new ();
   new->passive_interface_default = EIGRP_IF_ACTIVE;
@@ -128,13 +128,14 @@ eigrp_new (const char *AS)
   new->router_id.s_addr = htonl (0);
   new->router_id_static.s_addr = htonl (0);
 
-  if ((new->fd = eigrp_sock_init ()) < 0)
+  if ((eigrp_socket = eigrp_sock_init ()) < 0)
     {
       zlog_err ("eigrp_new: fatal error: eigrp_sock_init was unable to open "
                "a socket");
       exit (1);
     }
 
+  new->fd = eigrp_socket;
   new->maxsndbuflen = getsockopt_so_sendbuf (new->fd);
 
   if ((new->ibuf = stream_new (EIGRP_MAX_PACKET_SIZE+1)) == NULL)
