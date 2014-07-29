@@ -786,8 +786,8 @@ eigrp_read (struct thread *thread)
   struct eigrp_interface *ei;
   struct ip *iph;
   struct eigrp_header *eigrph;
-  u_int16_t length;
   struct interface *ifp;
+  u_int16_t length = 0;
 
   /* first of all get interface pointer. */
   eigrp = THREAD_ARG (thread);
@@ -1268,7 +1268,8 @@ eigrp_send_init_update (struct eigrp_neighbor *nbr)
 void
 eigrp_send_EOT_update (struct eigrp_neighbor *nbr)
 {
-  struct eigrp_packet *ep, *ep_multicast;
+  struct eigrp_packet *ep;
+//  struct eigrp_packet *ep_multicast;
   u_int16_t length = EIGRP_HEADER_SIZE;
   struct eigrp_neighbor_entry *te;
   struct eigrp_prefix_entry *tn;
