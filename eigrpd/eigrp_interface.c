@@ -322,7 +322,7 @@ eigrp_if_down (struct eigrp_interface *ei)
     {
       for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
         {
-          if ((te->ei == ei))
+          if (te->ei == ei)
             te->total_metric.delay = 0xFFFFFFFF;
 
         }
