@@ -25,20 +25,22 @@
  * 02111-1307, USA.
  */
 
-
-
-
 #ifndef _ZEBRA_EIGRP_NEIGHBOR_H
 #define _ZEBRA_EIGRP_NEIGHBOR_H
 
 /* Prototypes */
-extern struct eigrp_neighbor *eigrp_nbr_get (struct eigrp_interface *,
-                                              struct eigrp_header *,
-                                              struct ip *);
+extern struct eigrp_neighbor *eigrp_nbr_get(struct eigrp_interface *,
+					    struct eigrp_header *,
+					    struct ip *);
 extern struct eigrp_neighbor *eigrp_nbr_new (struct eigrp_interface *);
-extern void eigrp_nbr_delete (struct eigrp_neighbor *);
-extern int eigrp_neighborship_check (struct eigrp_neighbor *,struct TLV_Parameter_Type *);
+extern void eigrp_nbr_delete(struct eigrp_neighbor *);
 
-extern int holddown_timer_expired (struct thread *);
+extern int holddown_timer_expired(struct thread *);
+
+extern int eigrp_neighborship_check(struct eigrp_neighbor *,struct TLV_Parameter_Type *);
+extern void eigrp_nbr_state_update(struct eigrp_neighbor *);
+extern void eigrp_nbr_state_set(struct eigrp_neighbor *, u_char state);
+extern u_char eigrp_nbr_state_get(struct eigrp_neighbor *);
+extern const char *eigrp_nbr_state_str(struct eigrp_neighbor *);
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

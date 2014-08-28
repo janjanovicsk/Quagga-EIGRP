@@ -54,15 +54,16 @@ struct eigrp_master
 
 struct eigrp
 {
+  u_int16_t AS;			/* Autonomous system number */
+  u_int16_t vrid;		/* Virtual Router ID */
+  u_char    k_values[6];	/*Array for K values configuration*/
 
   /* EIGRP Router ID. */
-  struct in_addr router_id; /* Configured automatically. */
-  struct in_addr router_id_static; /* Configured manually. */
+  u_int32_t router_id; /* Configured automatically. */
+  u_int32_t router_id_static; /* Configured manually. */
 
   struct list *eiflist; /* eigrp interfaces */
   u_char passive_interface_default; /* passive-interface default */
-
-  int AS; /* Autonomous system number */
 
   unsigned int fd;
   unsigned int maxsndbuflen;
@@ -78,7 +79,6 @@ struct eigrp
 
   struct route_table *networks; /* EIGRP config networks. */
 
-  u_char k_values[6]; /*Array for K values configuration*/
 
   struct list *topology_table;
 
@@ -164,14 +164,19 @@ struct eigrp_neighbor
 
   /* EIGRP neighbor Information */
   u_char state; /* neigbor status. */
-  u_int32_t recv_sequence_number; /* Last received sequence Number. */
 
+  u_int32_t recv_sequence_number; /* Last received sequence Number. */
   u_int32_t init_sequence_number;
 
   /*If packet is unacknowledged, we try to send it again 16 times*/
   u_char retrans_counter;
 
   struct in_addr src; /* Neighbor Src address. */
+
+  u_char os_rel_major;		// system version - just for show
+  u_char os_rel_minor;		// system version - just for show
+  u_char tlv_rel_major;		// eigrp version - tells us what TLV format to use
+  u_char tlv_rel_minor;		// eigrp version - tells us what TLV format to use
 
   u_char K1;
   u_char K2;
@@ -217,11 +222,10 @@ struct eigrp_packet
 
 struct eigrp_fifo
 {
-  unsigned long count;
-
   struct eigrp_packet *head;
-
   struct eigrp_packet *tail;
+
+  unsigned long count;
 };
 
 struct eigrp_header
@@ -232,10 +236,12 @@ struct eigrp_header
   u_int32_t flags;
   u_int32_t sequence;
   u_int32_t ack;
-  u_int16_t routerID;
+  u_int16_t vrid;
   u_int16_t ASNumber;
+  char *tlv[0];
 
 }__attribute__((packed));
+#define EIGRP_HEADER_SIZE 20
 
 struct TLV_Parameter_Type
 {

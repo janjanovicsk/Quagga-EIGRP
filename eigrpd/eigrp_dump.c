@@ -47,6 +47,12 @@
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_topology.h"
 
+/* Enable debug option variables -- valid only session. */
+unsigned long term_debug_eigrp = 0;
+unsigned long term_debug_eigrp_nei = 0;
+unsigned long term_debug_eigrp_packet[5] = {0, 0, 0, 0, 0};
+unsigned long term_debug_eigrp_zebra = 0;
+
 static int
 eigrp_neighbor_packet_queue_sum (struct eigrp_interface *ei)
 {
@@ -81,6 +87,23 @@ eigrp_ip_header_dump (struct ip *iph)
   zlog_debug ("ip_sum 0x%x", (u_int32_t) iph->ip_sum);
   zlog_debug ("ip_src %s",  inet_ntoa (iph->ip_src));
   zlog_debug ("ip_dst %s", inet_ntoa (iph->ip_dst));
+}
+
+/*
+ * Expects header to be in host order
+ */
+void
+eigrp_header_dump (struct eigrp_header *eigrph)
+{
+  /* EIGRP Header dump. */
+  zlog_debug ("eigrp_version %u",	eigrph->version);
+  zlog_debug ("eigrp_opcode %u",	eigrph->opcode);
+  zlog_debug ("eigrp_checksum 0x%x",	ntohs(eigrph->checksum));
+  zlog_debug ("eigrp_flags 0x%x",	ntohl(eigrph->flags));
+  zlog_debug ("eigrp_sequence %u",	ntohl(eigrph->sequence));
+  zlog_debug ("eigrp_ack %u",		ntohl(eigrph->ack));
+  zlog_debug ("eigrp_vrid %u"	,	ntohs(eigrph->vrid));
+  zlog_debug ("eigrp_AS %u",		ntohs(eigrph->ASNumber));
 }
 
 const char *
@@ -195,7 +218,8 @@ show_ip_eigrp_neighbor_header (struct vty *vty, struct eigrp *eigrp)
 }
 
 void
-show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
+show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr,
+			    int detail)
 {
 
   vty_out (vty, "%-3u %-17s %-21s",0,eigrp_neigh_ip_string (nbr),eigrp_if_name_string (nbr->ei));
@@ -203,6 +227,17 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
   vty_out (vty,"%-8u %-6u %-5u",0,0,EIGRP_PACKET_RETRANS_TIME);
   vty_out (vty,"%-7lu",nbr->retrans_queue->count);
   vty_out (vty,"%u%s",nbr->recv_sequence_number,VTY_NEWLINE);
+
+
+  if (detail)
+    {
+      vty_out(vty,"    Version %u.%u/%u.%u",
+	      nbr->os_rel_major, nbr->os_rel_minor,
+	      nbr->tlv_rel_major, nbr->tlv_rel_minor);
+      vty_out(vty,", Retrans: %lu, Retries: %lu",
+	      nbr->retrans_queue->count, 0UL);
+      vty_out(vty,", %s%s", eigrp_nbr_state_str(nbr), VTY_NEWLINE);
+    }
 }
 
 /*
@@ -211,9 +246,12 @@ show_ip_eigrp_neighbor_sub (struct vty *vty, struct eigrp_neighbor *nbr)
 void
 show_ip_eigrp_topology_header (struct vty *vty, struct eigrp *eigrp)
 {
+  struct in_addr router_id;
+  router_id.s_addr = htonl(eigrp->router_id);
+
   vty_out (vty, "%s%s%d%s%s%s%s%s%s%s%s%s%s%s",
 	     VTY_NEWLINE,
-	     "EIGRP Topology Table for AS(", eigrp->AS, ")/ID(", inet_ntoa (eigrp->router_id), ")", VTY_NEWLINE,VTY_NEWLINE,
+	     "EIGRP Topology Table for AS(", eigrp->AS, ")/ID(", inet_ntoa(router_id), ")", VTY_NEWLINE,VTY_NEWLINE,
 	     "Codes: P - Passive, A - Active, U - Update, Q - Query, "
 	     "R - Reply", VTY_NEWLINE ,"       ","r - reply Status, s - sia Status",VTY_NEWLINE,VTY_NEWLINE);
 }

@@ -34,35 +34,6 @@
 #define EIGRP_NEIGHBOR_UP             3
 #define EIGRP_NEIGHBOR_STATE_MAX      4
 
-#define EIGRP_MAX_PACKET_SIZE  65535U   /* includes IP Header size. */
-#define EIGRP_HEADER_SIZE         20U
-#define EIGRP_HELLO_MIN_SIZE      12U
-
-#define EIGRP_HEADER_FLAG_INIT          0x00000001
-#define EIGRP_HEADER_FLAG_CR            0x00000002
-#define EIGRP_HEADER_FLAG_RESET         0x00000004
-#define EIGRP_HEADER_FLAG_EOT           0x00000008
-
-#define EIGRP_MSG_UPDATE        1  /* EIGRP Hello Message. */
-#define EIGRP_MSG_REQUEST       2  /* EIGRP Database Descriptoin Message. */
-#define EIGRP_MSG_QUERY         3  /* EIGRP Link State Request Message. */
-#define EIGRP_MSG_REPLY         4  /* EIGRP Link State Update Message. */
-#define EIGRP_MSG_HELLO         5  /* EIGRP Link State Acknoledgement Message. */
-#define EIGRP_MSG_PROBE         7  /* EIGRP Probe Message. */
-#define EIGRP_MSG_SIAQUERY     10  /* EIGRP SIAQUERY. */
-#define EIGRP_MSG_SIAREPLY     11  /* EIGRP SIAREPLY. */
-
-/*EIGRP TLV Type definitions*/
-#define TLV_PARAMETER_TYPE              0x0001       /*K types*/
-#define TLV_AUTHENTICATION_TYPE         0x0002
-#define TLV_SEQUENCE_TYPE               0x0003
-#define TLV_SOFTWARE_VERSION_TYPE       0x0004
-#define TLV_MULTICAST_SEQUENCE_TYPE     0x0005
-#define TLV_PEER_INFORMATION_TYPE       0x0006
-#define TLV_PEER_TERMINATION_TYPE       0x0007
-#define TLV_PEER_TID_LIST_TYPE          0x0008
-#define TLV_INTERNAL_TYPE               0x0102
-
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
 
@@ -93,7 +64,7 @@
 #define EIGRP_RELIABILITY_DEFAULT           255
 #define EIGRP_LOAD_DEFAULT                  1
 
-#define EIGRP_MULTICAST_ADDRESS                0xe000000A /*224.0.0.10*/
+#define EIGRP_MULTICAST_ADDRESS            0xe000000A /*224.0.0.10*/
 
 #define EIGRP_MAX_METRIC                   0xffffffffU    /*8589934591*/
 
@@ -138,14 +109,39 @@
 #define EIGRP_FSM_EVENT_LR_FCN                  6 /*last reply, FC not satisfied with current value of FDij*/
 #define EIGRP_FSM_KEEP_STATE                    7 /*state not changed, usually by receiving not last reply */
 
-#define INT_TYPES_CMD_STR                                                \
+#define INT_TYPES_CMD_STR						 \
 	"detail|fastethernet|loopback|static"
 
-#define INT_TYPES_DESC													 \
-	"Show detailed peer information\n"									 \
-	"FastEthernet IEEE 802.3\n"											 \
-	"Loopback interface\n"												 \
+#define INT_TYPES_DESC							\
+	"Show detailed peer information\n"				\
+	"FastEthernet IEEE 802.3\n"					\
+	"Loopback interface\n"						\
 	"Show static peer information\n"
 
+/**
+ * External routes originate from some other protocol - these are them
+ */
+#define NULL_PROTID		0		/*!< unknown protocol */
+#define IGRP_PROTID		1		/*!< IGRP.. whos your daddy! */
+#define EIGRP_PROTID		2		/*!< EIGRP - Just flat out the best */
+#define STATIC_PROTID		3		/*!< Staticly configured source */
+#define RIP_PROTID		4		/*!< Routing Information Protocol */
+#define HELLO_PROTID		5		/*!< Hello? RFC-891 you there? */
+#define OSPF_PROTID		6		/*!< OSPF - Open Shortest Path First */
+#define ISIS_PROTID		7		/*!< Intermediate System To Intermediate System */
+#define EGP_PROTID		8		/*!< Exterior Gateway Protocol */
+#define BGP_PROTID		9		/*!< Border Gateway Protocol */
+#define IDRP_PROTID		10		/*!< InterDomain Routing Protocol */
+#define CONN_PROTID		11		/*!< Connected source */
+
+/* 
+ * metric k-value defaults
+ */
+#define EIGRP_K1_DEFAULT	1		//!< unweighed inverse bandwidth
+#define EIGRP_K2_DEFAULT	0		//!< no loading term
+#define EIGRP_K3_DEFAULT	1		//!< unweighted delay
+#define EIGRP_K4_DEFAULT	0		//!< no reliability term
+#define EIGRP_K5_DEFAULT	0		//!< no reliability term
+#define EIGRP_K6_DEFAULT	0		//!< do not add in extended metrics
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

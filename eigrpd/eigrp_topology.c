@@ -332,7 +332,7 @@ eigrp_topology_update_distance (struct eigrp_fsm_action_message *msg)
 
   struct TLV_IPv4_External_type *ext_data = NULL;
   struct TLV_IPv4_Internal_type *int_data = NULL;
-  if (msg->data_type == TLV_INTERNAL_TYPE)
+  if (msg->data_type == EIGRP_TLV_IPv4_INT)
     {
       int_data = msg->data.ipv4_int_type;
           if (int_data->metric.bandwith == entry->reported_metric.bandwith

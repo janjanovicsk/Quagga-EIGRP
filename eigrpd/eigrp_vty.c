@@ -262,7 +262,6 @@ ALIAS (show_ip_eigrp_interfaces,
 	   "IP-EIGRP interfaces\n"
 	   INT_TYPES_DESC)
 
-
 DEFUN (show_ip_eigrp_neighbors,
        show_ip_eigrp_neighbors_cmd,
        "show ip eigrp neighbors",
@@ -275,6 +274,7 @@ DEFUN (show_ip_eigrp_neighbors,
   struct eigrp_interface *ei;
   struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
+  int detail = FALSE;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -283,14 +283,15 @@ DEFUN (show_ip_eigrp_neighbors,
       return CMD_SUCCESS;
     }
 
+  detail = ((argc > 0) && (strncmp(argv[0], "d", 1) == 0));
   show_ip_eigrp_neighbor_header (vty, eigrp);
 
   for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
     {
       for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
         {
-          if (nbr->state == EIGRP_NEIGHBOR_UP)
-            show_ip_eigrp_neighbor_sub (vty,nbr);
+	  if (detail || (nbr->state == EIGRP_NEIGHBOR_UP))
+	    show_ip_eigrp_neighbor_sub (vty, nbr, detail);
         }
     }
 
@@ -515,9 +516,13 @@ eigrp_config_write (struct vty *vty)
         return write;
 
       /* Router ID print. */
-      if (eigrp->router_id_static.s_addr != 0)
+      if (eigrp->router_id_static != 0)
+      {
+	struct in_addr router_id_static;
+	router_id_static.s_addr = htonl(eigrp->router_id_static);
         vty_out (vty, " eigrp router-id %s%s",
-                 inet_ntoa (eigrp->router_id_static), VTY_NEWLINE);
+                 inet_ntoa (router_id_static), VTY_NEWLINE);
+      }
 
 //      /* log-adjacency-changes flag print. */
 //      if (CHECK_FLAG (eigrp->config, EIGRP_LOG_ADJACENCY_CHANGES))
