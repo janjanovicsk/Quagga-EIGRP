@@ -239,8 +239,9 @@ eigrp_network_set (struct eigrp *eigrp, struct prefix_ipv4 *p)
   rn->info = (void *) 1;
 
   /* Schedule Router ID Update. */
-//    if (eigrp->router_id.s_addr == 0)
-//      eigrp_router_id_update (eigrp);
+//    if (eigrp->router_id == 0)
+//      eigrp_router_id_update(eigrp);
+
   /* Run network config now. */
   /* Get target interface. */
   for (ALL_LIST_ELEMENTS_RO (eigrp_om->iflist, node, ifp))
@@ -295,35 +296,13 @@ eigrp_network_run_interface (struct eigrp *eigrp, struct prefix *p,
 
           /* if router_id is not configured, dont bring up
            * interfaces.
-           * eigrp_router_id_update () will call eigrp_if_update
+           * eigrp_router_id_update() will call eigrp_if_update
            * whenever r-id is configured instead.
            */
-          if (if_is_operative (ifp))
-            eigrp_if_up (ei);
+          if (if_is_operative(ifp))
+            eigrp_if_up(ei);
         }
     }
-}
-
-int
-eigrp_hello_timer (struct thread *thread)
-{
-//  if (IS_DEBUG_EIGRP (ism, ISM_TIMERS))
-//    zlog (NULL, LOG_DEBUG, "ISM[%s]: Timer (Hello timer expire)",
-//          IF_NAME (oi));
-
-  struct eigrp_interface *ei;
-
-  ei = THREAD_ARG (thread);
-  ei->t_hello = NULL;
-
-  /* Sending hello packet. */
-  eigrp_hello_send (ei);
-
-  /* Hello timer set. */
-  ei->t_hello =
-      thread_add_timer (master, eigrp_hello_timer, ei, EIGRP_IF_PARAM (ei, v_hello));
-
-  return 0;
 }
 
 void
@@ -339,7 +318,7 @@ eigrp_if_update (struct interface *ifp)
    */
   for (ALL_LIST_ELEMENTS (eigrp_om->eigrp, node, nnode, eigrp)) {
       /* EIGRP must be on and Router-ID must be configured. */
-      if (!eigrp || eigrp->router_id.s_addr == 0)
+      if (!eigrp || eigrp->router_id == 0)
 	  continue;
 
       /* Run each network for this interface. */

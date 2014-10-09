@@ -215,7 +215,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
            *
            * In case of different packet type do nothing (ignore)
            */
-          if (msg->packet_type == EIGRP_MSG_UPDATE)
+          if (msg->packet_type == EIGRP_OPC_UPDATE)
             {
               entry = eigrp_neighbor_entry_new ();
               entry->adv_router = msg->adv_router;
@@ -307,7 +307,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
                 }
               else
                 {
-                  if (msg->packet_type == EIGRP_MSG_QUERY)
+                  if (msg->packet_type == EIGRP_OPC_QUERY)
                     {
                       return EIGRP_FSM_EVENT_Q_FCN;
                     }
@@ -325,7 +325,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
 
       eigrp_topology_update_distance (msg);
 
-      if (msg->packet_type == EIGRP_MSG_REPLY)
+      if (msg->packet_type == EIGRP_OPC_REPLY)
         {
           listnode_delete (prefix->rij, entry->adv_router);
           if (prefix->rij->count)
@@ -345,7 +345,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
             }
         }
 
-      if (msg->packet_type == EIGRP_MSG_QUERY
+      if (msg->packet_type == EIGRP_OPC_QUERY
           && (entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
               == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
         {
@@ -364,7 +364,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
        * "do nothing" (wait for rest replies), otherwise indicate "last reply" event
        */
 
-      if (msg->packet_type == EIGRP_MSG_QUERY
+      if (msg->packet_type == EIGRP_OPC_QUERY
           && (entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
               == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
         {
@@ -374,7 +374,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
       if (change == 1
           && (prefix->distance < eigrp_topology_get_successor (prefix)->distance))
         {
-          if (msg->packet_type == EIGRP_MSG_REPLY)
+          if (msg->packet_type == EIGRP_OPC_REPLY)
             {
               listnode_delete (prefix->rij, entry->adv_router);
               if (!prefix->rij->count)
@@ -385,7 +385,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
           return EIGRP_FSM_EVENT_DINC;
         }
 
-      if (msg->packet_type == EIGRP_MSG_REPLY)
+      if (msg->packet_type == EIGRP_OPC_REPLY)
         {
           listnode_delete (prefix->rij, entry->adv_router);
 
@@ -406,7 +406,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
     {
       eigrp_topology_update_distance (msg);
 
-      if (msg->packet_type == EIGRP_MSG_REPLY)
+      if (msg->packet_type == EIGRP_OPC_REPLY)
         {
           listnode_delete (prefix->rij, entry->adv_router);
 
@@ -440,7 +440,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
       if (change == 1
           && (prefix->distance < eigrp_topology_get_successor (prefix)->distance))
         {
-          if (msg->packet_type == EIGRP_MSG_REPLY)
+          if (msg->packet_type == EIGRP_OPC_REPLY)
             {
               listnode_delete (prefix->rij, entry->adv_router);
               if (!prefix->rij->count)
@@ -451,7 +451,7 @@ eigrp_get_fsm_event (struct eigrp_fsm_action_message *msg)
           return EIGRP_FSM_EVENT_DINC;
         }
 
-      if (msg->packet_type == EIGRP_MSG_REPLY)
+      if (msg->packet_type == EIGRP_OPC_REPLY)
         {
 
           //If entry doesn't exists yet

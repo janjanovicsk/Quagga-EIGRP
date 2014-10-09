@@ -68,11 +68,16 @@ eigrp_nbr_new (struct eigrp_interface *ei)
   nbr->retrans_queue = eigrp_fifo_new ();
   nbr->multicast_queue = eigrp_fifo_new ();
 
-  nbr->init_sequence_number = 0;
-
   return nbr;
 }
 
+/**
+ *@fn void dissect_eigrp_sw_version (tvbuff_t *tvb, proto_tree *tree,
+ *                                   proto_item *ti)
+ *
+ * @par
+ * Create a new neighbor structure and initalize it.
+ */
 static struct eigrp_neighbor *
 eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
               struct ip *iph)
@@ -80,12 +85,10 @@ eigrp_nbr_add (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   struct eigrp_neighbor *nbr;
 
   nbr = eigrp_nbr_new (ei);
-
   nbr->src = iph->ip_src;
 
-//
 //  if (IS_DEBUG_EIGRP_EVENT)
-//    zlog_debug ("NSM[%s:%s]: start", IF_NAME (nbr->oi),
+//    zlog_debug("NSM[%s:%s]: start", IF_NAME (nbr->oi),
 //               inet_ntoa (nbr->router_id));
 
   return nbr;
@@ -133,21 +136,119 @@ holddown_timer_expired (struct thread *thread)
 
   nbr = THREAD_ARG (thread);
 
-  zlog_info ("Neighbor %s (%s) is down: holding time expired",inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
+  zlog_info ("Neighbor %s (%s) is down: holding time expired",
+	     inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
   eigrp_nbr_delete (nbr);
 
   return 0;
 }
 
-int
-eigrp_neighborship_check (struct eigrp_neighbor *nbr,struct TLV_Parameter_Type *param)
+u_char
+eigrp_nbr_state_get (struct eigrp_neighbor *nbr)
 {
-  struct eigrp *eigrp = nbr->ei->eigrp;
-  if (eigrp->k_values[0]!=param->K1)
+  return(nbr->state);
+}
+
+void
+eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
+{
+  if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN)
     {
-      return -1;
+      // reset all the seq/ack counters
+      nbr->recv_sequence_number = 0;
+      nbr->init_sequence_number = 0;
+      nbr->retrans_counter = 0;
+
+      // Kvalues
+      nbr->K1 = EIGRP_K1_DEFAULT;
+      nbr->K2 = EIGRP_K2_DEFAULT;
+      nbr->K3 = EIGRP_K3_DEFAULT;
+      nbr->K4 = EIGRP_K4_DEFAULT;
+      nbr->K5 = EIGRP_K5_DEFAULT;
+      nbr->K6 = EIGRP_K6_DEFAULT;
+
+      // hold time..
+      nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
+
+      /* out with the old */
+      eigrp_fifo_free (nbr->multicast_queue);
+      eigrp_fifo_free (nbr->retrans_queue);
+
+      /* in with the new */
+      nbr->retrans_queue = eigrp_fifo_new ();
+      nbr->multicast_queue = eigrp_fifo_new ();
 
     }
+  nbr->state = state;
+}
 
-  return 1;
+const char *
+eigrp_nbr_state_str (struct eigrp_neighbor *nbr)
+{
+  const char *state;
+  switch (nbr->state)
+    {
+    case EIGRP_NEIGHBOR_DOWN:
+      {
+	state = "Down";
+	break;
+      }
+    case EIGRP_NEIGHBOR_PENDING:
+      {
+	state = "Waiting for Init";
+	break;
+      }
+    case EIGRP_NEIGHBOR_PENDING_INIT:
+      {
+	state = "Waiting for Init Ack";
+	break;
+      }
+    case EIGRP_NEIGHBOR_UP:
+      {
+	state = "Up";
+	break;
+      }
+    }
+
+  return(state);
+}
+
+void
+eigrp_nbr_state_update (struct eigrp_neighbor *nbr)
+{
+  switch (nbr->state)
+    {
+    case EIGRP_NEIGHBOR_DOWN:
+      {
+	/*Start Hold Down Timer for neighbor*/
+	THREAD_OFF(nbr->t_holddown);
+	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired,
+			nbr, nbr->v_holddown);
+	break;
+      }
+    case EIGRP_NEIGHBOR_PENDING:
+      {
+	/*Reset Hold Down Timer for neighbor*/
+	THREAD_OFF(nbr->t_holddown);
+	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
+			nbr->v_holddown);
+	break;
+      }
+    case EIGRP_NEIGHBOR_PENDING_INIT:
+      {
+	/*Reset Hold Down Timer for neighbor*/
+	THREAD_OFF(nbr->t_holddown);
+	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
+			nbr->v_holddown);
+	break;
+      }
+    case EIGRP_NEIGHBOR_UP:
+      {
+	/*Reset Hold Down Timer for neighbor*/
+	THREAD_OFF(nbr->t_holddown);
+	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
+			nbr->v_holddown);
+	break;
+      }
+    }
 }
