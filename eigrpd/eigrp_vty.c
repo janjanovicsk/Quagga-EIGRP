@@ -35,6 +35,7 @@
 #include "plist.h"
 #include "log.h"
 #include "zclient.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -63,6 +64,29 @@ config_write_network (struct vty *vty, struct eigrp *eigrp)
       }
 
   return 0;
+}
+
+static int
+eigrp_write_interface (struct vty *vty)
+{
+  int write=0;
+
+  return write;
+}
+
+static int
+eigrp_write_keychain (struct vty *vty)
+{
+  int write=0;
+
+  return write;
+}
+static int
+eigrp_write_keychain_key (struct vty *vty)
+{
+  int write=0;
+
+  return write;
 }
 
 DEFUN (router_eigrp,
@@ -638,13 +662,22 @@ static struct cmd_node eigrp_interface_node =
   1
 };
 
-static int
-eigrp_write_interface (struct vty *vty)
+/* eigrpd's interface node. */
+static struct cmd_node eigrp_keychain_node =
 {
-  int write=0;
+  KEYCHAIN_NODE,
+  "%s (config-keychain)# ",
+  1
+};
 
-  return write;
-}
+/* eigrpd's interface node. */
+static struct cmd_node eigrp_keychain_key_node =
+{
+  KEYCHAIN_KEY_NODE,
+  "%s (config-keychain-key)# ",
+  1
+};
+
 
 void
 eigrp_vty_if_init (void)
@@ -684,6 +717,8 @@ void
 eigrp_vty_init (void)
 {
   install_node (&eigrp_node, eigrp_config_write);
+  install_node (&eigrp_keychain_node, eigrp_write_keychain);
+  install_node (&eigrp_keychain_key_node, eigrp_write_keychain_key);
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
 

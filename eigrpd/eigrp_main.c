@@ -43,6 +43,7 @@
 #include "privs.h"
 #include "sigevent.h"
 #include "zclient.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -178,8 +179,10 @@ main (int argc, char **argv)
   /* Get configuration file. */
   /* EIGRP VTY inits */
   eigrp_vty_init ();
+  keychain_init();
   eigrp_vty_show_init ();
   eigrp_vty_if_init ();
+
 
   vty_read_config (config_file, config_default);
 

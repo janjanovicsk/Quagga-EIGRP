@@ -41,6 +41,7 @@
 #include "zclient.h"
 #include "plist.h"
 #include "sockopt.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
