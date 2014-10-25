@@ -1,5 +1,5 @@
 /*
- * Zebra connect library for EIGRP.
+ * EIGRP Sending and Receiving EIGRP Update Packets.
  * Copyright (C) 2013-2014
  * Authors:
  *   Donnie Savage
@@ -25,15 +25,3 @@
  * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.
  */
-
-#ifndef _ZEBRA_EIGRP_ZEBRA_H_
-#define _ZEBRA_EIGRP_ZEBRA_H_
-
-#include "vty.h"
-
-extern void eigrp_zebra_init (void);
-
-extern void eigrp_zebra_route_add (struct prefix_ipv4 *, struct eigrp_neighbor_entry *);
-extern void eigrp_zebra_route_delete (struct prefix_ipv4 *, struct eigrp_neighbor_entry *);
-
-#endif /* _ZEBRA_EIGRP_ZEBRA_H_ */

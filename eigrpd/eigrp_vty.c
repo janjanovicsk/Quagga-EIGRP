@@ -1,10 +1,12 @@
-/* EIGRP VTY interface.
+/*
+ * EIGRP VTY Interface.
  * Copyright (C) 2013-2014
  * Authors:
- * Jan Janovic
- * Matej Perina
- * Peter Orsag
- * Peter Paluch
+ *   Donnie Savage
+ *   Jan Janovic
+ *   Matej Perina
+ *   Peter Orsag
+ *   Peter Paluch
  *
  * This file is part of GNU Zebra.
  *
