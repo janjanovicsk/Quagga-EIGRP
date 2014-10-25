@@ -780,7 +780,11 @@ eigrp_read (struct thread *thread)
   /* Note that there should not be alignment problems with this assignment
    because this is at the beginning of the stream data buffer. */
   iph = (struct ip *)STREAM_DATA(ibuf);
-  length = iph->ip_len;
+
+  //Substract IPv4 header size from EIGRP Packet itself
+  if(iph->ip_v == 4)
+  length = (iph->ip_len) - 20U;
+
 
   /* IP Header dump. */
   if (IS_DEBUG_EIGRP_PACKET(0, RECV) && IS_DEBUG_EIGRP_PACKET(0, DETAIL))
@@ -900,6 +904,7 @@ eigrp_read (struct thread *thread)
 
   /* Read rest of the packet and call each sort of packet routine. */
   stream_forward_getp(ibuf, EIGRP_HEADER_LEN);
+
   switch (opcode)
     {
     case EIGRP_OPC_HELLO:

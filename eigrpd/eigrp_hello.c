@@ -297,10 +297,11 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	  default:
 	    break;
 	  }
+
     }
 
-    tlv_header = (struct eigrp_tlv_hdr_type *)((char *)tlv_header + length);
-    size -= length; 
+    tlv_header = (struct eigrp_tlv_hdr_type *)(((char *)tlv_header) + length);
+    size -= length;
 
   } while (size > 0);
 

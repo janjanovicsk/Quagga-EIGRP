@@ -59,14 +59,16 @@ eigrp_nbr_new (struct eigrp_interface *ei)
   nbr->ei = ei;
 
   /* Set default values. */
-  nbr->state = EIGRP_NEIGHBOR_DOWN;
-  if (ei!=NULL)
-    nbr->v_holddown = EIGRP_IF_PARAM (ei,v_wait);
-  else
-    nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
-  nbr->retrans_queue = eigrp_fifo_new ();
-  nbr->multicast_queue = eigrp_fifo_new ();
+  eigrp_nbr_state_set (nbr, EIGRP_NEIGHBOR_DOWN);
+//  nbr->state = EIGRP_NEIGHBOR_DOWN;
+//  if (ei!=NULL)
+//    nbr->v_holddown = EIGRP_IF_PARAM (ei,v_wait);
+//  else
+//    nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
+//
+//  nbr->retrans_queue = eigrp_fifo_new ();
+//  nbr->multicast_queue = eigrp_fifo_new ();
 
   return nbr;
 }
@@ -152,7 +154,10 @@ eigrp_nbr_state_get (struct eigrp_neighbor *nbr)
 void
 eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
 {
-  if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN)
+
+  nbr->state = state;
+
+  if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN)
     {
       // reset all the seq/ack counters
       nbr->recv_sequence_number = 0;
@@ -171,7 +176,9 @@ eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
       nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
       /* out with the old */
-      eigrp_fifo_free (nbr->multicast_queue);
+      if (nbr->multicast_queue)
+        eigrp_fifo_free (nbr->multicast_queue);
+      if (nbr->retrans_queue)
       eigrp_fifo_free (nbr->retrans_queue);
 
       /* in with the new */
@@ -179,7 +186,6 @@ eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
       nbr->multicast_queue = eigrp_fifo_new ();
 
     }
-  nbr->state = state;
 }
 
 const char *
