@@ -52,6 +52,12 @@ key_free (struct key *key)
   XFREE (MTYPE_KEY, key);
 }
 
+struct list *
+keychain_list_get (void)
+{
+  return keychain_list;
+}
+
 struct keychain *
 keychain_lookup (const char *name)
 {
@@ -531,6 +537,52 @@ key_lifetime_infinite_set (struct vty *vty, struct key_range *krange,
 
   return CMD_SUCCESS;
 }
+
+static void
+keychain_dump (struct vty *vty, struct keychain *keychain)
+{
+  struct listnode *node, *nnode;
+  struct key *keychainkey;
+  char startbuf[20], endbuf[20];
+
+  vty_out (vty, "Key-chain %s: %s",keychain->name, VTY_NEWLINE);
+  for (ALL_LIST_ELEMENTS(keychain->key, node, nnode, keychainkey))
+    {
+      vty_out (vty, "%-4skey %d -- text \"%s\" %s","",keychainkey->index,
+          (keychainkey->string) ? keychainkey->string : "key-string not configured yet", VTY_NEWLINE);
+        if (keychainkey->accept.start)
+          {
+            strftime(startbuf, 20, "%H:%M:%S %m-%d-%Y", localtime(&keychainkey->accept.start));
+            if(keychainkey->accept.end == -1)
+                vty_out (vty, "%-8saccept lifetime (%s) - (infinite) [valid now] %s","", startbuf, VTY_NEWLINE);
+            else
+              {
+                strftime(endbuf, 20, "%H:%M:%S %m-%d-%Y", localtime(&keychainkey->accept.end));
+                vty_out (vty, "%-8saccept lifetime (%s) - (%s) [%s] %s","", startbuf, endbuf,
+                    (keychainkey->accept.end > time(NULL)) ? "valid now" : "invalid" ,VTY_NEWLINE);
+              }
+          }
+        else
+          vty_out (vty, "%-8saccept lifetime (always valid) - (always valid) [valid now] %s","", VTY_NEWLINE);
+
+        if(keychainkey->send.start)
+          {
+            strftime(startbuf, 20, "%H:%M:%S %m-%d-%Y", localtime(&keychainkey->send.start));
+            if(keychainkey->send.end == -1)
+              vty_out (vty, "%-8ssend lifetime (%s) - (infinite) [valid now] %s","", startbuf, VTY_NEWLINE);
+            else
+              {
+                strftime(endbuf, 20, "%H:%M:%S %m-%d-%Y", localtime(&keychainkey->send.end));
+                vty_out (vty, "%-8ssend lifetime (%s) - (%s) [%s] %s","", startbuf, endbuf,
+                    (keychainkey->send.end > time(NULL)) ? "valid now" : "invalid", VTY_NEWLINE);
+              }
+          }
+        else
+          vty_out (vty, "%-8ssend lifetime (always valid) - (always valid) [valid now] %s","", VTY_NEWLINE);
+    }
+
+}
+
 
 DEFUN (accept_lifetime_day_month_day_month,
        accept_lifetime_day_month_day_month_cmd,
@@ -847,6 +899,48 @@ DEFUN (send_lifetime_duration_month_day,
   return key_lifetime_duration_set (vty, &key->send, argv[0], argv[2], argv[1],
 				    argv[3], argv[4]);
 }
+
+
+DEFUN (show_ip_keychain,
+       show_ip_keychain_cmd,
+       "show key chain",
+       SHOW_STR
+       "Key information\n"
+       "Keychain information\n")
+{
+  struct listnode *node, *nnode;
+  struct list *keylist;
+  struct keychain *keychain;
+
+  if (argc)
+    {
+      keychain = keychain_lookup (argv[0]);
+      if(keychain != NULL)
+        keychain_dump(vty,keychain);
+      else
+        vty_out(vty,"Key chain with specified name not found%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  keylist = keychain_list_get();
+
+  for (ALL_LIST_ELEMENTS (keylist, node, nnode, keychain))
+    {
+      keychain_dump (vty, keychain);
+    }
+
+  return CMD_SUCCESS;
+}
+
+ALIAS (show_ip_keychain,
+       show_ip_keychain_word_cmd,
+       "show key chain WORD",
+       SHOW_STR
+       "Key information\n"
+       "Keychain information\n"
+       "Keychain name\n")
+
+
 
 static struct cmd_node keychain_node =
 {
@@ -981,4 +1075,9 @@ keychain_init ()
   install_element (KEYCHAIN_KEY_NODE, &send_lifetime_infinite_month_day_cmd);
   install_element (KEYCHAIN_KEY_NODE, &send_lifetime_duration_day_month_cmd);
   install_element (KEYCHAIN_KEY_NODE, &send_lifetime_duration_month_day_cmd);
+
+  install_element (ENABLE_NODE, &show_ip_keychain_cmd);
+  install_element (VIEW_NODE, &show_ip_keychain_cmd);
+  install_element (ENABLE_NODE, &show_ip_keychain_word_cmd);
+  install_element (VIEW_NODE, &show_ip_keychain_word_cmd);
 }

@@ -36,6 +36,7 @@
 #include "log.h"
 #include "sockopt.h"
 #include "table.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"

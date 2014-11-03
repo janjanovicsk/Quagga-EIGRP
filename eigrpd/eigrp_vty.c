@@ -669,23 +669,6 @@ static struct cmd_node eigrp_interface_node =
   1
 };
 
-/* eigrpd's interface node. */
-static struct cmd_node eigrp_keychain_node =
-{
-  KEYCHAIN_NODE,
-  "%s (config-keychain)# ",
-  1
-};
-
-/* eigrpd's interface node. */
-static struct cmd_node eigrp_keychain_key_node =
-{
-  KEYCHAIN_KEY_NODE,
-  "%s (config-keychain-key)# ",
-  1
-};
-
-
 void
 eigrp_vty_if_init (void)
 {
@@ -724,8 +707,6 @@ void
 eigrp_vty_init (void)
 {
   install_node (&eigrp_node, eigrp_config_write);
-  install_node (&eigrp_keychain_node, eigrp_write_keychain);
-  install_node (&eigrp_keychain_key_node, eigrp_write_keychain_key);
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
 

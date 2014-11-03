@@ -40,6 +40,7 @@
 #include "sockopt.h"
 #include "checksum.h"
 #include "md5.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
