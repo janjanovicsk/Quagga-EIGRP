@@ -515,6 +515,85 @@ DEFUN (eigrp_if_ip_holdinterval,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_authentication_mode,
+       eigrp_authentication_mode_cmd,
+       "ip authentication mode eigrp <1-65535> md5",
+       "Interface Internet Protocol config commands\n"
+       "Authentication subcommands\n"
+       "Mode\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Autonomous system number\n"
+       "Keyed message digest\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct listnode *node, *nnode;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  ifp = vty->index;
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if (ei->ifp == ifp)
+        {
+          /* Here we will turn on authentication for this particular interface */
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_authentication_keychain,
+       eigrp_authentication_keychain_cmd,
+       "ip authentication key-chain eigrp <1-65535> WORD",
+       "Interface Internet Protocol config commands\n"
+       "Authentication subcommands\n"
+       "Key-chain\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Autonomous system number\n"
+       "Name of key-chain\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct listnode *node, *nnode;
+  struct keychain *keychain;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  ifp = vty->index;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if (ei->ifp == ifp)
+        {
+          if (argc == 2)
+            {
+              /* Just for testing, here will come authentication configuration code*/
+              keychain = keychain_lookup (argv[1]);
+              if(keychain != NULL)
+                keychain_dump(vty,keychain);
+              else
+                vty_out(vty,"Key chain with specified name not found%s", VTY_NEWLINE);
+              return CMD_SUCCESS;
+            }
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
@@ -689,11 +768,9 @@ eigrp_vty_if_init (void)
   install_element (INTERFACE_NODE, &interface_desc_cmd);
   install_element (INTERFACE_NODE, &no_interface_desc_cmd);
 
-//  /* "ip eigrp dead-interval" commands. */
-//  install_element (INTERFACE_NODE, &ip_eigrp_dead_interval_cmd);
-//
-//  /* "ip eigrp hello-interval" commands. */
-//  install_element (INTERFACE_NODE, &ip_eigrp_hello_interval_cmd);
+  /* "description" commands. */
+  install_element (INTERFACE_NODE, &eigrp_authentication_mode_cmd);
+  install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
 }
 
 static void

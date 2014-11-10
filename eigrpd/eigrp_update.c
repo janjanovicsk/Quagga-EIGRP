@@ -477,6 +477,9 @@ void
 eigrp_update_send_all (struct eigrp *eigrp, struct eigrp_prefix_entry *pe,
                        struct eigrp_interface *exception)
 {
+  /* TODO: Split horizont with poison reverse*/
+
+
   struct eigrp_interface *iface;
   struct listnode *node;
 

@@ -118,6 +118,9 @@ struct eigrp_interface
   /* Neighbor information. */
   struct list *nbrs; /* EIGRP Neighbor List */
 
+  /* Currently configured authentication keychain used on this interface */
+  struct keychain *authentication_keychain;
+
   /* Threads. */
   struct thread *t_hello; /* timer */
 
@@ -140,6 +143,8 @@ struct eigrp_if_params
   DECLARE_IF_PARAM (u_int32_t, delay);
   DECLARE_IF_PARAM (u_char, reliability);
   DECLARE_IF_PARAM (u_char, load);
+
+  DECLARE_IF_PARAM (u_char, authentication);
 };
 
 enum

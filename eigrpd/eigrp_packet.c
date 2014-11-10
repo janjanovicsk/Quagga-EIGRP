@@ -903,14 +903,14 @@ eigrp_read_ipv4_tlv (struct stream *s)
       tlv->destination.s_addr = (tlv->destination_part[0]);
 
     }
-  if (tlv->prefix_length > 8 && tlv->prefix_length <= 16)
+  else if (tlv->prefix_length > 8 && tlv->prefix_length <= 16)
     {
       tlv->destination_part[0] = stream_getc(s);
       tlv->destination_part[1] = stream_getc(s);
       tlv->destination.s_addr = ((tlv->destination_part[1] << 8)
           + tlv->destination_part[0]);
     }
-  if (tlv->prefix_length > 16 && tlv->prefix_length <= 24)
+  else if (tlv->prefix_length > 16 && tlv->prefix_length <= 24)
     {
       tlv->destination_part[0] = stream_getc(s);
       tlv->destination_part[1] = stream_getc(s);
@@ -918,7 +918,7 @@ eigrp_read_ipv4_tlv (struct stream *s)
       tlv->destination.s_addr = ((tlv->destination_part[2] << 16)
           + (tlv->destination_part[1] << 8) + tlv->destination_part[0]);
     }
-  if (tlv->prefix_length > 24 && tlv->prefix_length <= 32)
+  else if (tlv->prefix_length > 24 && tlv->prefix_length <= 32)
     {
       tlv->destination_part[0] = stream_getc(s);
       tlv->destination_part[1] = stream_getc(s);

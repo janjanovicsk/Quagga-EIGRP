@@ -538,7 +538,7 @@ key_lifetime_infinite_set (struct vty *vty, struct key_range *krange,
   return CMD_SUCCESS;
 }
 
-static void
+void
 keychain_dump (struct vty *vty, struct keychain *keychain)
 {
   struct listnode *node, *nnode;
