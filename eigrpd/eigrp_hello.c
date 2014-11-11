@@ -259,7 +259,7 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	       inet_ntoa(nbr->src));
 
   size -= EIGRP_HEADER_SIZE;
-  if (size <= 0)
+  if (size < 0)
     return;
 
   tlv_header = (struct eigrp_tlv_hdr_type *)eigrph->tlv;
@@ -305,8 +305,9 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 
   } while (size > 0);
 
+
   /*If received packet is hello with Parameter TLV*/
-  if (eigrph->ack == 0)
+  if (ntohl(eigrph->ack) == 0)
     {
       /* increment statistics. */
       ei->hello_in++;
@@ -318,11 +319,12 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
       struct eigrp_packet *ep;
 
       ep = eigrp_fifo_tail(nbr->retrans_queue);
+
       if (ep != NULL)
 	{
 	  if (ntohl(eigrph->ack) == ep->sequence_number)
 	    {
-	      ep = eigrp_fifo_tail(nbr->retrans_queue);
+	      ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
 	      eigrp_packet_free(ep);
 	      if (nbr->retrans_queue->count > 0)
 		{
@@ -336,7 +338,7 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	{
 	  if (ntohl(eigrph->ack) == ep->sequence_number)
 	    {
-	      ep = eigrp_fifo_tail(nbr->multicast_queue);
+	      ep = eigrp_fifo_pop_tail(nbr->multicast_queue);
 	      eigrp_packet_free(ep);
 	      if (nbr->multicast_queue->count > 0)
 		{
@@ -349,6 +351,9 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
       zlog_debug("Hello Packet received from %s", inet_ntoa(nbr->src));
+
+  if (nbr->state == EIGRP_NEIGHBOR_DOWN)
+    eigrp_update_send_init(nbr);
 
 }
 

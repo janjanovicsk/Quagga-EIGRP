@@ -67,6 +67,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   struct eigrp_neighbor_entry *tentry;
   u_int32_t flags;
   u_int16_t type;
+  uint16_t  length;
 
   /* increment statistics. */
   ei->update_in++;
@@ -88,222 +89,146 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 
   if ((flags & EIGRP_CR_FLAG) == EIGRP_CR_FLAG)
     {
-      if (nbr->state >= EIGRP_NEIGHBOR_PENDING_INIT)
-        eigrp_hello_send_ack(nbr);
+//      if (nbr->state >= EIGRP_NEIGHBOR_PENDING_INIT)
+//        eigrp_hello_send_ack(nbr);
       return;
     }
 
-  /*If it is INIT update*/
-  if ((flags & EIGRP_INIT_FLAG) == EIGRP_INIT_FLAG)
+
+  switch(nbr->state)
     {
-      struct eigrp_packet *ep;
-
-      ep = eigrp_fifo_tail(nbr->retrans_queue);
-      if (ep != NULL)
+      case EIGRP_NEIGHBOR_DOWN:
         {
-          if (ntohl(eigrph->ack) == ep->sequence_number)
-            {
-              if (ntohl(eigrph->ack) == nbr->init_sequence_number)
-                {
-                  nbr->state = EIGRP_NEIGHBOR_PENDING_INIT;
-                  nbr->init_sequence_number = 0;
-                  ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-                  eigrp_packet_free(ep);
-                  eigrp_update_send_EOT(nbr);
-                  return;
-                }
-              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-              eigrp_packet_free(ep);
-              eigrp_update_send_init(nbr);
-              return;
-            }
+
+          break;
         }
-      else
+      case EIGRP_NEIGHBOR_PENDING:
         {
-          eigrp_update_send_init(nbr);
-          return;
-        }
-    } /*If it is END OF TABLE update*/
-  else if ((flags & EIGRP_EOT_FLAG) == EIGRP_EOT_FLAG)
-    {
-      struct eigrp_packet *ep;
-
-      zlog (NULL, LOG_DEBUG, "EIGRP_EOT_FLAG");
-
-      ep = eigrp_fifo_tail(nbr->retrans_queue);
-      if (ep != NULL)
-        {
-          if (ntohl(eigrph->ack) == ep->sequence_number)
+          if ((flags & EIGRP_INIT_FLAG) == EIGRP_INIT_FLAG)
             {
-              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-              eigrp_packet_free(ep);
-              if (nbr->retrans_queue->count > 0)
+              struct eigrp_packet *ep;
+
+              ep = eigrp_fifo_tail(nbr->retrans_queue);
+              if (ep != NULL)
                 {
-                  eigrp_send_packet_reliably(nbr);
+                  if (ntohl(eigrph->ack) == ep->sequence_number)
+                    {
+                      if (ntohl(eigrph->ack) == nbr->init_sequence_number)
+                        {
+                          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
+                          zlog_info("Neighbor adjacency became full with INIT");
+                          nbr->init_sequence_number = -1;
+                          ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+                          eigrp_packet_free(ep);
+                          eigrp_update_send_EOT(nbr);
+                          ep = eigrp_fifo_tail(nbr->retrans_queue);
+                        }
+                    }
                 }
-              if (ntohl(eigrph->ack) == nbr->init_sequence_number)
+            } /*If it is END OF TABLE update*/
+          else if ((flags & EIGRP_EOT_FLAG) == EIGRP_EOT_FLAG)
+            {
+              struct eigrp_packet *ep;
+              ep = eigrp_fifo_tail(nbr->retrans_queue);
+              if (ep != NULL)
                 {
-                  nbr->state = EIGRP_NEIGHBOR_PENDING_INIT;
-                  nbr->init_sequence_number = 0;
-                  eigrp_update_send_EOT(nbr);
+                  if (ntohl(eigrph->ack) == ep->sequence_number)
+                    {
+                      if (ntohl(eigrph->ack) == nbr->init_sequence_number)
+                        {
+                          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
+                          zlog_info("Neighbor adjacency became full with EOT");
+                          nbr->init_sequence_number = -1;
+                          ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
+                          eigrp_packet_free(ep);
+                          eigrp_update_send_EOT(nbr);
+                        }
+                    }
                 }
             }
+          break;
         }
-      /*If there is topology information*/
-      while (s->endp > s->getp)
-        {
-          type = stream_getw(s);
-          if (type == EIGRP_TLV_IPv4_INT)
-            {
-              stream_set_getp(s, s->getp - sizeof(u_int16_t));
-
-              tlv = eigrp_read_ipv4_tlv(s);
-
-              /*searching if destination exists */
-              struct prefix_ipv4 *dest_addr;
-              dest_addr = prefix_ipv4_new();
-              dest_addr->prefix = tlv->destination;
-              dest_addr->prefixlen = tlv->prefix_length;
-              struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
-                  eigrp->topology_table, dest_addr);
-
-              /*if exists it comes to DUAL*/
-              if (dest != NULL)
-                {
-                  struct eigrp_fsm_action_message *msg;
-                  msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
-                      sizeof(struct eigrp_fsm_action_message));
-                  struct eigrp_neighbor_entry *entry =
-                      eigrp_prefix_entry_lookup(dest->entries, nbr);
-
-                  msg->packet_type = EIGRP_OPC_UPDATE;
-                  msg->eigrp = eigrp;
-                  msg->data_type = EIGRP_TLV_IPv4_INT;
-                  msg->adv_router = nbr;
-                  msg->data.ipv4_int_type = tlv;
-                  msg->entry = entry;
-                  msg->prefix = dest;
-                  int event = eigrp_get_fsm_event(msg);
-                  EIGRP_FSM_EVENT_SCHEDULE(msg, event);
-                }
-              else
-                {
-                  /*Here comes topology information save*/
-                  tnode = eigrp_prefix_entry_new();
-                  tnode->destination->family = AF_INET;
-                  tnode->destination->prefix = tlv->destination;
-                  tnode->destination->prefixlen = tlv->prefix_length;
-                  tnode->state = EIGRP_FSM_STATE_PASSIVE;
-                  tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
-
-                  tentry = eigrp_neighbor_entry_new();
-                  tentry->ei = ei;
-                  tentry->adv_router = nbr;
-                  tentry->reported_metric = tlv->metric;
-                  tentry->reported_distance = eigrp_calculate_metrics(eigrp,
-                      &tlv->metric);
-
-                  tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
-
-                  tnode->fdistance = tnode->distance = tnode->rdistance =
-                      tentry->distance;
-                  tentry->prefix = tnode;
-                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
-
-                  eigrp_prefix_entry_add(eigrp->topology_table, tnode);
-                  eigrp_neighbor_entry_add(tnode, tentry);
-                  tnode->distance = tnode->fdistance = tnode->rdistance =
-                      tentry->distance;
-                  tnode->reported_metric = tentry->total_metric;
-                  eigrp_topology_update_node_flags(tnode);
-                  eigrp_update_send_all(eigrp, tnode, ei);
-                }
-              XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
-            }
-        }
-
-      if (nbr->state != EIGRP_NEIGHBOR_UP)
+      case EIGRP_NEIGHBOR_UP:
         {
           eigrp_hello_send_ack(nbr);
-          nbr->state = EIGRP_NEIGHBOR_UP;
-          zlog_info("Neighbor adjacency became full");
-          return;
+          break;
         }
-    }/*regular update*/
-  else
-    {
-      /*If there is topology information*/
-      while (s->endp > s->getp)
-        {
-          type = stream_getw(s);
-          if (type == EIGRP_TLV_IPv4_INT)
-            {
-              stream_set_getp(s, s->getp - sizeof(u_int16_t));
-
-              tlv = eigrp_read_ipv4_tlv(s);
-
-              /*searching if destination exists */
-              struct prefix_ipv4 *dest_addr;
-              dest_addr = prefix_ipv4_new();
-              dest_addr->prefix = tlv->destination;
-              dest_addr->prefixlen = tlv->prefix_length;
-              struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
-                  eigrp->topology_table, dest_addr);
-              /*if exists it comes to DUAL*/
-              if (dest != NULL)
-                {
-                  struct eigrp_fsm_action_message *msg;
-                  msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
-                      sizeof(struct eigrp_fsm_action_message));
-                  struct eigrp_neighbor_entry *entry =
-                      eigrp_prefix_entry_lookup(dest->entries, nbr);
-
-                  msg->packet_type = EIGRP_OPC_UPDATE;
-                  msg->eigrp = eigrp;
-                  msg->data_type = EIGRP_TLV_IPv4_INT;
-                  msg->adv_router = nbr;
-                  msg->data.ipv4_int_type = tlv;
-                  msg->entry = entry;
-                  msg->prefix = dest;
-                  int event = eigrp_get_fsm_event(msg);
-                  EIGRP_FSM_EVENT_SCHEDULE(msg, event);
-                }
-              else
-                {
-                  /*Here comes topology information save*/
-                  tnode = eigrp_prefix_entry_new();
-                  tnode->destination->family = AF_INET;
-                  tnode->destination->prefix = tlv->destination;
-                  tnode->destination->prefixlen = tlv->prefix_length;
-                  tnode->state = EIGRP_FSM_STATE_PASSIVE;
-                  tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
-
-                  tentry = eigrp_neighbor_entry_new();
-                  tentry->ei = ei;
-                  tentry->adv_router = nbr;
-                  tentry->reported_metric = tlv->metric;
-                  tentry->reported_distance = eigrp_calculate_metrics(eigrp,
-                      &tlv->metric);
-                  tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
-                  tentry->prefix = tnode;
-                  tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
-
-                  eigrp_prefix_entry_add(eigrp->topology_table, tnode);
-                  eigrp_neighbor_entry_add(tnode, tentry);
-                  tnode->distance = tnode->fdistance = tnode->rdistance =
-                      tentry->distance;
-                  tnode->reported_metric = tentry->total_metric;
-                  eigrp_topology_update_node_flags(tnode);
-                  eigrp_update_send_all(eigrp, tnode, ei);
-
-                }
-              XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
-            }
-        }
+      default:
+        break;
     }
 
-  if (nbr->state >= EIGRP_NEIGHBOR_PENDING_INIT)
-    eigrp_hello_send_ack(nbr);
+  /*If there is topology information*/
+  while (s->endp > s->getp)
+    {
+      type = stream_getw(s);
+      if (type == EIGRP_TLV_IPv4_INT)
+        {
+          stream_set_getp(s, s->getp - sizeof(u_int16_t));
+
+          tlv = eigrp_read_ipv4_tlv(s);
+
+          /*searching if destination exists */
+          struct prefix_ipv4 *dest_addr;
+          dest_addr = prefix_ipv4_new();
+          dest_addr->prefix = tlv->destination;
+          dest_addr->prefixlen = tlv->prefix_length;
+          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
+              eigrp->topology_table, dest_addr);
+
+          /*if exists it comes to DUAL*/
+          if (dest != NULL)
+            {
+              struct eigrp_fsm_action_message *msg;
+              msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
+                  sizeof(struct eigrp_fsm_action_message));
+              struct eigrp_neighbor_entry *entry =
+                  eigrp_prefix_entry_lookup(dest->entries, nbr);
+
+              msg->packet_type = EIGRP_OPC_UPDATE;
+              msg->eigrp = eigrp;
+              msg->data_type = EIGRP_TLV_IPv4_INT;
+              msg->adv_router = nbr;
+              msg->data.ipv4_int_type = tlv;
+              msg->entry = entry;
+              msg->prefix = dest;
+              int event = eigrp_get_fsm_event(msg);
+              EIGRP_FSM_EVENT_SCHEDULE(msg, event);
+            }
+          else
+            {
+              /*Here comes topology information save*/
+              tnode = eigrp_prefix_entry_new();
+              tnode->destination->family = AF_INET;
+              tnode->destination->prefix = tlv->destination;
+              tnode->destination->prefixlen = tlv->prefix_length;
+              tnode->state = EIGRP_FSM_STATE_PASSIVE;
+              tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
+
+              tentry = eigrp_neighbor_entry_new();
+              tentry->ei = ei;
+              tentry->adv_router = nbr;
+              tentry->reported_metric = tlv->metric;
+              tentry->reported_distance = eigrp_calculate_metrics(eigrp,
+                  &tlv->metric);
+
+              tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
+
+              tnode->fdistance = tnode->distance = tnode->rdistance =
+                  tentry->distance;
+              tentry->prefix = tnode;
+              tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
+
+              eigrp_prefix_entry_add(eigrp->topology_table, tnode);
+              eigrp_neighbor_entry_add(tnode, tentry);
+              tnode->distance = tnode->fdistance = tnode->rdistance =
+                  tentry->distance;
+              tnode->reported_metric = tentry->total_metric;
+              eigrp_topology_update_node_flags(tnode);
+              eigrp_update_send_all(eigrp, tnode, ei);
+            }
+          XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
+        }
+    }
 }
 
 /*send EIGRP Update packet*/
@@ -334,6 +259,7 @@ eigrp_update_send_init (struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   nbr->init_sequence_number = nbr->ei->eigrp->sequence_number;
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
+  nbr->ei->eigrp->sequence_number++;
 
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
     zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
