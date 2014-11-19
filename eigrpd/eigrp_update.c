@@ -78,8 +78,14 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   /* neighbor must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
 
-  nbr->recv_sequence_number = ntohl(eigrph->sequence);
   flags = ntohl(eigrph->flags);
+
+  if (flags & EIGRP_CR_FLAG)
+    {
+      return;
+    }
+
+  nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
     zlog_debug("Processing Update size[%u] int(%s) nbr(%s) seq [%u] flags [%0x]",
@@ -87,74 +93,18 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
                inet_ntoa(nbr->src),
                nbr->recv_sequence_number, flags);
 
-  if ((flags & EIGRP_CR_FLAG) == EIGRP_CR_FLAG)
+
+  /*
+   * We don't need to send separate Ack for INIT Update. INIT will be acked in EOT Update.
+   */
+  if ((nbr->state == EIGRP_NEIGHBOR_UP) && !(flags & EIGRP_INIT_FLAG))
     {
-//      if (nbr->state >= EIGRP_NEIGHBOR_PENDING_INIT)
-//        eigrp_hello_send_ack(nbr);
-      return;
+      eigrp_hello_send_ack(nbr);
     }
 
-
-  switch(nbr->state)
+    if((flags & EIGRP_INIT_FLAG) && (nbr->init_sequence_number== 0))
     {
-      case EIGRP_NEIGHBOR_DOWN:
-        {
-
-          break;
-        }
-      case EIGRP_NEIGHBOR_PENDING:
-        {
-          if ((flags & EIGRP_INIT_FLAG) == EIGRP_INIT_FLAG)
-            {
-              struct eigrp_packet *ep;
-
-              ep = eigrp_fifo_tail(nbr->retrans_queue);
-              if (ep != NULL)
-                {
-                  if (ntohl(eigrph->ack) == ep->sequence_number)
-                    {
-                      if (ntohl(eigrph->ack) == nbr->init_sequence_number)
-                        {
-                          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
-                          zlog_info("Neighbor adjacency became full with INIT");
-                          nbr->init_sequence_number = -1;
-                          ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-                          eigrp_packet_free(ep);
-                          eigrp_update_send_EOT(nbr);
-                          ep = eigrp_fifo_tail(nbr->retrans_queue);
-                        }
-                    }
-                }
-            } /*If it is END OF TABLE update*/
-          else if ((flags & EIGRP_EOT_FLAG) == EIGRP_EOT_FLAG)
-            {
-              struct eigrp_packet *ep;
-              ep = eigrp_fifo_tail(nbr->retrans_queue);
-              if (ep != NULL)
-                {
-                  if (ntohl(eigrph->ack) == ep->sequence_number)
-                    {
-                      if (ntohl(eigrph->ack) == nbr->init_sequence_number)
-                        {
-                          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
-                          zlog_info("Neighbor adjacency became full with EOT");
-                          nbr->init_sequence_number = -1;
-                          ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-                          eigrp_packet_free(ep);
-                          eigrp_update_send_EOT(nbr);
-                        }
-                    }
-                }
-            }
-          break;
-        }
-      case EIGRP_NEIGHBOR_UP:
-        {
-          eigrp_hello_send_ack(nbr);
-          break;
-        }
-      default:
-        break;
+        eigrp_update_send_init(nbr);
     }
 
   /*If there is topology information*/

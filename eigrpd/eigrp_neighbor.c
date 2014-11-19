@@ -206,11 +206,6 @@ eigrp_nbr_state_str (struct eigrp_neighbor *nbr)
 	state = "Waiting for Init";
 	break;
       }
-//    case EIGRP_NEIGHBOR_PENDING_INIT:
-//      {
-//	state = "Waiting for Init Ack";
-//	break;
-//      }
     case EIGRP_NEIGHBOR_UP:
       {
 	state = "Up";
@@ -242,14 +237,6 @@ eigrp_nbr_state_update (struct eigrp_neighbor *nbr)
 			nbr->v_holddown);
 	break;
       }
-//    case EIGRP_NEIGHBOR_PENDING_INIT:
-//      {
-//	/*Reset Hold Down Timer for neighbor*/
-//	THREAD_OFF(nbr->t_holddown);
-//	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired, nbr,
-//			nbr->v_holddown);
-//	break;
-//      }
     case EIGRP_NEIGHBOR_UP:
       {
 	/*Reset Hold Down Timer for neighbor*/

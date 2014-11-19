@@ -33,9 +33,8 @@
 
 #define EIGRP_NEIGHBOR_DOWN           0
 #define EIGRP_NEIGHBOR_PENDING        1
-#define EIGRP_NEIGHBOR_PENDING_INIT   2
-#define EIGRP_NEIGHBOR_UP             3
-#define EIGRP_NEIGHBOR_STATE_MAX      4
+#define EIGRP_NEIGHBOR_UP             2
+#define EIGRP_NEIGHBOR_STATE_MAX      3
 
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */

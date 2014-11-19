@@ -146,11 +146,12 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
 
       if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN)
 	{
-	  eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
+          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
 	  zlog_info("Neighbor %s (%s) is pending: new adjacency",
 		    inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
-	  eigrp_update_send_init(nbr);
+	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
+	    eigrp_update_send_init(nbr);
 	}
     }
   else
@@ -313,47 +314,10 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
       ei->hello_in++;
       eigrp_nbr_state_update(nbr);
 
-    } /*If packet is only ack*/
-  else
-    {
-      struct eigrp_packet *ep;
-
-      ep = eigrp_fifo_tail(nbr->retrans_queue);
-
-      if (ep != NULL)
-	{
-	  if (ntohl(eigrph->ack) == ep->sequence_number)
-	    {
-	      ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-	      eigrp_packet_free(ep);
-	      if (nbr->retrans_queue->count > 0)
-		{
-		  eigrp_send_packet_reliably(nbr);
-		}
-	      return;
-	    }
-	}
-      ep = eigrp_fifo_tail(nbr->multicast_queue);
-      if (ep != NULL)
-	{
-	  if (ntohl(eigrph->ack) == ep->sequence_number)
-	    {
-	      ep = eigrp_fifo_pop_tail(nbr->multicast_queue);
-	      eigrp_packet_free(ep);
-	      if (nbr->multicast_queue->count > 0)
-		{
-		  eigrp_send_packet_reliably(nbr);
-		}
-	      return;
-	    }
-	}
     }
 
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
       zlog_debug("Hello Packet received from %s", inet_ntoa(nbr->src));
-
-  if (nbr->state == EIGRP_NEIGHBOR_DOWN)
-    eigrp_update_send_init(nbr);
 
 }
 
