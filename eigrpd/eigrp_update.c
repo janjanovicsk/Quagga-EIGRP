@@ -102,8 +102,12 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
       eigrp_hello_send_ack(nbr);
     }
 
-    if((flags & EIGRP_INIT_FLAG) && (nbr->init_sequence_number== 0))
+    if((flags & EIGRP_INIT_FLAG) && (nbr->state == EIGRP_NEIGHBOR_UP))
     {
+        /*
+         * TODO: RESET NEIGHBOR, HIS TOPOLOGY INFORMATION
+         */
+
         eigrp_update_send_init(nbr);
     }
 
