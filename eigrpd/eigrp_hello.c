@@ -150,6 +150,9 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
 	  zlog_info("Neighbor %s (%s) is pending: new adjacency",
 		    inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
+	  /* Expedited hello sent */
+	    eigrp_hello_send(nbr->ei);
+
 	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
 	    eigrp_update_send_init(nbr);
 	}
