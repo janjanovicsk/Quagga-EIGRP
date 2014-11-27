@@ -131,6 +131,8 @@ struct eigrp_interface
   u_int32_t update_in; /* Update message input count. */
   u_int32_t query_in; /* Querry message input count. */
   u_int32_t reply_in; /* Querry message input count. */
+
+  u_int32_t crypt_seqnum;             /* Cryptographic Sequence Number */
 };
 
 struct eigrp_if_params
@@ -199,9 +201,12 @@ struct eigrp_neighbor
 
   struct eigrp_fifo *retrans_queue;
   struct eigrp_fifo *multicast_queue;
+
+  u_int32_t crypt_seqnum;           /* Cryptographic Sequence Number. */
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 struct eigrp_packet
 {
@@ -249,6 +254,23 @@ struct eigrp_header
 }__attribute__((packed));
 #define EIGRP_HEADER_SIZE 20
 
+
+/**
+ * Generic TLV type used for packet decoding.
+ *
+ *      +-----+------------------+
+ *      |     |     |            |
+ *      | Type| Len |    Vector  |
+ *      |     |     |            |
+ *      +-----+------------------+
+ */
+struct eigrp_tlv_hdr_type
+{
+  u_int16_t type;
+  u_int16_t length;
+  uint8_t  value[0];
+}__attribute__((packed));
+
 struct TLV_Parameter_Type
 {
   u_int16_t type;
@@ -264,6 +286,15 @@ struct TLV_Parameter_Type
 
 struct TLV_Authentication_Type
 {
+  u_int16_t type;
+  u_int16_t length;
+  u_int16_t auth_type;
+  u_int16_t auth_length;
+  u_int32_t key_id;
+  u_int32_t key_sequence;
+  u_char Nullpad[8];
+  u_char digest[EIGRP_AUTH_MD5_SIZE];
+
 
 }__attribute__((packed));
 

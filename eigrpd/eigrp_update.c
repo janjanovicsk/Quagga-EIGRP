@@ -104,14 +104,12 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 
     if(flags & EIGRP_INIT_FLAG)
     {
-        eigrp_update_send_init(nbr);
-        /*
-         * TODO: RESET NEIGHBOR, HIS TOPOLOGY INFORMATION
-         */
         if (nbr->state == EIGRP_NEIGHBOR_UP)
           {
-
+            eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
           }
+        eigrp_update_send_init(nbr);
+
     }
 
   /*If there is topology information*/

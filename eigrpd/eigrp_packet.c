@@ -40,6 +40,7 @@
 #include "sockopt.h"
 #include "checksum.h"
 #include "md5.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -75,6 +76,43 @@ static struct stream * eigrp_recv_packet (int, struct interface **, struct strea
 static int eigrp_verify_header (struct stream *, struct eigrp_interface *, struct ip *,
 				struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
+
+static int
+eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, struct key *auth_key, struct TLV_Authentication_Type *auth_TLV)
+{
+  unsigned char digest[EIGRP_AUTH_MD5_SIZE];
+  MD5_CTX ctx;
+  void *ibuf;
+  u_int32_t t;
+
+  ibuf = STREAM_DATA (s);
+
+
+   /*  Note that quagga_time /deliberately/ is not used here */
+  t = (time(NULL) & 0xFFFFFFFF);
+  if (t > ei->crypt_seqnum)
+    ei->crypt_seqnum = t;
+  else
+    ei->crypt_seqnum++;
+
+  auth_TLV->key_sequence = htonl (ei->crypt_seqnum);
+
+  /* Generate a digest for the entire packet + our secret key. */
+  memset(&ctx, 0, sizeof(ctx));
+  MD5Init(&ctx);
+  MD5Update(&ctx, ibuf, ntohs (EIGRP_HEADER_LEN));
+  MD5Update(&ctx, auth_key, EIGRP_AUTH_MD5_SIZE);
+  MD5Final(digest, &ctx);
+
+
+
+  /* Append md5 digest to the end of the stream. */
+  memcpy(auth_TLV->digest,digest,sizeof(digest));
+
+
+  return EIGRP_AUTH_MD5_SIZE;
+}
+
 
 /*
  * eigrp_packet_dump
@@ -1053,4 +1091,55 @@ eigrp_add_internalTLV_to_stream (struct stream *s,
     }
 
   return length;
+}
+
+u_int16_t
+eigrp_add_authTLV_to_stream (struct stream *s,
+    struct eigrp_interface *ei)
+{
+
+  struct TLV_Authentication_Type *authTLV;
+  authTLV = eigrp_authTLV_new();
+
+  authTLV->type = htons(EIGRP_TLV_AUTH);
+  authTLV->length = htons(EIGRP_AUTH_MD5_TLV_SIZE);
+  authTLV->auth_type = htons(EIGRP_AUTH_TYPE_MD5);
+  authTLV->auth_length = htons(EIGRP_AUTH_TYPE_MD5_LEN);
+
+  struct listnode *node, *nnode;
+  struct key *key;
+
+  for (ALL_LIST_ELEMENTS (ei->authentication_keychain->key, node, nnode, key))
+      {
+        if(key_send_valid(key))
+          {
+            authTLV->key_id = htonl(key->index);
+            eigrp_make_md5_digest(ei,s,key,authTLV);
+            stream_put(s,authTLV,sizeof(struct TLV_Authentication_Type));
+            eigrp_authTLV_free(authTLV);
+            return EIGRP_AUTH_MD5_TLV_SIZE;
+          }
+      }
+
+  eigrp_authTLV_free(authTLV);
+  return NULL;
+
+}
+
+struct TLV_Authentication_Type *
+eigrp_authTLV_new ()
+{
+  struct TLV_Authentication_Type *new;
+
+  new = XCALLOC(MTYPE_EIGRP_AUTH_TLV, sizeof(struct TLV_Authentication_Type));
+
+  return new;
+}
+
+void
+eigrp_authTLV_free (struct TLV_Authentication_Type *authTLV)
+{
+
+  XFREE(MTYPE_EIGRP_AUTH_TLV, authTLV);
+
 }

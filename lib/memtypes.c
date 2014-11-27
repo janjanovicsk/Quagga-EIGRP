@@ -269,6 +269,7 @@ struct memory_list memory_list_eigrp[] =
   { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"       },
   { MTYPE_EIGRP_NEIGHBOR,        "EIGRP neighbor structure"     },
   { MTYPE_EIGRP_IPV4_INT_TLV,    "EIGRP Internal IPv4 TLV "     },
+  { MTYPE_EIGRP_AUTH_TLV,        "EIGRP Authentication TLV "    },
   { MTYPE_EIGRP_FSM_MSG,         "EIGRP FSM action message"     },
   { -1, NULL },
 };

@@ -64,27 +64,46 @@ config_write_network (struct vty *vty, struct eigrp *eigrp)
         vty_out (vty, " network %s/%d %s",
                  inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen, VTY_NEWLINE);
       }
+  /*Separate EIGRP configuration from the rest of the config*/
+  vty_out (vty, "!%s", VTY_NEWLINE);
+
+  return 0;
+}
+
+static int
+config_write_interfaces (struct vty *vty, struct eigrp *eigrp)
+{
+  struct eigrp_interface *ei;
+  struct listnode *node;
+
+  for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+    {
+      vty_out (vty, "interface %s%s", ei->ifp->name, VTY_NEWLINE);
+
+      if ((IF_DEF_PARAMS (ei->ifp)->authentication) == EIGRP_AUTHENTICATION_MD5_ON)
+        {
+          vty_out (vty, " ip authentication mode eigrp %d md5%s", eigrp->AS, VTY_NEWLINE);
+        }
+
+      if ((IF_DEF_PARAMS (ei->ifp)->v_hello) != EIGRP_HELLO_INTERVAL_DEFAULT)
+        {
+          vty_out (vty, " ip hello-interval eigrp %d%s", IF_DEF_PARAMS (ei->ifp)->v_hello, VTY_NEWLINE);
+        }
+
+      if ((IF_DEF_PARAMS (ei->ifp)->v_wait) != EIGRP_HELLO_INTERVAL_DEFAULT)
+        {
+          vty_out (vty, "ip hold-time eigrp %d%s", IF_DEF_PARAMS (ei->ifp)->v_wait, VTY_NEWLINE);
+        }
+
+      /*Separate this EIGRP interface configuration from the others*/
+        vty_out (vty, "!%s", VTY_NEWLINE);
+    }
 
   return 0;
 }
 
 static int
 eigrp_write_interface (struct vty *vty)
-{
-  int write=0;
-
-  return write;
-}
-
-static int
-eigrp_write_keychain (struct vty *vty)
-{
-  int write=0;
-
-  return write;
-}
-static int
-eigrp_write_keychain_key (struct vty *vty)
 {
   int write=0;
 
@@ -543,6 +562,7 @@ DEFUN (eigrp_authentication_mode,
       if (ei->ifp == ifp)
         {
           /* Here we will turn on authentication for this particular interface */
+          IF_DEF_PARAMS (ifp)->authentication = EIGRP_AUTHENTICATION_MD5_ON;
         }
     }
 
@@ -583,7 +603,7 @@ DEFUN (eigrp_authentication_keychain,
               /* Just for testing, here will come authentication configuration code*/
               keychain = keychain_lookup (argv[1]);
               if(keychain != NULL)
-                keychain_dump(vty,keychain);
+                ei->authentication_keychain = keychain;
               else
                 vty_out(vty,"Key chain with specified name not found%s", VTY_NEWLINE);
               return CMD_SUCCESS;
@@ -629,71 +649,12 @@ eigrp_config_write (struct vty *vty)
                  inet_ntoa (router_id_static), VTY_NEWLINE);
       }
 
-//      /* log-adjacency-changes flag print. */
-//      if (CHECK_FLAG (eigrp->config, EIGRP_LOG_ADJACENCY_CHANGES))
-//        {
-//          vty_out (vty, " log-adjacency-changes");
-//          if (CHECK_FLAG (eigrp->config, EIGRP_LOG_ADJACENCY_DETAIL))
-//            vty_out (vty, " detail");
-//          vty_out (vty, "%s", VTY_NEWLINE);
-//        }
-
-      /* SPF timers print. */
-//      if (eigrp->spf_delay != EIGRP_SPF_DELAY_DEFAULT ||
-//          eigrp->spf_holdtime != EIGRP_SPF_HOLDTIME_DEFAULT ||
-//          eigrp->spf_max_holdtime != EIGRP_SPF_MAX_HOLDTIME_DEFAULT)
-//        vty_out (vty, " timers throttle spf %d %d %d%s",
-//                 eigrp->spf_delay, eigrp->spf_holdtime,
-//                 eigrp->spf_max_holdtime, VTY_NEWLINE);
-
-//      /* Max-metric router-lsa print */
-//      config_write_stub_router (vty, eigrp);
-
-//      /* SPF refresh parameters print. */
-//      if (eigrp->lsa_refresh_interval != EIGRP_LSA_REFRESH_INTERVAL_DEFAULT)
-//        vty_out (vty, " refresh timer %d%s",
-//                 eigrp->lsa_refresh_interval, VTY_NEWLINE);
-//
-//      /* Redistribute information print. */
-//      config_write_eigrp_redistribute (vty, eigrp);
-//
-//      /* passive-interface print. */
-//      if (eigrp->passive_interface_default == EIGRP_IF_PASSIVE)
-//        vty_out (vty, " passive-interface default%s", VTY_NEWLINE);
-//
-//      for (ALL_LIST_ELEMENTS_RO (om->iflist, node, ifp))
-//        if (EIGRP_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (ifp), passive_interface)
-//            && IF_DEF_PARAMS (ifp)->passive_interface !=
-//                              eigrp->passive_interface_default)
-//          {
-//            vty_out (vty, " %spassive-interface %s%s",
-//                     IF_DEF_PARAMS (ifp)->passive_interface ? "" : "no ",
-//                     ifp->name, VTY_NEWLINE);
-//          }
-//      for (ALL_LIST_ELEMENTS_RO (eigrp->oiflist, node, oi))
-//        {
-//          if (!EIGRP_IF_PARAM_CONFIGURED (oi->params, passive_interface))
-//            continue;
-//          if (EIGRP_IF_PARAM_CONFIGURED (IF_DEF_PARAMS (oi->ifp),
-//                                        passive_interface))
-//            {
-//              if (oi->params->passive_interface == IF_DEF_PARAMS (oi->ifp)->passive_interface)
-//                continue;
-//            }
-//          else if (oi->params->passive_interface == eigrp->passive_interface_default)
-//            continue;
-//
-//          vty_out (vty, " %spassive-interface %s %s%s",
-//                   oi->params->passive_interface ? "" : "no ",
-//                   oi->ifp->name,
-//                   inet_ntoa (oi->address->u.prefix4), VTY_NEWLINE);
-//        }
-
       /* Network area print. */
       config_write_network (vty, eigrp);
 
-//      /* Area config print. */
-//      config_write_eigrp_area (vty, eigrp);
+      /* Interface config print */
+      config_write_interfaces (vty, eigrp);
+
 //
 //      /* static neighbor print. */
 //      config_write_eigrp_nbr_nbma (vty, eigrp);

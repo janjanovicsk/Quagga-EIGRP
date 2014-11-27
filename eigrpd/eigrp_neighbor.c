@@ -36,6 +36,7 @@
 #include "stream.h"
 #include "table.h"
 #include "log.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -187,6 +188,7 @@ eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
       nbr->retrans_queue = eigrp_fifo_new ();
       nbr->multicast_queue = eigrp_fifo_new ();
 
+      nbr->crypt_seqnum = 0;
     }
 }
 

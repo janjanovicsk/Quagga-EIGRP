@@ -37,6 +37,7 @@
 #include "command.h"
 #include "stream.h"
 #include "log.h"
+#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -92,6 +93,8 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 
   /* Initialize neighbor list. */
   ei->nbrs = list_new ();
+
+  ei->crypt_seqnum = time (NULL);
 
   return ei;
 }
@@ -174,6 +177,9 @@ eigrp_if_new_hook (struct interface *ifp)
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), load);
   IF_DEF_PARAMS (ifp)->load = (u_char) EIGRP_LOAD_DEFAULT;
 
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), authentication);
+  IF_DEF_PARAMS (ifp)->authentication = (u_char) EIGRP_AUTHENTICATION_MD5_OFF;
+
   return rc;
 }
 
@@ -193,6 +199,7 @@ eigrp_new_if_params (void)
   UNSET_IF_PARAM (eip, delay);
   UNSET_IF_PARAM (eip, reliability);
   UNSET_IF_PARAM (eip, load);
+  UNSET_IF_PARAM (eip, authentication);
 
   return eip;
 }

@@ -583,6 +583,34 @@ keychain_dump (struct vty *vty, struct keychain *keychain)
 
 }
 
+u_char
+key_accept_valid(struct key *key)
+{
+  if (key->accept.start)
+    {
+      if((key->accept.end == -1) || (key->accept.end > time(NULL)))
+        return KEYCHAIN_KEY_VALID;
+    }
+  else
+    return KEYCHAIN_KEY_VALID;
+
+  return KEYCHAIN_KEY_INVALID;
+}
+
+u_char
+key_send_valid(struct key *key)
+{
+  if (key->send.start)
+    {
+      if((key->send.end == -1) || (key->send.end > time(NULL)))
+        return KEYCHAIN_KEY_VALID;
+    }
+  else
+    return KEYCHAIN_KEY_VALID;
+
+  return KEYCHAIN_KEY_INVALID;
+}
+
 
 DEFUN (accept_lifetime_day_month_day_month,
        accept_lifetime_day_month_day_month_cmd,

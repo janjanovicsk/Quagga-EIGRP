@@ -438,6 +438,12 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
     // encode common header feilds
     eigrp_packet_header_init(EIGRP_OPC_HELLO, ei, ep->s, 0, 0, ack);
 
+    // encode Authentication TLV
+    if((IF_DEF_PARAMS (ei->ifp)->authentication) && (ei->authentication_keychain != NULL))
+      {
+        length += eigrp_add_authTLV_to_stream(ep->s,ei);
+      }
+
     // encode Hello packet with approperate TLVs
     length += eigrp_hello_parameter_encode(ei, ep->s);
 
@@ -530,6 +536,7 @@ eigrp_hello_send (struct eigrp_interface *ei)
 
   /* if packet was succesfully created, then add it to the interface queue */
   ep = eigrp_hello_encode(ei, htonl(EIGRP_MULTICAST_ADDRESS), 0);
+
   if (ep)
     {
       // Add packet to the top of the interface output queue
