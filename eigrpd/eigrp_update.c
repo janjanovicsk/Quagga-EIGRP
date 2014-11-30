@@ -181,7 +181,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               eigrp_topology_update_node_flags(tnode);
               eigrp_update_send_all(eigrp, tnode, ei);
             }
-          XFREE(MTYPE_EIGRP_IPV4_INT_TLV, tlv);
+          eigrp_IPv4_InternalTLV_free (tlv);
         }
     }
 }

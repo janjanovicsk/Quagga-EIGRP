@@ -51,9 +51,6 @@
 #endif /* IPPROTO_EIGRPIGP */
 
 #define EIGRP_AUTH_MD5_TLV_SIZE     40
-#define EIGRP_AUTHENTICATION_MD5_ON     1
-#define EIGRP_AUTHENTICATION_MD5_OFF     0
-#define EIGRP_AUTH_MD5_SIZE 16U
 
 /* IP TTL for EIGRP protocol. */
 #define EIGRP_IP_TTL             1

@@ -96,7 +96,9 @@ extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_neighbor_ent
 extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
 
-extern struct TLV_Authentication_Type * eigrp_authTLV_new ();
+extern struct TLV_Authentication_Type *eigrp_authTLV_new ();
 extern void eigrp_authTLV_free (struct TLV_Authentication_Type *);
+extern struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new ();
+extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

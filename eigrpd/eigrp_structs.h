@@ -118,9 +118,6 @@ struct eigrp_interface
   /* Neighbor information. */
   struct list *nbrs; /* EIGRP Neighbor List */
 
-  /* Currently configured authentication keychain used on this interface */
-  struct keychain *authentication_keychain;
-
   /* Threads. */
   struct thread *t_hello; /* timer */
 
@@ -146,7 +143,8 @@ struct eigrp_if_params
   DECLARE_IF_PARAM (u_char, reliability);
   DECLARE_IF_PARAM (u_char, load);
 
-  DECLARE_IF_PARAM (u_char, authentication);
+  DECLARE_IF_PARAM (char *, auth_keychain );    /* Associated keychain with interface*/
+  DECLARE_IF_PARAM (int, auth_type);         /* EIGRP authentication type */
 };
 
 enum
@@ -293,8 +291,7 @@ struct TLV_Authentication_Type
   u_int32_t key_id;
   u_int32_t key_sequence;
   u_char Nullpad[8];
-  u_char digest[EIGRP_AUTH_MD5_SIZE];
-
+  u_char digest[EIGRP_AUTH_TYPE_MD5_LEN];
 
 }__attribute__((packed));
 

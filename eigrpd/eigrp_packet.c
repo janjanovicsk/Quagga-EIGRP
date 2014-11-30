@@ -80,10 +80,11 @@ static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 static int
 eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, struct key *auth_key, struct TLV_Authentication_Type *auth_TLV)
 {
-  unsigned char digest[EIGRP_AUTH_MD5_SIZE];
+  unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
   MD5_CTX ctx;
   void *ibuf;
   u_int32_t t;
+  u_int16_t result;
 
   ibuf = STREAM_DATA (s);
 
@@ -101,18 +102,52 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, struct key 
   memset(&ctx, 0, sizeof(ctx));
   MD5Init(&ctx);
   MD5Update(&ctx, ibuf, ntohs (EIGRP_HEADER_LEN));
-  MD5Update(&ctx, auth_key, EIGRP_AUTH_MD5_SIZE);
+  MD5Update(&ctx, auth_key, EIGRP_AUTH_TYPE_MD5_LEN);
   MD5Final(digest, &ctx);
-
-
 
   /* Append md5 digest to the end of the stream. */
   memcpy(auth_TLV->digest,digest,sizeof(digest));
 
 
-  return EIGRP_AUTH_MD5_SIZE;
+  return EIGRP_AUTH_TYPE_MD5_LEN;
 }
 
+static int
+eigrp_check_md5_digest (struct eigrp_interface *ei, struct TLV_Authentication_Type *authTLV,struct eigrp_neighbor *nbr, struct eigrp_header *eigrph)
+{
+  MD5_CTX ctx;
+  unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
+  struct key *key;
+
+  if (nbr && ntohl(nbr->crypt_seqnum) > ntohl(authTLV->key_sequence))
+    {
+      zlog_warn ("interface %s: eigrp_check_md5 bad sequence %d (expect %d)",
+                 IF_NAME (ei),
+                 ntohl(authTLV->key_sequence),
+                 ntohl(nbr->crypt_seqnum));
+      return 0;
+    }
+
+  /* Generate a digest for the eigrp packet - their digest + our digest. */
+  memset(&ctx, 0, sizeof(ctx));
+  MD5Init(&ctx);
+  MD5Update(&ctx, eigrph, EIGRP_HEADER_LEN);
+  MD5Update(&ctx, key, EIGRP_AUTH_TYPE_MD5_LEN);
+  MD5Final(digest, &ctx);
+
+  /* compare the two */
+  if (memcmp ((caddr_t)authTLV->digest, digest, EIGRP_AUTH_TYPE_MD5_LEN))
+    {
+      zlog_warn ("interface %s: ospf_check_md5 checksum mismatch",
+                 IF_NAME (ei));
+      return 0;
+    }
+
+  /* save neighbor's crypt_seqnum */
+  if (nbr)
+    nbr->crypt_seqnum = authTLV->key_sequence;
+  return 1;
+}
 
 /*
  * eigrp_packet_dump
@@ -966,8 +1001,7 @@ eigrp_read_ipv4_tlv (struct stream *s)
 {
   struct TLV_IPv4_Internal_type *tlv;
 
-  tlv = XCALLOC(MTYPE_EIGRP_IPV4_INT_TLV,
-		 sizeof(struct TLV_IPv4_Internal_type));
+  tlv = eigrp_IPv4_InternalTLV_new ();
 
   tlv->type = stream_getw(s);
   tlv->length = stream_getw(s);
@@ -1097,8 +1131,10 @@ u_int16_t
 eigrp_add_authTLV_to_stream (struct stream *s,
     struct eigrp_interface *ei)
 {
-
+  struct key *key;
+  struct keychain *keychain;
   struct TLV_Authentication_Type *authTLV;
+
   authTLV = eigrp_authTLV_new();
 
   authTLV->type = htons(EIGRP_TLV_AUTH);
@@ -1106,23 +1142,29 @@ eigrp_add_authTLV_to_stream (struct stream *s,
   authTLV->auth_type = htons(EIGRP_AUTH_TYPE_MD5);
   authTLV->auth_length = htons(EIGRP_AUTH_TYPE_MD5_LEN);
 
-  struct listnode *node, *nnode;
-  struct key *key;
+  keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
+  if(keychain)
+    key = key_lookup_for_send(keychain);
+  else
+    {
+      free(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
+      IF_DEF_PARAMS (ei->ifp)->auth_keychain = NULL;
+      eigrp_authTLV_free(authTLV);
+      return 0;
+    }
 
-  for (ALL_LIST_ELEMENTS (ei->authentication_keychain->key, node, nnode, key))
-      {
-        if(key_send_valid(key))
-          {
-            authTLV->key_id = htonl(key->index);
-            eigrp_make_md5_digest(ei,s,key,authTLV);
-            stream_put(s,authTLV,sizeof(struct TLV_Authentication_Type));
-            eigrp_authTLV_free(authTLV);
-            return EIGRP_AUTH_MD5_TLV_SIZE;
-          }
-      }
+  if(key)
+    {
+      authTLV->key_id = htonl(key->index);
+      eigrp_make_md5_digest(ei,s,key,authTLV);
+      stream_put(s,authTLV, sizeof(struct TLV_Authentication_Type));
+      eigrp_authTLV_free(authTLV);
+      return EIGRP_AUTH_MD5_TLV_SIZE;
+    }
 
   eigrp_authTLV_free(authTLV);
-  return NULL;
+
+  return 0;
 
 }
 
@@ -1141,5 +1183,21 @@ eigrp_authTLV_free (struct TLV_Authentication_Type *authTLV)
 {
 
   XFREE(MTYPE_EIGRP_AUTH_TLV, authTLV);
+}
 
+struct TLV_IPv4_Internal_type *
+eigrp_IPv4_InternalTLV_new ()
+{
+  struct TLV_IPv4_Internal_type *new;
+
+  new = XCALLOC(MTYPE_EIGRP_IPV4_INT_TLV,sizeof(struct TLV_IPv4_Internal_type));
+
+  return new;
+}
+
+void
+eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *IPv4_InternalTLV)
+{
+
+  XFREE(MTYPE_EIGRP_IPV4_INT_TLV, IPv4_InternalTLV);
 }

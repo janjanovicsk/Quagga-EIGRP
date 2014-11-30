@@ -58,7 +58,5 @@ extern struct key *key_match_for_accept (const struct keychain *, const char *);
 extern struct key *key_lookup_for_send (const struct keychain *);
 extern struct list *keychain_list_get (void);
 extern void keychain_dump (struct vty *, struct keychain *);
-extern u_char key_accept_valid(struct key *);
-extern u_char key_send_valid(struct key *);
 
 #endif /* _ZEBRA_KEYCHAIN_H */

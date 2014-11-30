@@ -177,8 +177,11 @@ eigrp_if_new_hook (struct interface *ifp)
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), load);
   IF_DEF_PARAMS (ifp)->load = (u_char) EIGRP_LOAD_DEFAULT;
 
-  SET_IF_PARAM (IF_DEF_PARAMS (ifp), authentication);
-  IF_DEF_PARAMS (ifp)->authentication = (u_char) EIGRP_AUTHENTICATION_MD5_OFF;
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), auth_type);
+  IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_NONE;
+
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), auth_keychain);
+  IF_DEF_PARAMS (ifp)->auth_keychain= NULL;
 
   return rc;
 }
@@ -199,7 +202,9 @@ eigrp_new_if_params (void)
   UNSET_IF_PARAM (eip, delay);
   UNSET_IF_PARAM (eip, reliability);
   UNSET_IF_PARAM (eip, load);
-  UNSET_IF_PARAM (eip, authentication);
+  UNSET_IF_PARAM (eip, auth_keychain);
+  UNSET_IF_PARAM (eip, auth_type);
+
 
   return eip;
 }
@@ -207,6 +212,9 @@ eigrp_new_if_params (void)
 void
 eigrp_del_if_params (struct eigrp_if_params *eip)
 {
+  if(eip->auth_keychain)
+    free(eip->auth_keychain);
+
   XFREE (MTYPE_EIGRP_IF_PARAMS, eip);
 }
 
@@ -332,7 +340,6 @@ eigrp_if_down (struct eigrp_interface *ei)
         {
           if (te->ei == ei)
             te->total_metric.delay = 0xFFFFFFFF;
-
         }
     }
 

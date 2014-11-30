@@ -301,7 +301,6 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	  default:
 	    break;
 	  }
-
     }
 
     tlv_header = (struct eigrp_tlv_hdr_type *)(((char *)tlv_header) + length);
@@ -439,7 +438,7 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
     eigrp_packet_header_init(EIGRP_OPC_HELLO, ei, ep->s, 0, 0, ack);
 
     // encode Authentication TLV
-    if((IF_DEF_PARAMS (ei->ifp)->authentication) && (ei->authentication_keychain != NULL))
+    if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
       {
         length += eigrp_add_authTLV_to_stream(ep->s,ei);
       }

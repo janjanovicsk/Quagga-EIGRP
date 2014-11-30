@@ -43,5 +43,7 @@ extern void eigrp_nbr_state_update(struct eigrp_neighbor *);
 extern void eigrp_nbr_state_set(struct eigrp_neighbor *, u_char state);
 extern u_char eigrp_nbr_state_get(struct eigrp_neighbor *);
 extern const char *eigrp_nbr_state_str(struct eigrp_neighbor *);
+extern struct eigrp_neighbor *eigrp_nbr_lookup_by_addr (struct eigrp_interface *, struct in_addr *);
+
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

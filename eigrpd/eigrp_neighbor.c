@@ -120,6 +120,24 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   return nbr;
 }
 
+struct eigrp_neighbor *
+eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
+{
+  struct eigrp_neighbor *nbr;
+  struct listnode *node, *nnode;
+
+  for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
+      {
+        if (addr == nbr->src.s_addr)
+          {
+            return nbr;
+          }
+      }
+
+  return NULL;
+}
+
+
 /* Delete specified EIGRP neighbor from interface. */
 void
 eigrp_nbr_delete (struct eigrp_neighbor *nbr)

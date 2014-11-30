@@ -24,6 +24,7 @@ Boston, MA 02111-1307, USA.  */
 #include "memory.h"
 #include "linklist.h"
 #include "keychain.h"
+#include "vty.h"
 
 /* Master list of key chain. */
 struct list *keychain_list;
@@ -581,34 +582,6 @@ keychain_dump (struct vty *vty, struct keychain *keychain)
           vty_out (vty, "%-8ssend lifetime (always valid) - (always valid) [valid now] %s","", VTY_NEWLINE);
     }
 
-}
-
-u_char
-key_accept_valid(struct key *key)
-{
-  if (key->accept.start)
-    {
-      if((key->accept.end == -1) || (key->accept.end > time(NULL)))
-        return KEYCHAIN_KEY_VALID;
-    }
-  else
-    return KEYCHAIN_KEY_VALID;
-
-  return KEYCHAIN_KEY_INVALID;
-}
-
-u_char
-key_send_valid(struct key *key)
-{
-  if (key->send.start)
-    {
-      if((key->send.end == -1) || (key->send.end > time(NULL)))
-        return KEYCHAIN_KEY_VALID;
-    }
-  else
-    return KEYCHAIN_KEY_VALID;
-
-  return KEYCHAIN_KEY_INVALID;
 }
 
 

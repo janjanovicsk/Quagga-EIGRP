@@ -38,6 +38,7 @@
 #include "log.h"
 #include "zclient.h"
 #include "keychain.h"
+#include "linklist.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -80,9 +81,14 @@ config_write_interfaces (struct vty *vty, struct eigrp *eigrp)
     {
       vty_out (vty, "interface %s%s", ei->ifp->name, VTY_NEWLINE);
 
-      if ((IF_DEF_PARAMS (ei->ifp)->authentication) == EIGRP_AUTHENTICATION_MD5_ON)
+      if ((IF_DEF_PARAMS (ei->ifp)->auth_type) == EIGRP_AUTH_TYPE_MD5)
         {
           vty_out (vty, " ip authentication mode eigrp %d md5%s", eigrp->AS, VTY_NEWLINE);
+        }
+
+      if(IF_DEF_PARAMS (ei->ifp)->auth_keychain)
+        {
+          vty_out (vty, " ip authentication key-chain eigrp %d %s%s",eigrp->AS,IF_DEF_PARAMS (ei->ifp)->auth_keychain, VTY_NEWLINE);
         }
 
       if ((IF_DEF_PARAMS (ei->ifp)->v_hello) != EIGRP_HELLO_INTERVAL_DEFAULT)
@@ -90,9 +96,9 @@ config_write_interfaces (struct vty *vty, struct eigrp *eigrp)
           vty_out (vty, " ip hello-interval eigrp %d%s", IF_DEF_PARAMS (ei->ifp)->v_hello, VTY_NEWLINE);
         }
 
-      if ((IF_DEF_PARAMS (ei->ifp)->v_wait) != EIGRP_HELLO_INTERVAL_DEFAULT)
+      if ((IF_DEF_PARAMS (ei->ifp)->v_wait) != EIGRP_HOLD_INTERVAL_DEFAULT)
         {
-          vty_out (vty, "ip hold-time eigrp %d%s", IF_DEF_PARAMS (ei->ifp)->v_wait, VTY_NEWLINE);
+          vty_out (vty, " ip hold-time eigrp %d%s", IF_DEF_PARAMS (ei->ifp)->v_wait, VTY_NEWLINE);
         }
 
       /*Separate this EIGRP interface configuration from the others*/
@@ -489,6 +495,7 @@ DEFUN (eigrp_if_ip_hellointerval,
 
   for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
     {
+      zlog_warn("HELLO \n");
       if (ei->ifp == ifp)
         {
           THREAD_TIMER_OFF (ei->t_hello);
@@ -547,7 +554,6 @@ DEFUN (eigrp_authentication_mode,
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
   struct interface *ifp;
-  struct listnode *node, *nnode;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -557,14 +563,35 @@ DEFUN (eigrp_authentication_mode,
     }
 
   ifp = vty->index;
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+  IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_authentication_mode,
+       no_eigrp_authentication_mode_cmd,
+       "no ip authentication mode eigrp <1-65535> md5",
+       "Disable\n"
+       "Interface Internet Protocol config commands\n"
+       "Authentication subcommands\n"
+       "Mode\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Autonomous system number\n"
+       "Keyed message digest\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
     {
-      if (ei->ifp == ifp)
-        {
-          /* Here we will turn on authentication for this particular interface */
-          IF_DEF_PARAMS (ifp)->authentication = EIGRP_AUTHENTICATION_MD5_ON;
-        }
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
     }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_NONE;
 
   return CMD_SUCCESS;
 }
@@ -582,34 +609,64 @@ DEFUN (eigrp_authentication_keychain,
   struct eigrp *eigrp;
   struct eigrp_interface *ei;
   struct interface *ifp;
-  struct listnode *node, *nnode;
   struct keychain *keychain;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
     {
-      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
       return CMD_SUCCESS;
     }
 
   ifp = vty->index;
-
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+  keychain = keychain_lookup (argv[1]);
+  if(keychain != NULL)
     {
-      if (ei->ifp == ifp)
+      if(IF_DEF_PARAMS (ifp)->auth_keychain)
         {
-          if (argc == 2)
-            {
-              /* Just for testing, here will come authentication configuration code*/
-              keychain = keychain_lookup (argv[1]);
-              if(keychain != NULL)
-                ei->authentication_keychain = keychain;
-              else
-                vty_out(vty,"Key chain with specified name not found%s", VTY_NEWLINE);
-              return CMD_SUCCESS;
-            }
+          free (IF_DEF_PARAMS (ifp)->auth_keychain);
+          IF_DEF_PARAMS (ifp)->auth_keychain = strdup(keychain->name);
         }
+      else
+        IF_DEF_PARAMS (ifp)->auth_keychain = strdup(keychain->name);
     }
+  else
+    vty_out(vty,"Key chain with specified name not found%s", VTY_NEWLINE);
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_authentication_keychain,
+       no_eigrp_authentication_keychain_cmd,
+       "no ip authentication key-chain eigrp <1-65535> WORD",
+       "Disable\n"
+       "Interface Internet Protocol config commands\n"
+       "Authentication subcommands\n"
+       "Key-chain\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Autonomous system number\n"
+       "Name of key-chain\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct keychain *keychain;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  ifp = vty->index;
+  if((IF_DEF_PARAMS (ifp)->auth_keychain != NULL) && (strcmp(IF_DEF_PARAMS (ifp)->auth_keychain,argv[1])==0))
+    {
+      free (IF_DEF_PARAMS (ifp)->auth_keychain);
+      IF_DEF_PARAMS (ifp)->auth_keychain = NULL;
+    }
+  else
+    vty_out(vty,"Key chain with specified name not configured on interface%s", VTY_NEWLINE);
 
   return CMD_SUCCESS;
 }
@@ -617,7 +674,7 @@ DEFUN (eigrp_authentication_keychain,
 static struct cmd_node eigrp_node =
 {
   EIGRP_NODE,
-  "%s (config-router)# ",
+  "%s(config-router)# ",
   1
 };
 
@@ -705,7 +762,7 @@ eigrp_vty_show_init (void)
 static struct cmd_node eigrp_interface_node =
 {
   INTERFACE_NODE,
-  "%s (config-if)# ",
+  "%s(config-if)# ",
   1
 };
 
@@ -729,9 +786,11 @@ eigrp_vty_if_init (void)
   install_element (INTERFACE_NODE, &interface_desc_cmd);
   install_element (INTERFACE_NODE, &no_interface_desc_cmd);
 
-  /* "description" commands. */
+  /* "Authentication configuration commands */
   install_element (INTERFACE_NODE, &eigrp_authentication_mode_cmd);
   install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_authentication_mode_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_authentication_keychain_cmd);
 }
 
 static void

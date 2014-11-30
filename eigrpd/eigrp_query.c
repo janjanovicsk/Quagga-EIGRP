@@ -146,7 +146,7 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
               int event = eigrp_get_fsm_event(msg);
               EIGRP_FSM_EVENT_SCHEDULE(msg, event);
             }
-
+          eigrp_IPv4_InternalTLV_free (tlv);
         }
     }
   eigrp_hello_send_ack(nbr);
