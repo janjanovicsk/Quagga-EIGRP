@@ -68,6 +68,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   u_int32_t flags;
   u_int16_t type;
   uint16_t  length;
+  u_char same;
 
   /* increment statistics. */
   ei->update_in++;
@@ -84,6 +85,9 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
     {
       return;
     }
+
+  if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence)))
+    same = 1;
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
@@ -102,14 +106,13 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
       eigrp_hello_send_ack(nbr);
     }
 
-    if(flags & EIGRP_INIT_FLAG)
+    if((flags & EIGRP_INIT_FLAG) && (!same))
     {
         if (nbr->state == EIGRP_NEIGHBOR_UP)
           {
             eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+            eigrp_update_send_init(nbr);
           }
-        eigrp_update_send_init(nbr);
-
     }
 
   /*If there is topology information*/
@@ -214,7 +217,6 @@ eigrp_update_send_init (struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   nbr->init_sequence_number = nbr->ei->eigrp->sequence_number;
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
-  nbr->ei->eigrp->sequence_number++;
 
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
     zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
