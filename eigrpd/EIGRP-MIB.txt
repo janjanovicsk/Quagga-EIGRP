@@ -907,7 +907,7 @@ ciscoEigrpMIB MODULE-IDENTITY
             cEigrpCRpkts           Counter32,
             cEigrpAcksSuppressed   Counter32,
             cEigrpRetransSent       Counter32,
-            cEigrpOOSrvcd          Counter32,
+            cEigrpOOSrcvd          Counter32,
             cEigrpAuthMode         INTEGER,
             cEigrpAuthKeyChain    SnmpAdminString
          }
@@ -1088,7 +1088,7 @@ ciscoEigrpMIB MODULE-IDENTITY
              the interface."
         ::= { cEigrpInterfaceEntry 20 }
 
-    cEigrpOOSrvcd OBJECT-TYPE
+    cEigrpOOSrcvd OBJECT-TYPE
         SYNTAX     Counter32
         MAX-ACCESS read-only
         STATUS     current
@@ -1255,7 +1255,7 @@ ciscoEigrpMIB MODULE-IDENTITY
             cEigrpCRpkts,
             cEigrpAcksSuppressed,
             cEigrpRetransSent,
-            cEigrpOOSrvcd,
+            cEigrpOOSrcvd,
             cEigrpAuthMode,
             cEigrpAuthKeyChain
         }
