@@ -410,8 +410,99 @@ DEFUN (eigrp_if_delay,
   return CMD_SUCCESS;
 }
 
+DEFUN (no_eigrp_if_delay,
+       no_eigrp_if_delay_cmd,
+       "no delay",
+       "No"
+       "Specify interface throughput delay\n")
+{
+  struct eigrp *eigrp;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+
+      return CMD_SUCCESS;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->delay = EIGRP_DELAY_DEFAULT;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if (ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
 DEFUN (eigrp_if_bandwidth,
        eigrp_if_bandwidth_cmd,
+       "bandwidth <1-10000000>",
+       "Set bandwidth informational parameter\n"
+       "Bandwidth in kilobits\n")
+{
+  u_int32_t bandwidth;
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct interface *ifp;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  bandwidth = atoi (argv[0]);
+
+  /* bandwidth range is <1-10000000>. */
+  if ((bandwidth < 1) || (bandwidth > 10000000))
+    {
+      vty_out (vty, "Interface bandwidth is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      if (ei->ifp == ifp)
+        break;
+    }
+
+  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
+    {
+      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
+        {
+
+        }
+    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_if_bandwidth,
+       no_eigrp_if_bandwidth_cmd,
        "bandwidth <1-10000000>",
        "Set bandwidth informational parameter\n"
        "Bandwidth in kilobits\n")
@@ -493,16 +584,43 @@ DEFUN (eigrp_if_ip_hellointerval,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->v_hello = hello;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+//  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+//    {
+//      zlog_warn("HELLO \n");
+//      if (ei->ifp == ifp)
+//        {
+//          THREAD_TIMER_OFF (ei->t_hello);
+//          THREAD_TIMER_ON (master,ei->t_hello,eigrp_hello_timer,ei,1);
+//          break;
+//        }
+//    }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_if_ip_hellointerval,
+       no_eigrp_if_ip_hellointerval_cmd,
+       "no ip hello-interval eigrp",
+       "No"
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds between hello transmissions\n")
+{
+  struct eigrp *eigrp;
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+  struct listnode *node, *nnode;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
     {
-      zlog_warn("HELLO \n");
-      if (ei->ifp == ifp)
-        {
-          THREAD_TIMER_OFF (ei->t_hello);
-          THREAD_TIMER_ON (master,ei->t_hello,eigrp_hello_timer,ei,1);
-          break;
-        }
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
     }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_hello = EIGRP_HELLO_INTERVAL_DEFAULT;
 
   return CMD_SUCCESS;
 }
@@ -537,6 +655,31 @@ DEFUN (eigrp_if_ip_holdinterval,
 
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->v_wait = hold;
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_if_ip_holdinterval,
+       no_eigrp_if_ip_holdinterval_cmd,
+       "no ip hold-time eigrp",
+       "No"
+       "Interface Internet Protocol config commands\n"
+       "Configures EIGRP hello interval\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "Seconds before neighbor is considered down\n")
+{
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  ifp = vty->index;
+  IF_DEF_PARAMS (ifp)->v_wait = EIGRP_HOLD_INTERVAL_DEFAULT;
 
   return CMD_SUCCESS;
 }
@@ -711,7 +854,6 @@ eigrp_config_write (struct vty *vty)
 
       /* Interface config print */
       config_write_interfaces (vty, eigrp);
-
 //
 //      /* static neighbor print. */
 //      config_write_eigrp_nbr_nbma (vty, eigrp);
@@ -780,7 +922,9 @@ eigrp_vty_if_init (void)
 
   /*Hello-interval and hold-time interval configuration commands*/
   install_element (INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_if_ip_holdinterval_cmd);
   install_element (INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_if_ip_hellointerval_cmd);
 
   /* "description" commands. */
   install_element (INTERFACE_NODE, &interface_desc_cmd);
@@ -788,9 +932,10 @@ eigrp_vty_if_init (void)
 
   /* "Authentication configuration commands */
   install_element (INTERFACE_NODE, &eigrp_authentication_mode_cmd);
-  install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_authentication_mode_cmd);
+  install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_authentication_keychain_cmd);
+
 }
 
 static void

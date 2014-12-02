@@ -90,13 +90,14 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, struct key 
 
 
    /*  Note that quagga_time /deliberately/ is not used here */
-  t = (time(NULL) & 0xFFFFFFFF);
-  if (t > ei->crypt_seqnum)
-    ei->crypt_seqnum = t;
-  else
-    ei->crypt_seqnum++;
+//  t = (time(NULL) & 0xFFFFFFFF);
+//  if (t > ei->crypt_seqnum)
+//    ei->crypt_seqnum = t;
+//  else
+//    ei->crypt_seqnum++;
 
-  auth_TLV->key_sequence = htonl (ei->crypt_seqnum);
+//  auth_TLV->key_sequence = htonl (ei->crypt_seqnum);
+  auth_TLV->key_sequence = 0;
 
   /* Generate a digest for the entire packet + our secret key. */
   memset(&ctx, 0, sizeof(ctx));
