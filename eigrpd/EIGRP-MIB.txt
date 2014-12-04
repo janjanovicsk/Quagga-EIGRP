@@ -1,12 +1,3 @@
--- *****************************************************************
--- CISCO-EIGRP-MIB.my:  Cisco Enterprise EIGRP MIB file
---
--- November 2004, Wayne Bond
---
--- Copyright (c) 2004-2005 by cisco Systems, Inc.
--- All rights reserved.
---
--- *****************************************************************
 CISCO-EIGRP-MIB DEFINITIONS ::= BEGIN
 
     IMPORTS

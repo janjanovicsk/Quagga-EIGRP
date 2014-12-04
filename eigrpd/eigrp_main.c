@@ -54,7 +54,7 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_network.h"
-
+#include "eigrpd/eigrp_snmp.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p [] = 
@@ -183,6 +183,10 @@ main (int argc, char **argv)
   keychain_init();
   eigrp_vty_show_init ();
   eigrp_vty_if_init ();
+
+#ifdef HAVE_SNMP
+  eigrp_snmp_init ();
+#endif /* HAVE_SNMP */
 
 
   vty_read_config (config_file, config_default);

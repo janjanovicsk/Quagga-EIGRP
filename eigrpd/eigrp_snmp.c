@@ -28,7 +28,7 @@
 
 #include <zebra.h>
 
-#ifdef HAVE_SNMP
+//#ifdef HAVE_SNMP
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 
@@ -51,9 +51,19 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
+#include "eigrpd/eigrp_snmp.h"
+
+
+struct list *eigrp_snmp_iflist;
+
+/* Declare static local variables for convenience. */
+SNMP_LOCAL_VARIABLES
 
 /* EIGRP-MIB. */
 #define EIGRPMIB 1,3,6,1,4,1,9,9,449,1
+
+/* EIGRP-MIB instances. */
+oid eigrp_oid [] = { EIGRPMIB };
 
 /* EIGRP VPN entry */
 #define EIGRPVPNID							1
@@ -150,8 +160,6 @@
 #define IPADDRESSTYPE ASN_OCTET_STR
 #define INTERFACEINDEXORZERO ASN_INTEGER
 
-/* OSPF-MIB instances. */
-oid eigrp_oid [] = { EIGRPMIB };
 
 
 
@@ -332,34 +340,139 @@ struct variable eigrp_variables[] =
 
   static u_char *
   eigrpVpnEntry (struct variable *v, oid *name, size_t *length,
-   				 int exact, size_t *var_length, WriteMethod **write_method)
+   				 int exact, size_t *var_len, WriteMethod **write_method)
   {
 	  return NULL;
   }
   static u_char *
   eigrpTraffStatsEntry (struct variable *v, oid *name, size_t *length,
-			 	 int exact, size_t *var_length, WriteMethod **write_method)
+			 	 int exact, size_t *var_len, WriteMethod **write_method)
   {
+	struct eigrp *eigrp;
+
+	zlog_warn("SOM TU \n");
+	eigrp = eigrp_lookup ();
+
+	/* Check whether the instance identifier is valid */
+	if (smux_header_generic (v, name, length, exact, var_len, write_method)
+	  == MATCH_FAILED)
+	return NULL;
+
+	/* Return the current value of the variable */
+	switch (v->magic)
+	{
+	case EIGRPASNUMBER:		/* 1 */
+		  /* AS-number of this EIGRP instance. */
+		  if (eigrp)
+		return SNMP_INTEGER (eigrp->AS);
+		  else
+		return SNMP_INTEGER (0);
+		  break;
+//	case OSPFADMINSTAT:		/* 2 */
+//		  /* The administrative status of OSPF in the router. */
+//		  if (ospf_admin_stat (ospf))
+//		return SNMP_INTEGER (OSPF_STATUS_ENABLED);
+//		  else
+//	return SNMP_INTEGER (OSPF_STATUS_DISABLED);
+//	  break;
+//	case OSPFVERSIONNUMBER:	/* 3 */
+//	  /* OSPF version 2. */
+//	  return SNMP_INTEGER (OSPF_VERSION);
+//	  break;
+//	case OSPFAREABDRRTRSTATUS:	/* 4 */
+//	  /* Area Border router status. */
+//	  if (ospf && CHECK_FLAG (ospf->flags, OSPF_FLAG_ABR))
+//	return SNMP_INTEGER (SNMP_TRUE);
+//	  else
+//	return SNMP_INTEGER (SNMP_FALSE);
+//	  break;
+//	case OSPFASBDRRTRSTATUS:	/* 5 */
+//	  /* AS Border router status. */
+//	  if (ospf && CHECK_FLAG (ospf->flags, OSPF_FLAG_ASBR))
+//	return SNMP_INTEGER (SNMP_TRUE);
+//	  else
+//	return SNMP_INTEGER (SNMP_FALSE);
+//	  break;
+//	case OSPFEXTERNLSACOUNT:	/* 6 */
+//	  /* External LSA counts. */
+//	  if (ospf)
+//	return SNMP_INTEGER (ospf_lsdb_count_all (ospf->lsdb));
+//	  else
+//	return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFEXTERNLSACKSUMSUM:	/* 7 */
+//	  /* External LSA checksum. */
+//	  return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFTOSSUPPORT:	/* 8 */
+//	  /* TOS is not supported. */
+//	  return SNMP_INTEGER (SNMP_FALSE);
+//	  break;
+//	case OSPFORIGINATENEWLSAS:	/* 9 */
+//	  /* The number of new link-state advertisements. */
+//	  if (ospf)
+//	return SNMP_INTEGER (ospf->lsa_originate_count);
+//	  else
+//	return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFRXNEWLSAS:		/* 10 */
+//	  /* The number of link-state advertisements received determined
+//		 to be new instantiations. */
+//	  if (ospf)
+//	return SNMP_INTEGER (ospf->rx_lsa_count);
+//	  else
+//	return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFEXTLSDBLIMIT:	/* 11 */
+//	  /* There is no limit for the number of non-default
+//		 AS-external-LSAs. */
+//	  return SNMP_INTEGER (-1);
+//	  break;
+//	case OSPFMULTICASTEXTENSIONS: /* 12 */
+//	  /* Multicast Extensions to OSPF is not supported. */
+//	  return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFEXITOVERFLOWINTERVAL: /* 13 */
+//	  /* Overflow is not supported. */
+//	  return SNMP_INTEGER (0);
+//	  break;
+//	case OSPFDEMANDEXTENSIONS:	/* 14 */
+//	  /* Demand routing is not supported. */
+//	  return SNMP_INTEGER (SNMP_FALSE);
+//	  break;
+	default:
 	  return NULL;
+	}
+	return NULL;
   }
   static u_char *
   eigrpTopologyEntry (struct variable *v, oid *name, size_t *length,
-			 	 int exact, size_t *var_length, WriteMethod **write_method)
+			 	 int exact, size_t *var_len, WriteMethod **write_method)
   {
 	  return NULL;
   }
   static u_char *
   eigrpPeerEntry (struct variable *v, oid *name, size_t *length,
-			 	 int exact, size_t *var_length, WriteMethod **write_method)
+			 	 int exact, size_t *var_len, WriteMethod **write_method)
   {
 	  return NULL;
   }
   static u_char *
   eigrpInterfaceEntry (struct variable *v, oid *name, size_t *length,
-			 	 int exact, size_t *var_length, WriteMethod **write_method)
+			 	 int exact, size_t *var_len, WriteMethod **write_method)
   {
 	  return NULL;
   }
 
 
-#endif
+  /* Register EIGRP-MIB. */
+  void
+  eigrp_snmp_init ()
+  {
+    eigrp_snmp_iflist = list_new ();
+    smux_init (eigrp_om->master);
+    REGISTER_MIB("ciscosmi/ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
+  }
+
+
+//#endif
