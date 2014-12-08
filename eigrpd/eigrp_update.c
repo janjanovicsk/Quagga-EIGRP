@@ -86,8 +86,6 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
       return;
     }
 
-  zlog_info("SOM V UPDATE \n");
-
   same = 0;
   if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence))){
       same = 1;
@@ -100,7 +98,6 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
                size, ifindex2ifname(nbr->ei->ifp->ifindex),
                inet_ntoa(nbr->src),
                nbr->recv_sequence_number, flags);
-
 
   /*
    * We don't need to send separate Ack for INIT Update. INIT will be acked in EOT Update.
