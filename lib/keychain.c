@@ -540,7 +540,7 @@ key_lifetime_infinite_set (struct vty *vty, struct key_range *krange,
 }
 
 void
-keychain_dump (struct vty *vty, struct keychain *keychain)
+keychain_dump (struct vty *vty, const struct keychain *keychain)
 {
   struct listnode *node, *nnode;
   struct key *keychainkey;

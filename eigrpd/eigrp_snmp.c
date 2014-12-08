@@ -28,7 +28,7 @@
 
 #include <zebra.h>
 
-//#ifdef HAVE_SNMP
+#ifdef HAVE_SNMP
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 
@@ -481,4 +481,4 @@ struct variable eigrp_variables[] =
   }
 
 
-//#endif
+#endif
