@@ -31,6 +31,7 @@
 #include "thread.h"
 #include "memory.h"
 #include "linklist.h"
+#include "keychain.h"
 #include "prefix.h"
 #include "if.h"
 #include "table.h"
@@ -40,7 +41,6 @@
 #include "sockopt.h"
 #include "checksum.h"
 #include "md5.h"
-#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
