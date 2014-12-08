@@ -464,7 +464,7 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
 
       if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
         {
-          eigrp_make_md5_digest(ei,ep->s,key_lookup_for_send(IF_DEF_PARAMS (ei->ifp)->auth_keychain),length);
+          eigrp_make_md5_digest(ei,ep->s,length);
         }
     }
 

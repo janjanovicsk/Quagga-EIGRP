@@ -98,7 +98,7 @@ extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_heade
 
 extern struct TLV_Authentication_Type *eigrp_authTLV_new (void);
 extern void eigrp_authTLV_free (struct TLV_Authentication_Type *);
-extern int eigrp_make_md5_digest (struct eigrp_interface *, struct stream *, struct key *,
+extern int eigrp_make_md5_digest (struct eigrp_interface *, struct stream *,
                                   u_int16_t);
 
 
