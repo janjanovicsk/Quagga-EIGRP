@@ -130,7 +130,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
           dest_addr->prefixlen = tlv->prefix_length;
-          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
+          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup_ipv4(
               eigrp->topology_table, dest_addr);
 
           /*if exists it comes to DUAL*/
@@ -156,11 +156,10 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
             {
               /*Here comes topology information save*/
               tnode = eigrp_prefix_entry_new();
-              tnode->destination->family = AF_INET;
-              tnode->destination->prefix = tlv->destination;
-              tnode->destination->prefixlen = tlv->prefix_length;
+              tnode->destination_ipv4 = dest_addr;
+              tnode->af = AF_INET;
               tnode->state = EIGRP_FSM_STATE_PASSIVE;
-              tnode->dest_type = EIGRP_TOPOLOGY_TYPE_REMOTE;
+              tnode->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
               tentry = eigrp_neighbor_entry_new();
               tentry->ei = ei;
@@ -217,7 +216,6 @@ eigrp_update_send_init (struct eigrp_neighbor *nbr)
   /*This ack number we await from neighbor*/
   nbr->init_sequence_number = nbr->ei->eigrp->sequence_number;
   ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
     zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
                ep->length, ep->sequence_number, inet_ntoa(ep->dst));
@@ -253,7 +251,7 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
       for (ALL_LIST_ELEMENTS(tn->entries, node2, nnode2, te))
         {
           if ((te->ei == nbr->ei)
-              && (te->prefix->dest_type == EIGRP_TOPOLOGY_TYPE_REMOTE))
+              && (te->prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE))
             continue;
 
           length += eigrp_add_internalTLV_to_stream(ep->s, te);

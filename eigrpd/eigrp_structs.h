@@ -366,29 +366,31 @@ struct TLV_IPv4_External_type
 struct eigrp_prefix_entry
 {
   struct list *entries, *rij;
-  struct prefix_ipv4 *destination; //destination address
-  u_int32_t fdistance;
-  u_int32_t rdistance;
-  u_int32_t distance;
-  struct eigrp_metrics reported_metric;
-  u_char state; //route fsm state
-  u_char dest_type;
+  u_int32_t fdistance;						// FD
+  u_int32_t rdistance;						// RD
+  u_int32_t distance;						// D
+  struct eigrp_metrics reported_metric;		// RD for sending
+  u_char nt;                                                    //network type
+  u_char state; 							//route fsm state
+  u_char af;								// address family
+  struct prefix_ipv4 *destination_ipv4;		// pointer to struct with ipv4 address
+  struct prefix_ipv6 *destination_ipv6;		// pointer to struct with ipv6 address
 };
 
 /* EIGRP Topology table record structure */
 struct eigrp_neighbor_entry
 {
   struct eigrp_prefix_entry *prefix;
-  u_int32_t reported_distance; //distance reported by neighbor
-  u_int32_t distance; //sum of reported distance and link cost to advertised neighbor
+  u_int32_t reported_distance; 				//distance reported by neighbor
+  u_int32_t distance; 						//sum of reported distance and link cost to advertised neighbor
 
   struct eigrp_metrics reported_metric;
   struct eigrp_metrics total_metric;
 
-  struct eigrp_neighbor *adv_router; //ip address of advertising neighbor
-  u_char flags; //used for marking successor and FS
+  struct eigrp_neighbor *adv_router; 		//ip address of advertising neighbor
+  u_char flags; 							//used for marking successor and FS
 
-  struct eigrp_interface *ei; /*pointer for case of connected entry*/
+  struct eigrp_interface *ei; 				//pointer for case of connected entry
 
 };
 
@@ -398,9 +400,9 @@ struct eigrp_neighbor_entry
 
 struct eigrp_fsm_action_message
 {
-  u_char packet_type; //UPDATE, QUERY, SIAQUERY, SIAREPLY
-  struct eigrp *eigrp;		// which thread sent mesg
-  struct eigrp_neighbor *adv_router; //advertising neighbor
+  u_char packet_type; 					//UPDATE, QUERY, SIAQUERY, SIAREPLY
+  struct eigrp *eigrp;					// which thread sent mesg
+  struct eigrp_neighbor *adv_router; 	//advertising neighbor
   struct eigrp_neighbor_entry *entry;
   struct eigrp_prefix_entry *prefix;
   int data_type; // internal or external tlv type

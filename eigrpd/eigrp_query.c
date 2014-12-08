@@ -113,7 +113,7 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
           dest_addr->prefixlen = tlv->prefix_length;
-          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup(
+          struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup_ipv4(
               eigrp->topology_table, dest_addr);
 
           temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
@@ -122,7 +122,7 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
               sizeof(struct eigrp_prefix_entry));
           temp_te->total_metric.delay = 0xFFFFFFFF;
           temp_te->prefix = temp_tn;
-          temp_tn->destination = dest_addr;
+          temp_tn->destination_ipv4 = dest_addr;
 
           eigrp_send_reply(nbr, temp_te);
           XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);

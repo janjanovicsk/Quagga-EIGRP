@@ -91,6 +91,8 @@
 /*EIGRP TT entry flags*/
 #define EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG     1
 #define EIGRP_NEIGHBOR_ENTRY_FSUCCESSOR_FLAG    2
+#define EIGRP_NEIGHBOR_ENTRY_INTABLE_FLAG		4
+#define EIGRP_NEIGHBOR_ENTRY_EXTERNAL_FLAG		8
 
 /*EIGRP FSM state count, event count*/
 #define EIGRP_FSM_STATE_MAX                  5

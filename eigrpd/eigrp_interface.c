@@ -283,14 +283,15 @@ eigrp_if_up (struct eigrp_interface *ei)
   dest_addr->prefix = ei->connected->address->u.prefix4;
   dest_addr->prefixlen = ei->connected->address->prefixlen;
   apply_mask_ipv4 (dest_addr);
-  tn = eigrp_topology_table_lookup (eigrp->topology_table, dest_addr);
+  tn = eigrp_topology_table_lookup_ipv4 (eigrp->topology_table, dest_addr);
 
   if (tn == NULL)
     {
       tn = eigrp_prefix_entry_new ();
 
-      tn->destination = dest_addr;
-      tn->dest_type = EIGRP_TOPOLOGY_TYPE_CONNECTED;
+      tn->destination_ipv4 = dest_addr;
+      tn->af = AF_INET;
+      tn->nt = EIGRP_TOPOLOGY_TYPE_CONNECTED;
 
       tn->state = EIGRP_FSM_STATE_PASSIVE;
       tn->fdistance = eigrp_calculate_metrics (eigrp, &metric);

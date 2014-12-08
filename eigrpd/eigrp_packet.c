@@ -1068,24 +1068,24 @@ eigrp_add_internalTLV_to_stream (struct stream *s,
   u_int16_t length;
 
   stream_putw(s, EIGRP_TLV_IPv4_INT);
-  if (te->prefix->destination->prefixlen <= 8)
+  if (te->prefix->destination_ipv4->prefixlen <= 8)
     {
       stream_putw(s, 0x001A);
       length = 0x001A;
     }
-  if ((te->prefix->destination->prefixlen > 8)
-      && (te->prefix->destination->prefixlen <= 16))
+  if ((te->prefix->destination_ipv4->prefixlen > 8)
+      && (te->prefix->destination_ipv4->prefixlen <= 16))
     {
       stream_putw(s, 0x001B);
       length = 0x001B;
     }
-  if ((te->prefix->destination->prefixlen > 16)
-      && (te->prefix->destination->prefixlen <= 24))
+  if ((te->prefix->destination_ipv4->prefixlen > 16)
+      && (te->prefix->destination_ipv4->prefixlen <= 24))
     {
       stream_putw(s, 0x001C);
       length = 0x001C;
     }
-  if (te->prefix->destination->prefixlen > 24)
+  if (te->prefix->destination_ipv4->prefixlen > 24)
     {
       stream_putw(s, 0x001D);
       length = 0x001D;
@@ -1105,31 +1105,31 @@ eigrp_add_internalTLV_to_stream (struct stream *s,
   stream_putc(s, te->total_metric.tag);
   stream_putc(s, te->total_metric.flags);
 
-  stream_putc(s, te->prefix->destination->prefixlen);
+  stream_putc(s, te->prefix->destination_ipv4->prefixlen);
 
-  if (te->prefix->destination->prefixlen <= 8)
+  if (te->prefix->destination_ipv4->prefixlen <= 8)
     {
-      stream_putc(s, te->prefix->destination->prefix.s_addr & 0xFF);
+      stream_putc(s, te->prefix->destination_ipv4->prefix.s_addr & 0xFF);
     }
-  if ((te->prefix->destination->prefixlen > 8)
-      && (te->prefix->destination->prefixlen <= 16))
+  if ((te->prefix->destination_ipv4->prefixlen > 8)
+      && (te->prefix->destination_ipv4->prefixlen <= 16))
     {
-      stream_putc(s, te->prefix->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, te->prefix->destination_ipv4->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 8) & 0xFF);
     }
-  if ((te->prefix->destination->prefixlen > 16)
-      && (te->prefix->destination->prefixlen <= 24))
+  if ((te->prefix->destination_ipv4->prefixlen > 16)
+      && (te->prefix->destination_ipv4->prefixlen <= 24))
     {
-      stream_putc(s, te->prefix->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 8) & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, te->prefix->destination_ipv4->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 16) & 0xFF);
     }
-  if (te->prefix->destination->prefixlen > 24)
+  if (te->prefix->destination_ipv4->prefixlen > 24)
     {
-      stream_putc(s, te->prefix->destination->prefix.s_addr & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 8) & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 16) & 0xFF);
-      stream_putc(s, (te->prefix->destination->prefix.s_addr >> 24) & 0xFF);
+      stream_putc(s, te->prefix->destination_ipv4->prefix.s_addr & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 8) & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 16) & 0xFF);
+      stream_putc(s, (te->prefix->destination_ipv4->prefix.s_addr >> 24) & 0xFF);
     }
 
   return length;
