@@ -98,6 +98,10 @@ extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_heade
 
 extern struct TLV_Authentication_Type *eigrp_authTLV_new ();
 extern void eigrp_authTLV_free (struct TLV_Authentication_Type *);
+extern int eigrp_make_md5_digest (struct eigrp_interface *, struct stream *, struct key *,
+                                  u_int16_t  *);
+
+
 extern struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new ();
 extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 

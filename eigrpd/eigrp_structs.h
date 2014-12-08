@@ -250,7 +250,6 @@ struct eigrp_header
   char *tlv[0];
 
 }__attribute__((packed));
-#define EIGRP_HEADER_SIZE 20
 
 
 /**

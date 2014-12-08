@@ -32,12 +32,18 @@
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 
-#include "if.h"
-#include "log.h"
-#include "prefix.h"
-#include "table.h"
-#include "command.h"
+#include "thread.h"
 #include "memory.h"
+#include "linklist.h"
+#include "prefix.h"
+#include "if.h"
+#include "table.h"
+#include "sockunion.h"
+#include "stream.h"
+#include "log.h"
+#include "sockopt.h"
+#include "checksum.h"
+#include "md5.h"
 #include "smux.h"
 
 #include "eigrpd/eigrp_structs.h"
@@ -66,7 +72,7 @@ SNMP_LOCAL_VARIABLES
 oid eigrp_oid [] = { EIGRPMIB };
 
 /* EIGRP VPN entry */
-#define EIGRPVPNID							1
+#define EIGRPVPNID						1
 #define EIGRPVPNNAME						2
 
 /* EIGRP Traffic statistics entry */
@@ -91,35 +97,35 @@ oid eigrp_oid [] = { EIGRPMIB };
 #define EIGRPTOPOROUTES						19
 #define EIGRPHEADSERIAL						20
 #define EIGRPNEXTSERIAL						21
-#define EIGRPXMITPENDREPLIES				22
+#define EIGRPXMITPENDREPLIES				        22
 #define EIGRPXMITDUMMIES					23
 
 /* EIGRP topology entry */
 #define EIGRPDESTNETTYPE					1
 #define EIGRPDESTNET						2
-#define EIGRPDESTNETPREFIXLEN				4
-#define EIGRPACTIVE							5
+#define EIGRPDESTNETPREFIXLEN				        4
+#define EIGRPACTIVE						5
 #define EIGRPSTUCKINACTIVE					6
 #define EIGRPDESTSUCCESSORS					7
 #define EIGRPFDISTANCE						8
-#define EIGRPROUTEORIGINTYPE				9
-#define EIGRPROUTEORIGINADDRTYPE			10
-#define EIGRPROUTEORIGINADDR				11
-#define EIGRPNEXTHOPADDRESSTYPE				12
+#define EIGRPROUTEORIGINTYPE				        9
+#define EIGRPROUTEORIGINADDRTYPE			        10
+#define EIGRPROUTEORIGINADDR				        11
+#define EIGRPNEXTHOPADDRESSTYPE				        12
 #define EIGRPNEXTHOPADDRESS					13
-#define EIGRPNEXTHOPINTERFACE				14
+#define EIGRPNEXTHOPINTERFACE				        14
 #define EIGRPDISTANCE						15
 #define EIGRPREPORTDISTANCE					16
 
 /* EIGRP peer entry */
-#define EIGRPHANDLE							1
+#define EIGRPHANDLE						1
 #define EIGRPPEERADDRTYPE					2
 #define EIGRPPEERADDR						3
 #define EIGRPPEERIFINDEX					4
 #define EIGRPHOLDTIME						5
-#define EIGRPUPTIME							6
-#define EIGRPSRTT							7
-#define EIGRPRTO							8
+#define EIGRPUPTIME						6
+#define EIGRPSRTT						7
+#define EIGRPRTO						8
 #define EIGRPPKTSENQUEUED					9
 #define EIGRPLASTSEQ						10
 #define EIGRPVERSION						11
@@ -129,10 +135,10 @@ oid eigrp_oid [] = { EIGRPMIB };
 /* EIGRP interface entry */
 #define EIGRPPEERCOUNT						3
 #define EIGRPXMITRELIABLEQ					4
-#define EIGRPXMITUNRELIABLEQ				5
+#define EIGRPXMITUNRELIABLEQ	        			5
 #define EIGRPMEANSRTT						6
 #define EIGRPPACINGRELIABLE					7
-#define EIGRPPACINGUNRELIABLE				8
+#define EIGRPPACINGUNRELIABLE		        		8
 #define EIGRPMFLOWTIMER						9
 #define EIGRPPENDINGROUTES					10
 #define EIGRPHELLOINTERVAL					11
@@ -142,7 +148,7 @@ oid eigrp_oid [] = { EIGRPMIB };
 #define EIGRPUUCASTS						15
 #define EIGRPRUCASTS						16
 #define EIGRPMCASTEXCEPTS					17
-#define EIGRPCRPKTS							18
+#define EIGRPCRPKTS						18
 #define EIGRPACKSSUPPRESSED					19
 #define EIGRPRETRANSSENT					20
 #define EIGRPOOSRCVD						21
@@ -471,7 +477,7 @@ struct variable eigrp_variables[] =
   {
     eigrp_snmp_iflist = list_new ();
     smux_init (eigrp_om->master);
-    REGISTER_MIB("ciscosmi/ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
+    REGISTER_MIB("iana/ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
   }
 
 

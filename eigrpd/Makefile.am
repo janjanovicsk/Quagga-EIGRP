@@ -21,7 +21,7 @@ eigrpdheader_HEADERS = \
 	
 noinst_HEADERS = \
 	eigrp_const.h eigrp_structs.h eigrp_macros.h eigrp_interface.h eigrp_neighbor.h eigrp_network.h eigrp_packet.h \
-	eigrp_zebra.h eigrp_vty.h 
+	eigrp_zebra.h eigrp_vty.h eigrp_snmp.h
 	
 eigrpd_SOURCES = eigrp_main.c
 

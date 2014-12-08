@@ -262,7 +262,7 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	       size, ifindex2ifname(nbr->ei->ifp->ifindex), 
 	       inet_ntoa(nbr->src));
 
-  size -= EIGRP_HEADER_SIZE;
+  size -= EIGRP_HEADER_LEN;
   if (size < 0)
     return;
 
@@ -433,34 +433,40 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
   // allocate a new packet to be sent
   ep = eigrp_packet_new(ei->ifp->mtu);
 
-  if (ep) {
-    // encode common header feilds
-    eigrp_packet_header_init(EIGRP_OPC_HELLO, ei, ep->s, 0, 0, ack);
+  if (ep)
+    {
+      // encode common header feilds
+      eigrp_packet_header_init(EIGRP_OPC_HELLO, ei, ep->s, 0, 0, ack);
 
-    // encode Authentication TLV
-    if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
-      {
-        length += eigrp_add_authTLV_to_stream(ep->s,ei);
-      }
+      // encode Authentication TLV
+      if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
+        {
+          length += eigrp_add_authTLV_to_stream(ep->s,ei);
+        }
 
-    // encode Hello packet with approperate TLVs
-    length += eigrp_hello_parameter_encode(ei, ep->s);
+      // encode Hello packet with approperate TLVs
+      length += eigrp_hello_parameter_encode(ei, ep->s);
 
-    // figure out the version of code we're running
-    length += eigrp_sw_version_encode(ep->s);
+      // figure out the version of code we're running
+      length += eigrp_sw_version_encode(ep->s);
 
-    // add in the TID list if doing multi-topology
-    length += eigrp_tidlist_encode(ep->s);
+      // add in the TID list if doing multi-topology
+      length += eigrp_tidlist_encode(ep->s);
 
-    // EIGRP Checksum
-    eigrp_packet_checksum(ei, ep->s, length);
+      // EIGRP Checksum
+      eigrp_packet_checksum(ei, ep->s, length);
 
-    // Set packet length
-    ep->length = length;
+      // Set packet length
+      ep->length = length;
 
-    // set soruce address for the hello packet
-    ep->dst.s_addr = addr;
-  }
+      // set soruce address for the hello packet
+      ep->dst.s_addr = addr;
+
+      if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
+        {
+          eigrp_make_md5_digest(ei,ep->s,key_lookup_for_send(IF_DEF_PARAMS (ei->ifp)->auth_keychain),length);
+        }
+    }
 
   return(ep);
 }
