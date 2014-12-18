@@ -156,15 +156,16 @@ oid eigrp_oid [] = { EIGRPMIB };
 #define EIGRPAUTHKEYCHAIN					23
 
 /* SNMP value hack. */
-#define COUNTER     ASN_COUNTER
-#define INTEGER     ASN_INTEGER
-#define GAUGE       ASN_GAUGE
-#define TIMETICKS   ASN_TIMETICKS
-#define IPADDRESS   ASN_IPADDRESS
-#define STRING      ASN_OCTET_STR
-#define IPADDRESSPREFIXLEN ASN_INTEGER
-#define IPADDRESSTYPE ASN_OCTET_STR
-#define INTERFACEINDEXORZERO ASN_INTEGER
+#define COUNTER                 ASN_COUNTER
+#define INTEGER                 ASN_INTEGER
+#define GAUGE                   ASN_GAUGE
+#define TIMETICKS               ASN_TIMETICKS
+#define IPADDRESS               ASN_IPADDRESS
+#define STRING                  ASN_OCTET_STR
+#define IPADDRESSPREFIXLEN      ASN_INTEGER
+#define IPADDRESSTYPE           ASN_OCTET_STR
+#define INTERFACEINDEXORZERO    ASN_INTEGER
+#define UINTEGER                ASN_UNSIGNED
 
 
 
@@ -186,161 +187,161 @@ struct variable eigrp_variables[] =
 {
   /* EIGRP vpn variables */
   {EIGRPVPNID,              	INTEGER, NOACCESS, eigrpVpnEntry,
-   5, {1, 1, 1, 1, 1}},
+   4, {1, 1, 1, 1}},
   {EIGRPVPNNAME,            	STRING, RONLY, eigrpVpnEntry,
-   5, {1, 1, 1, 1, 2}},
+   4, {1, 1, 1, 2}},
 
   /* EIGRP traffic stats variables */
-  {EIGRPASNUMBER,              	INTEGER, NOACCESS, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 1}},
-  {EIGRPNBRCOUNT,              	INTEGER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 2}},
+  {EIGRPASNUMBER,              	UINTEGER, NOACCESS, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 1}},
+  {EIGRPNBRCOUNT,              	UINTEGER, RONLY, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 2}},
   {EIGRPHELLOSSENT,            	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 3}},
+   4, {2, 1, 1, 3}},
   {EIGRPHELLOSRCVD,           	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 4}},
+   4, {2, 1, 1, 4}},
   {EIGRPUPDATESSENT,          	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 5}},
+   4, {2, 1, 1, 5}},
   {EIGRPUPDATESRCVD,           	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 6}},
+   4, {2, 1, 1, 6}},
   {EIGRPQUERIESSENT,            COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 7}},
+   4, {2, 1, 1, 7}},
   {EIGRPQUERIESRCVD,            COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 8}},
+   4, {2, 1, 1, 8}},
   {EIGRPREPLIESSENT,           	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 9}},
+   4, {2, 1, 1, 9}},
   {EIGRPREPLIESRCVD,            COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 10}},
+   4, {2, 1, 1, 10}},
   {EIGRPACKSSENT,               COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 11}},
+   4, {2, 1, 1, 11}},
   {EIGRPACKSRCVD,               COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 12}},
+   4, {2, 1, 1, 12}},
   {EIGRPINPUTQHIGHMARK,         INTEGER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 13}},
+   4, {2, 1, 1, 13}},
   {EIGRPINPUTQDROPS,           	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 14}},
+   4, {2, 1, 1, 14}},
   {EIGRPSIAQUERIESSENT,        	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 15}},
+   4, {2, 1, 1, 15}},
   {EIGRPSIAQUERIESRCVD,       	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 16}},
+   4, {2, 1, 1, 16}},
   {EIGRPASROUTERIDTYPE,         IPADDRESSTYPE, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 17}},
-  {EIGRPASROUTERID,       	   	IPADDRESS, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 18}},
-  {EIGRPTOPOROUTES,       	   	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 19}},
-  {EIGRPHEADSERIAL,       	   	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 20}},
+   4, {2, 1, 1, 17}},
+  {EIGRPASROUTERID,       	IPADDRESS, RONLY, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 18}},
+  {EIGRPTOPOROUTES,       	COUNTER, RONLY, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 19}},
+  {EIGRPHEADSERIAL,       	COUNTER, RONLY, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 20}},
   {EIGRPNEXTSERIAL,            	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 21}},
+   4, {2, 1, 1, 21}},
   {EIGRPXMITPENDREPLIES,       	INTEGER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 22}},
-  {EIGRPXMITDUMMIES,       	   	COUNTER, RONLY, eigrpTraffStatsEntry,
-   5, {1, 2, 1, 1, 23}},
+   4, {2, 1, 1, 22}},
+  {EIGRPXMITDUMMIES,       	COUNTER, RONLY, eigrpTraffStatsEntry,
+   4, {2, 1, 1, 23}},
 
   /* EIGRP topology variables */
-  {EIGRPDESTNETTYPE,       	   	IPADDRESSTYPE, NOACCESS, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 1}},
-  {EIGRPDESTNET,       	   	   	IPADDRESSPREFIXLEN, NOACCESS, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 2}},
+  {EIGRPDESTNETTYPE,       	IPADDRESSTYPE, NOACCESS, eigrpTopologyEntry,
+   4, {3, 1, 1, 1}},
+  {EIGRPDESTNET,       	   	IPADDRESSPREFIXLEN, NOACCESS, eigrpTopologyEntry,
+   4, {3, 1, 1, 2}},
   {EIGRPDESTNETPREFIXLEN,      	IPADDRESSTYPE, NOACCESS, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 4}},
-  {EIGRPACTIVE,       	   		INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 5}},
+   4, {3, 1, 1, 4}},
+  {EIGRPACTIVE,       	   	INTEGER, RONLY, eigrpTopologyEntry,
+   4, {3, 1, 1, 5}},
   {EIGRPSTUCKINACTIVE,       	INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 6}},
+   4, {3, 1, 1, 6}},
   {EIGRPDESTSUCCESSORS,       	INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 7}},
-  {EIGRPFDISTANCE,       	   	INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 8}},
+   4, {3, 1, 1, 7}},
+  {EIGRPFDISTANCE,       	INTEGER, RONLY, eigrpTopologyEntry,
+   4, {3, 1, 1, 8}},
   {EIGRPROUTEORIGINTYPE,       	STRING, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 9}},
+   4, {3, 1, 1, 9}},
   {EIGRPROUTEORIGINADDRTYPE,    IPADDRESSTYPE, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 10}},
+   4, {3, 1, 1, 10}},
   {EIGRPROUTEORIGINADDR,       	IPADDRESS, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 11}},
+   4, {3, 1, 1, 11}},
   {EIGRPNEXTHOPADDRESSTYPE,     IPADDRESSTYPE, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 12}},
+   4, {3, 1, 1, 12}},
   {EIGRPNEXTHOPADDRESS,       	IPADDRESS, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 13}},
+   4, {3, 1, 1, 13}},
   {EIGRPNEXTHOPINTERFACE,       STRING, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 14}},
-  {EIGRPDISTANCE,       	    INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 15}},
+   4, {3, 1, 1, 14}},
+  {EIGRPDISTANCE,       	INTEGER, RONLY, eigrpTopologyEntry,
+   4, {3, 1, 1, 15}},
   {EIGRPREPORTDISTANCE,       	INTEGER, RONLY, eigrpTopologyEntry,
-   5, {1, 3, 1, 1, 16}},
+   4, {3, 1, 1, 16}},
 
   /* EIGRP peer variables */
   {EIGRPHANDLE,       	    	INTEGER, NOACCESS, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 1}},
+   4, {4, 1, 1, 1}},
   {EIGRPPEERADDRTYPE,       	IPADDRESSTYPE, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 2}},
-  {EIGRPPEERADDR,       	    IPADDRESS, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 3}},
-  {EIGRPPEERIFINDEX,       	    INTERFACEINDEXORZERO, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 4}},
-  {EIGRPHOLDTIME,       	    INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 5}},
+   4, {4, 1, 1, 2}},
+  {EIGRPPEERADDR,       	IPADDRESS, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 3}},
+  {EIGRPPEERIFINDEX,       	INTERFACEINDEXORZERO, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 4}},
+  {EIGRPHOLDTIME,       	INTEGER, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 5}},
   {EIGRPUPTIME,       	    	STRING, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 6}},
-  {EIGRPSRTT,       	   		INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 7}},
-  {EIGRPRTO,       	    		INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 8}},
-  {EIGRPPKTSENQUEUED,			INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 9}},
+   4, {4, 1, 1, 6}},
+  {EIGRPSRTT,       	   	INTEGER, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 7}},
+  {EIGRPRTO,       	    	INTEGER, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 8}},
+  {EIGRPPKTSENQUEUED,		INTEGER, RONLY, eigrpPeerEntry,
+   4, {4, 1, 1, 9}},
   {EIGRPLASTSEQ,       	    	INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 10}},
+   4, {4, 1, 1, 10}},
   {EIGRPVERSION,       	    	STRING, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 11}},
+   4, {4, 1, 1, 11}},
   {EIGRPRETRANS,       	    	COUNTER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 12}},
+   4, {4, 1, 1, 12}},
   {EIGRPRETRIES,       	    	INTEGER, RONLY, eigrpPeerEntry,
-   5, {1, 4, 1, 1, 13}},
+   4, {4, 1, 1, 13}},
 
   /* EIGRP interface variables */
-  {EIGRPPEERCOUNT,       	    GAUGE, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 3}},
+  {EIGRPPEERCOUNT,       	GAUGE, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 3}},
   {EIGRPXMITRELIABLEQ,       	GAUGE, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 4}},
+   4, {5, 1, 1, 4}},
   {EIGRPXMITUNRELIABLEQ,       	GAUGE, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 5}},
-  {EIGRPMEANSRTT,       	    INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 6}},
+   4, {5, 1, 1, 5}},
+  {EIGRPMEANSRTT,       	INTEGER, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 6}},
   {EIGRPPACINGRELIABLE,       	INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 7}},
+   4, {5, 1, 1, 7}},
   {EIGRPPACINGUNRELIABLE,       INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 8}},
-  {EIGRPMFLOWTIMER,       	    INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 9}},
+   4, {5, 1, 1, 8}},
+  {EIGRPMFLOWTIMER,       	INTEGER, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 9}},
   {EIGRPPENDINGROUTES,       	GAUGE, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 10}},
+   4, {5, 1, 1, 10}},
   {EIGRPHELLOINTERVAL,       	INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 11}},
+   4, {5, 1, 1, 11}},
   {EIGRPXMITNEXTSERIAL,       	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 12}},
+   4, {5, 1, 1, 12}},
   {EIGRPUMCASTS,       	    	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 13}},
+   4, {5, 1, 1, 13}},
   {EIGRPRMCASTS,       	    	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 14}},
+   4, {5, 1, 1, 14}},
   {EIGRPUUCASTS,       	    	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 15}},
+   4, {5, 1, 1, 15}},
   {EIGRPRUCASTS,       	    	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 16}},
+   4, {5, 1, 1, 16}},
   {EIGRPMCASTEXCEPTS,       	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 17}},
-  {EIGRPCRPKTS,       	   	 	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 18}},
+   4, {5, 1, 1, 17}},
+  {EIGRPCRPKTS,       	   	COUNTER, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 18}},
   {EIGRPACKSSUPPRESSED,       	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 19}},
-  {EIGRPRETRANSSENT,       	    COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 20}},
+   4, {5, 1, 1, 19}},
+  {EIGRPRETRANSSENT,       	COUNTER, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 20}},
   {EIGRPOOSRCVD,       	    	COUNTER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 21}},
-  {EIGRPAUTHMODE,       	    INTEGER, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 22}},
+   4, {5, 1, 1, 21}},
+  {EIGRPAUTHMODE,       	INTEGER, RONLY, eigrpInterfaceEntry,
+   4, {5, 1, 1, 22}},
   {EIGRPAUTHKEYCHAIN,       	STRING, RONLY, eigrpInterfaceEntry,
-   5, {1, 5, 1, 1, 23}}
+   4, {5, 1, 1, 23}}
 };
 
 
@@ -350,13 +351,40 @@ struct variable eigrp_variables[] =
   {
 	  return NULL;
   }
+
+  static uint32_t
+  eigrp_neighbor_count(struct eigrp *eigrp)
+  {
+    uint32_t count;
+    struct eigrp_interface *ei;
+    struct listnode *node, *node2, *nnode2;
+    struct eigrp_neighbor *nbr;
+
+      if (eigrp == NULL)
+        {
+          return 0;
+        }
+
+    count = 0;
+    for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+        {
+          for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+            {
+              if (nbr->state == EIGRP_NEIGHBOR_UP)
+                count++;
+            }
+        }
+
+    return count;
+  }
+
+
   static u_char *
   eigrpTraffStatsEntry (struct variable *v, oid *name, size_t *length,
 			 	 int exact, size_t *var_len, WriteMethod **write_method)
   {
 	struct eigrp *eigrp;
 
-	zlog_warn("SOM TU \n");
 	eigrp = eigrp_lookup ();
 
 	/* Check whether the instance identifier is valid */
@@ -368,84 +396,19 @@ struct variable eigrp_variables[] =
 	switch (v->magic)
 	{
 	case EIGRPASNUMBER:		/* 1 */
-		  /* AS-number of this EIGRP instance. */
-		  if (eigrp)
-		return SNMP_INTEGER (eigrp->AS);
-		  else
-		return SNMP_INTEGER (0);
-		  break;
-//	case OSPFADMINSTAT:		/* 2 */
-//		  /* The administrative status of OSPF in the router. */
-//		  if (ospf_admin_stat (ospf))
-//		return SNMP_INTEGER (OSPF_STATUS_ENABLED);
-//		  else
-//	return SNMP_INTEGER (OSPF_STATUS_DISABLED);
-//	  break;
-//	case OSPFVERSIONNUMBER:	/* 3 */
-//	  /* OSPF version 2. */
-//	  return SNMP_INTEGER (OSPF_VERSION);
-//	  break;
-//	case OSPFAREABDRRTRSTATUS:	/* 4 */
-//	  /* Area Border router status. */
-//	  if (ospf && CHECK_FLAG (ospf->flags, OSPF_FLAG_ABR))
-//	return SNMP_INTEGER (SNMP_TRUE);
-//	  else
-//	return SNMP_INTEGER (SNMP_FALSE);
-//	  break;
-//	case OSPFASBDRRTRSTATUS:	/* 5 */
-//	  /* AS Border router status. */
-//	  if (ospf && CHECK_FLAG (ospf->flags, OSPF_FLAG_ASBR))
-//	return SNMP_INTEGER (SNMP_TRUE);
-//	  else
-//	return SNMP_INTEGER (SNMP_FALSE);
-//	  break;
-//	case OSPFEXTERNLSACOUNT:	/* 6 */
-//	  /* External LSA counts. */
-//	  if (ospf)
-//	return SNMP_INTEGER (ospf_lsdb_count_all (ospf->lsdb));
-//	  else
-//	return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFEXTERNLSACKSUMSUM:	/* 7 */
-//	  /* External LSA checksum. */
-//	  return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFTOSSUPPORT:	/* 8 */
-//	  /* TOS is not supported. */
-//	  return SNMP_INTEGER (SNMP_FALSE);
-//	  break;
-//	case OSPFORIGINATENEWLSAS:	/* 9 */
-//	  /* The number of new link-state advertisements. */
-//	  if (ospf)
-//	return SNMP_INTEGER (ospf->lsa_originate_count);
-//	  else
-//	return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFRXNEWLSAS:		/* 10 */
-//	  /* The number of link-state advertisements received determined
-//		 to be new instantiations. */
-//	  if (ospf)
-//	return SNMP_INTEGER (ospf->rx_lsa_count);
-//	  else
-//	return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFEXTLSDBLIMIT:	/* 11 */
-//	  /* There is no limit for the number of non-default
-//		 AS-external-LSAs. */
-//	  return SNMP_INTEGER (-1);
-//	  break;
-//	case OSPFMULTICASTEXTENSIONS: /* 12 */
-//	  /* Multicast Extensions to OSPF is not supported. */
-//	  return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFEXITOVERFLOWINTERVAL: /* 13 */
-//	  /* Overflow is not supported. */
-//	  return SNMP_INTEGER (0);
-//	  break;
-//	case OSPFDEMANDEXTENSIONS:	/* 14 */
-//	  /* Demand routing is not supported. */
-//	  return SNMP_INTEGER (SNMP_FALSE);
-//	  break;
+            /* AS-number of this EIGRP instance. */
+            if (eigrp)
+          return SNMP_INTEGER (eigrp->AS);
+            else
+          return SNMP_INTEGER (0);
+            break;
+	case EIGRPNBRCOUNT:           /* 2 */
+              /* Neighbor count of this EIGRP instance */
+              if (eigrp)
+            return SNMP_INTEGER (eigrp_neighbor_count(eigrp));
+              else
+            return SNMP_INTEGER (0);
+              break;
 	default:
 	  return NULL;
 	}
@@ -477,7 +440,7 @@ struct variable eigrp_variables[] =
   {
     eigrp_snmp_iflist = list_new ();
     smux_init (eigrp_om->master);
-    REGISTER_MIB("iana/ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
+    REGISTER_MIB("ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
   }
 
 

@@ -87,9 +87,8 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
     }
 
   same = 0;
-  if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence))){
+  if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence)))
       same = 1;
-  }
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
@@ -115,9 +114,8 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
             eigrp_update_send_init(nbr);
           }
 
-        if(nbr->state == EIGRP_NEIGHBOR_PENDING){
+        if(nbr->state == EIGRP_NEIGHBOR_PENDING)
           eigrp_update_send_init(nbr);
-        }
     }
 
   /*If there is topology information*/

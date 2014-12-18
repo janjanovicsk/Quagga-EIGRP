@@ -103,7 +103,7 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_int16_t l
   /* Generate a digest for the entire packet + our secret key. */
   memset(&ctx, 0, sizeof(ctx));
   MD5Init(&ctx);
-  MD5Update(&ctx, ibuf, length);
+  MD5Update(&ctx, ibuf, backup_end);
   MD5Final(digest, &ctx);
 
   /* Append md5 digest to the end of the stream. */
@@ -1161,7 +1161,7 @@ eigrp_add_authTLV_to_stream (struct stream *s,
   if(key)
     {
       authTLV->key_id = htonl(key->index);
-      memcpy(authTLV->digest, key->string, strlen(key->string));
+      memcpy(authTLV->digest + (EIGRP_AUTH_TYPE_MD5_LEN-strlen(key->string)), key->string, strlen(key->string));
       stream_put(s,authTLV, sizeof(struct TLV_Authentication_Type));
       eigrp_authTLV_free(authTLV);
       return EIGRP_AUTH_MD5_TLV_SIZE;

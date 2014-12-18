@@ -167,7 +167,7 @@ DEFUN (no_eigrp_network,
 
   if (ret == 0)
   {
-    vty_out (vty,"Can't find specified network area configuration.%s", VTY_NEWLINE);
+    vty_out (vty,"Can't find specified network configuration.%s", VTY_NEWLINE);
     return CMD_WARNING;
   }
 

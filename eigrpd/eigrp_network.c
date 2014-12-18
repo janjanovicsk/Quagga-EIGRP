@@ -368,6 +368,8 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
         eigrp_if_free(ei);
     }
 
+
+
   return 1;
 }
 
