@@ -80,6 +80,10 @@ static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 int
 eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_int16_t length)
 {
+
+  struct key *key;
+  struct keychain *keychain;
+
   unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
   MD5_CTX ctx;
   void *ibuf;
@@ -100,14 +104,20 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_int16_t l
 
   auth_TLV->key_sequence = 0;
 
+
+  keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
+   if(keychain)
+     key = key_lookup_for_send(keychain);
+
   /* Generate a digest for the entire packet + our secret key. */
   memset(&ctx, 0, sizeof(ctx));
   MD5Init(&ctx);
   MD5Update(&ctx, ibuf, backup_end);
+  MD5Update(&ctx, key->string, EIGRP_AUTH_TYPE_MD5_LEN);
   MD5Final(digest, &ctx);
 
   /* Append md5 digest to the end of the stream. */
-  memcpy(auth_TLV->digest,digest,sizeof(digest));
+  memcpy(auth_TLV->digest,digest,EIGRP_AUTH_TYPE_MD5_LEN);
 
   stream_set_endp(s,EIGRP_HEADER_LEN);
   stream_put(s,auth_TLV,EIGRP_AUTH_MD5_TLV_SIZE);
@@ -1161,6 +1171,7 @@ eigrp_add_authTLV_to_stream (struct stream *s,
   if(key)
     {
       authTLV->key_id = htonl(key->index);
+      memset(authTLV->digest,0,EIGRP_AUTH_TYPE_MD5_LEN);
       memcpy(authTLV->digest + (EIGRP_AUTH_TYPE_MD5_LEN-strlen(key->string)), key->string, strlen(key->string));
       stream_put(s,authTLV, sizeof(struct TLV_Authentication_Type));
       eigrp_authTLV_free(authTLV);

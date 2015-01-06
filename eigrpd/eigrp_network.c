@@ -379,6 +379,9 @@ eigrp_calculate_metrics(struct eigrp *eigrp, struct eigrp_metrics *metric)
   u_int64_t temp_metric;
   temp_metric = 0;
 
+  if(metric->delay == EIGRP_MAX_METRIC)
+    return EIGRP_MAX_METRIC;
+
   // EIGRP Metric = {K1*BW+[(K2*BW)/(256-load)]+(K3*delay)}*{K5/(reliability+K4)}
 
   if (eigrp->k_values[0])

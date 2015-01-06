@@ -142,7 +142,10 @@ eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
 void
 eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 {
+
+  eigrp_topology_neighbor_down(nbr->ei->eigrp, nbr);
   /* Cancel all events. *//* Thread lookup cost would be negligible. */
+
   thread_cancel_event (master, nbr);
   eigrp_fifo_free (nbr->multicast_queue);
   eigrp_fifo_free (nbr->retrans_queue);
@@ -161,6 +164,7 @@ holddown_timer_expired (struct thread *thread)
 
   zlog_info ("Neighbor %s (%s) is down: holding time expired",
 	     inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+  nbr->state = EIGRP_NEIGHBOR_DOWN;
   eigrp_nbr_delete (nbr);
 
   return 0;

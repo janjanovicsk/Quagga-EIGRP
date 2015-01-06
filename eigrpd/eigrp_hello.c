@@ -453,9 +453,6 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
       // add in the TID list if doing multi-topology
       length += eigrp_tidlist_encode(ep->s);
 
-      // EIGRP Checksum
-      eigrp_packet_checksum(ei, ep->s, length);
-
       // Set packet length
       ep->length = length;
 
@@ -466,6 +463,9 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
         {
           eigrp_make_md5_digest(ei,ep->s,length);
         }
+
+      // EIGRP Checksum
+      eigrp_packet_checksum(ei, ep->s, length);
     }
 
   return(ep);

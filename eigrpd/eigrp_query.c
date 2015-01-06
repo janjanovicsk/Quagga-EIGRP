@@ -54,27 +54,31 @@
 #include "eigrpd/eigrp_fsm.h"
 
 
-void
+u_int32_t
 eigrp_query_send_all (struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
 {
   struct eigrp_interface *iface;
   struct listnode *node, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
+  u_int32_t counter;
 
   if (eigrp == NULL)
     {
       zlog_debug("EIGRP Routing Process not enabled");
-      return;
+      return 0;
     }
 
+  counter=0;
   for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
     {
       for (ALL_LIST_ELEMENTS(iface->nbrs, node2, nnode2, nbr))
         {
           if (nbr->state == EIGRP_NEIGHBOR_UP)
             eigrp_send_query(nbr, te);
+            counter++;
         }
     }
+  return counter;
 }
 
 /*EIGRP QUERY read function*/

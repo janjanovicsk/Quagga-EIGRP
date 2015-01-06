@@ -70,7 +70,7 @@
 
 #define EIGRP_MULTICAST_ADDRESS            0xe000000A /*224.0.0.10*/
 
-#define EIGRP_MAX_METRIC                   0xffffffffU    /*8589934591*/
+#define EIGRP_MAX_METRIC                   0xffffffffU    /*4294967295*/
 
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0

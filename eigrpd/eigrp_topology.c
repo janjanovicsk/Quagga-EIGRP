@@ -473,19 +473,18 @@ eigrp_update_routing_table(struct eigrp_prefix_entry * prefix)
           entry->flags -= EIGRP_NEIGHBOR_ENTRY_INTABLE_FLAG;
         }
     }
-
 }
 
 void
 eigrp_topology_neighbor_down(struct eigrp *eigrp, struct eigrp_neighbor * nbr)
 {
-  struct listnode *node1, *node2;
+  struct listnode *node1, *node11, *node2, *node22;
   struct eigrp_prefix_entry *prefix;
   struct eigrp_neighbor_entry *entry;
 
-  for (ALL_LIST_ELEMENTS_RO(eigrp->topology_table, node1, prefix))
+  for (ALL_LIST_ELEMENTS(eigrp->topology_table, node1, node11, prefix))
     {
-      for (ALL_LIST_ELEMENTS_RO(prefix->entries, node2, entry))
+      for (ALL_LIST_ELEMENTS(prefix->entries, node2, node22, entry))
         {
           if (entry->adv_router == nbr)
             {
