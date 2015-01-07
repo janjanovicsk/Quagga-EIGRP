@@ -53,11 +53,24 @@ struct eigrp_master
 #define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
 };
 
+struct eigrp_metrics
+{
+  u_int32_t delay;
+  u_int32_t bandwith;
+  unsigned char mtu[3];
+  u_char hop_count;
+  u_char reliability;
+  u_char load;
+  u_char tag;
+  u_char flags;
+};
+
 struct eigrp
 {
   u_int16_t AS;			/* Autonomous system number */
   u_int16_t vrid;		/* Virtual Router ID */
   u_char    k_values[6];	/*Array for K values configuration*/
+  u_char variance;              /*Metric variance multiplier*/
 
   /* EIGRP Router ID. */
   u_int32_t router_id; /* Configured automatically. */
@@ -85,6 +98,10 @@ struct eigrp
 
   /*Neighbor self*/
   struct eigrp_neighbor *neighbor_self;
+
+  /*Configured metric for redistributed routes*/
+  struct eigrp_metrics dmetric[ZEBRA_ROUTE_MAX + 1];
+  int redistribute;           /* Num of redistributed protocols. */
 
 };
 
@@ -312,18 +329,6 @@ struct TLV_Software_Type
   u_char eigrp_minor;
 }__attribute__((packed));
 
-struct eigrp_metrics
-{
-  u_int32_t delay;
-  u_int32_t bandwith;
-  unsigned char mtu[3];
-  u_char hop_count;
-  u_char reliability;
-  u_char load;
-  u_char tag;
-  u_char flags;
-};
-
 struct TLV_IPv4_Internal_type
 {
   u_int16_t type;
@@ -370,11 +375,16 @@ struct eigrp_prefix_entry
   u_int32_t rdistance;						// RD
   u_int32_t distance;						// D
   struct eigrp_metrics reported_metric;		// RD for sending
+
   u_char nt;                                                    //network type
   u_char state; 							//route fsm state
   u_char af;								// address family
+
   struct prefix_ipv4 *destination_ipv4;		// pointer to struct with ipv4 address
   struct prefix_ipv6 *destination_ipv6;		// pointer to struct with ipv6 address
+
+  //If network type is REMOTE_EXTERNAL, pointer will have reference to its external TLV
+  struct TLV_IPv4_External_type *extTLV;
 };
 
 /* EIGRP Topology table record structure */

@@ -46,7 +46,7 @@ extern int eigrp_if_up (struct eigrp_interface *);
 extern void eigrp_if_stream_set (struct eigrp_interface *);
 extern void eigrp_if_set_multicast (struct eigrp_interface *);
 extern u_char eigrp_default_iftype (struct interface *);
-extern void eigrp_if_free (struct eigrp_interface *);
+extern void eigrp_if_free (struct eigrp_interface *, int);
 extern int eigrp_if_down (struct eigrp_interface *);
 extern void eigrp_if_stream_unset (struct eigrp_interface *);
 

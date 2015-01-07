@@ -365,7 +365,7 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
         }
 
       if (found == 0)
-        eigrp_if_free(ei);
+        eigrp_if_free(ei, INTERFACE_DOWN_BY_VTY);
     }
 
 
@@ -438,3 +438,10 @@ eigrp_metrics_is_same(struct eigrp_metrics *metric1,
 
     return 0; // if different
 }
+void
+eigrp_external_routes_refresh (struct eigrp *eigrp, int type)
+{
+
+
+}
+

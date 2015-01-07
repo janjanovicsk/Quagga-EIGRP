@@ -53,7 +53,7 @@ extern void eigrp_fifo_reset (struct eigrp_fifo *);
 extern void eigrp_send_packet_reliably (struct eigrp_neighbor *);
 
 extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv (struct stream *);
-extern u_int16_t eigrp_add_internalTLV_to_stream (struct stream *, struct eigrp_neighbor_entry *);
+extern u_int16_t eigrp_add_internalTLV_to_stream (struct stream *, struct eigrp_prefix_entry *);
 
 extern u_int16_t eigrp_add_authTLV_to_stream (struct stream *, struct eigrp_interface *);
 

@@ -39,6 +39,10 @@
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
 
+/*Metric variance multiplier*/
+#define EIGRP_VARIANCE_DEFAULT  1
+
+
 /* Return values of functions involved in packet verification */
 #define MSG_OK    0
 #define MSG_NG    1
@@ -72,6 +76,12 @@
 
 #define EIGRP_MAX_METRIC                   0xffffffffU    /*4294967295*/
 
+#define DEFAULT_ROUTE               ZEBRA_ROUTE_MAX
+#define DEFAULT_ROUTE_TYPE(T) ((T) == DEFAULT_ROUTE)
+
+#define INTERFACE_DOWN_BY_ZEBRA       1
+#define INTERFACE_DOWN_BY_VTY         2
+
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
  #define EIGRP_IFTYPE_POINTOPOINT         1
@@ -85,8 +95,9 @@
 #define EIGRP_IF_PASSIVE                 1
 
 /* EIGRP TT destination type */
-#define EIGRP_TOPOLOGY_TYPE_CONNECTED           0
-#define EIGRP_TOPOLOGY_TYPE_REMOTE              1
+#define EIGRP_TOPOLOGY_TYPE_CONNECTED           0 // Connected network
+#define EIGRP_TOPOLOGY_TYPE_REMOTE              1 // Remote internal network
+#define EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL     2 // Remote external network
 
 /*EIGRP TT entry flags*/
 #define EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG     1

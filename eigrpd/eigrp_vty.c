@@ -561,9 +561,7 @@ DEFUN (eigrp_if_ip_hellointerval,
 {
   u_int32_t hello;
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
-  struct listnode *node, *nnode;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -584,17 +582,6 @@ DEFUN (eigrp_if_ip_hellointerval,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->v_hello = hello;
 
-//  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-//    {
-//      zlog_warn("HELLO \n");
-//      if (ei->ifp == ifp)
-//        {
-//          THREAD_TIMER_OFF (ei->t_hello);
-//          THREAD_TIMER_ON (master,ei->t_hello,eigrp_hello_timer,ei,1);
-//          break;
-//        }
-//    }
-
   return CMD_SUCCESS;
 }
 
@@ -608,9 +595,7 @@ DEFUN (no_eigrp_if_ip_hellointerval,
        "Seconds between hello transmissions\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
-  struct listnode *node, *nnode;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -695,7 +680,6 @@ DEFUN (eigrp_authentication_mode,
        "Keyed message digest\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
 
   eigrp = eigrp_lookup ();
@@ -723,7 +707,6 @@ DEFUN (no_eigrp_authentication_mode,
        "Keyed message digest\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
 
   eigrp = eigrp_lookup ();
@@ -750,7 +733,6 @@ DEFUN (eigrp_authentication_keychain,
        "Name of key-chain\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
   struct keychain *keychain;
 
@@ -791,9 +773,7 @@ DEFUN (no_eigrp_authentication_keychain,
        "Name of key-chain\n")
 {
   struct eigrp *eigrp;
-  struct eigrp_interface *ei;
   struct interface *ifp;
-  struct keychain *keychain;
 
   eigrp = eigrp_lookup ();
   if (eigrp == NULL)
@@ -812,6 +792,98 @@ DEFUN (no_eigrp_authentication_keychain,
     vty_out(vty,"Key chain with specified name not configured on interface%s", VTY_NEWLINE);
 
   return CMD_SUCCESS;
+}
+
+
+DEFUN (eigrp_redistribute_source_metric,
+    eigrp_redistribute_source_metric_cmd,
+       "redistribute " QUAGGA_REDIST_STR_EIGRPD
+         " metric <1-4294967295> <0-4294967295> <0-255> <1-255> <1-65535>",
+       REDIST_STR
+       QUAGGA_REDIST_HELP_STR_EIGRPD
+       "Metric for redistributed routes\n"
+       "Bandwidth metric in Kbits per second\n"
+       "EIGRP delay metric, in 10 microsecond units\n"
+       "EIGRP reliability metric where 255 is 100% reliable2 ?\n"
+       "EIGRP Effective bandwidth metric (Loading) where 255 is 100% loaded\n"
+       "EIGRP MTU of the path\n")
+{
+  struct eigrp *eigrp = vty->index;
+  struct eigrp_metrics metrics_from_command;
+  int source;
+
+  /* Get distribute source. */
+  source = proto_redistnum(AFI_IP, argv[0]);
+  if (source < 0 )
+    return CMD_WARNING;
+
+  /* Get metrics values */
+
+  return eigrp_redistribute_set (eigrp, source, metrics_from_command);
+}
+
+
+DEFUN (no_eigrp_redistribute_source_metric,
+    no_eigrp_redistribute_source_metric_cmd,
+       "no redistribute " QUAGGA_REDIST_STR_EIGRPD
+         " metric <1-4294967295> <0-4294967295> <0-255> <1-255> <1-65535>",
+         "Disable\n"
+       REDIST_STR
+       QUAGGA_REDIST_HELP_STR_EIGRPD
+       "Metric for redistributed routes\n"
+       "Bandwidth metric in Kbits per second\n"
+       "EIGRP delay metric, in 10 microsecond units\n"
+       "EIGRP reliability metric where 255 is 100% reliable2 ?\n"
+       "EIGRP Effective bandwidth metric (Loading) where 255 is 100% loaded\n"
+       "EIGRP MTU of the path\n")
+{
+  struct eigrp *eigrp = vty->index;
+  struct eigrp_metrics metrics_from_command;
+  int source;
+
+  /* Get distribute source. */
+  source = proto_redistnum(AFI_IP, argv[0]);
+  if (source < 0 )
+    return CMD_WARNING;
+
+  /* Get metrics values */
+
+  return eigrp_redistribute_unset (eigrp, source);
+}
+
+DEFUN (eigrp_variance,
+    eigrp_variance_cmd,
+    "variance <1-128>",
+     "Control load balancing variancev\n"
+     "Metric variance multiplier\n")
+{
+
+    struct eigrp *eigrp;
+
+    eigrp = eigrp_lookup ();
+
+    if(eigrp)
+      eigrp->variance = atoi(argv[0]);
+
+    return CMD_SUCCESS;
+}
+
+
+DEFUN (no_eigrp_variance,
+    no_eigrp_variance_cmd,
+    "no variance <1-128>",
+    "Disable\n"
+     "Control load balancing variancev\n"
+     "Metric variance multiplier\n")
+{
+
+    struct eigrp *eigrp;
+    eigrp = eigrp_lookup ();
+
+    if(eigrp)
+      eigrp->variance = EIGRP_VARIANCE_DEFAULT;
+
+    return CMD_SUCCESS;
 }
 
 static struct cmd_node eigrp_node =
@@ -941,6 +1013,8 @@ eigrp_vty_if_init (void)
 static void
 eigrp_vty_zebra_init (void)
 {
+  install_element (EIGRP_NODE, &eigrp_redistribute_source_metric_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_redistribute_source_metric_cmd);
 
 }
 
@@ -956,4 +1030,9 @@ eigrp_vty_init (void)
 
   install_element (EIGRP_NODE, &eigrp_network_cmd);
   install_element (EIGRP_NODE, &no_eigrp_network_cmd);
+
+  install_element (EIGRP_NODE, &eigrp_variance_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_variance_cmd);
+
+  eigrp_vty_zebra_init ();
 }

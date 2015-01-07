@@ -239,7 +239,7 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
 //  struct eigrp_packet *ep_multicast;
   u_int16_t length = EIGRP_HEADER_LEN;
   struct eigrp_neighbor_entry *te;
-  struct eigrp_prefix_entry *tn;
+  struct eigrp_prefix_entry *pe;
   struct listnode *node, *node2, *nnode, *nnode2;
 
   ep = eigrp_packet_new(nbr->ei->ifp->mtu);
@@ -249,15 +249,15 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
                            nbr->ei->eigrp->sequence_number,
                            nbr->recv_sequence_number);
 
-  for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node, nnode, tn))
+  for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node, nnode, pe))
     {
-      for (ALL_LIST_ELEMENTS(tn->entries, node2, nnode2, te))
+      for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, te))
         {
           if ((te->ei == nbr->ei)
               && (te->prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE))
             continue;
 
-          length += eigrp_add_internalTLV_to_stream(ep->s, te);
+          length += eigrp_add_internalTLV_to_stream(ep->s, pe);
         }
     }
 
@@ -294,7 +294,6 @@ eigrp_update_send (struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
   struct eigrp_packet *ep, *duplicate;
   struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
-  struct eigrp_neighbor_entry *entry;
 
   u_int16_t length = EIGRP_HEADER_LEN;
 
@@ -304,11 +303,11 @@ eigrp_update_send (struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
   eigrp_packet_header_init(EIGRP_OPC_UPDATE, ei, ep->s, 0,
                            ei->eigrp->sequence_number, 0);
 
-  for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, entry))
-    {
-      if ((entry->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG) == EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
-        length += eigrp_add_internalTLV_to_stream(ep->s, entry);
-    }
+      if ((pe->nt == EIGRP_TOPOLOGY_TYPE_REMOTE) || (pe->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED))
+        length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+
+      if (pe->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL)
+        //TODO: Send update in TLV_IPv4_External_type
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(ei, ep->s, length);

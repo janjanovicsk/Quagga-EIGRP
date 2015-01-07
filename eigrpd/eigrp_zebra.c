@@ -66,6 +66,9 @@ static int eigrp_interface_state_down (int, struct zclient *,
                                        zebra_size_t);
 static struct interface * zebra_interface_if_lookup (struct stream *);
 
+static int eigrp_zebra_read_ipv4 (int , struct zclient *,
+                      zebra_size_t );
+
 /* Zebra structure to hold current status. */
 struct zclient *zclient = NULL;
 
@@ -106,8 +109,73 @@ eigrp_zebra_init (void)
   zclient->interface_down = eigrp_interface_state_down;
   zclient->interface_address_add = eigrp_interface_address_add;
   zclient->interface_address_delete = eigrp_interface_address_delete;
-//  zclient->ipv4_route_add = eigrp_zebra_read_ipv4;/* Not implemented */
-//  zclient->ipv4_route_delete = eigrp_zebra_read_ipv4;/* Not implemented */
+  zclient->ipv4_route_add = eigrp_zebra_read_ipv4;
+  zclient->ipv4_route_delete = eigrp_zebra_read_ipv4;
+}
+
+
+/* Zebra route add and delete treatment. */
+static int
+eigrp_zebra_read_ipv4 (int command, struct zclient *zclient,
+                      zebra_size_t length)
+{
+  struct stream *s;
+  struct zapi_ipv4 api;
+  unsigned long ifindex;
+  struct in_addr nexthop;
+  struct prefix_ipv4 p;
+  struct TLV_IPv4_External_type *external_tlv;
+  struct eigrp *eigrp;
+
+  s = zclient->ibuf;
+  ifindex = 0;
+  nexthop.s_addr = 0;
+
+  /* Type, flags, message. */
+  api.type = stream_getc (s);
+  api.flags = stream_getc (s);
+  api.message = stream_getc (s);
+
+  /* IPv4 prefix. */
+  memset (&p, 0, sizeof (struct prefix_ipv4));
+  p.family = AF_INET;
+  p.prefixlen = stream_getc (s);
+  stream_get (&p.prefix, s, PSIZE (p.prefixlen));
+
+  if (IPV4_NET127(ntohl(p.prefix.s_addr)))
+    return 0;
+
+  /* Nexthop, ifindex, distance, metric. */
+  if (CHECK_FLAG (api.message, ZAPI_MESSAGE_NEXTHOP))
+    {
+      api.nexthop_num = stream_getc (s);
+      nexthop.s_addr = stream_get_ipv4 (s);
+    }
+  if (CHECK_FLAG (api.message, ZAPI_MESSAGE_IFINDEX))
+    {
+      api.ifindex_num = stream_getc (s);
+      /* XXX assert(api.ifindex_num == 1); */
+      ifindex = stream_getl (s);
+    }
+  if (CHECK_FLAG (api.message, ZAPI_MESSAGE_DISTANCE))
+    api.distance = stream_getc (s);
+  if (CHECK_FLAG (api.message, ZAPI_MESSAGE_METRIC))
+    api.metric = stream_getl (s);
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    return 0;
+
+  if (command == ZEBRA_IPV4_ROUTE_ADD)
+    {
+
+    }
+  else                          /* if (command == ZEBRA_IPV4_ROUTE_DELETE) */
+    {
+
+    }
+
+  return 0;
 }
 
 /* Inteface addition message from zebra. */
@@ -156,7 +224,7 @@ eigrp_interface_delete (int command, struct zclient *zclient,
 
   for (rn = route_top (IF_OIFS (ifp)); rn; rn = route_next (rn))
     if (rn->info)
-      eigrp_if_free ((struct eigrp_interface *) rn->info);
+      eigrp_if_free ((struct eigrp_interface *) rn->info, INTERFACE_DOWN_BY_ZEBRA);
 
   ifp->ifindex = IFINDEX_INTERNAL;
   return 0;
@@ -222,7 +290,7 @@ eigrp_interface_address_delete (int command, struct zclient *zclient,
   ei = rn->info;
 
   /* Call interface hook functions to clean up */
-  eigrp_if_free (ei);
+  eigrp_if_free (ei, INTERFACE_DOWN_BY_ZEBRA);
 
   connected_free (c);
 
@@ -447,5 +515,65 @@ eigrp_zebra_route_delete (struct prefix_ipv4 *p, struct eigrp_neighbor_entry *te
 
       zclient_send_message (zclient);
     }
+}
+
+int
+eigrp_is_type_redistributed (int type)
+{
+  return (DEFAULT_ROUTE_TYPE (type)) ?
+    zclient->default_information : zclient->redist[type];
+}
+
+int
+eigrp_redistribute_set (struct eigrp *eigrp, int type, struct eigrp_metrics metric)
+{
+
+  if (eigrp_is_type_redistributed (type))
+    {
+      if (eigrp_metrics_is_same(&metric, &eigrp->dmetric[type]))
+        {
+          eigrp->dmetric[type] = metric;
+        }
+
+      eigrp_external_routes_refresh (eigrp, type);
+
+//      if (IS_DEBUG_EIGRP(zebra, ZEBRA_REDISTRIBUTE))
+//        zlog_debug ("Redistribute[%s]: Refresh  Type[%d], Metric[%d]",
+//                   eigrp_redist_string(type),
+//                   metric_type (eigrp, type), metric_value (eigrp, type));
+      return CMD_SUCCESS;
+    }
+
+  eigrp->dmetric[type] = metric;
+
+  zclient_redistribute (ZEBRA_REDISTRIBUTE_ADD, zclient, type);
+
+//  if (IS_DEBUG_EIGRP (zebra, ZEBRA_REDISTRIBUTE))
+//    zlog_debug ("Redistribute[%s]: Start  Type[%d], Metric[%d]",
+//               ospf_redist_string(type),
+//               metric_type (ospf, type), metric_value (ospf, type));
+
+  ++eigrp->redistribute;
+
+  return CMD_SUCCESS;
+}
+
+int
+eigrp_redistribute_unset (struct eigrp *eigrp, int type)
+{
+
+  if (eigrp_is_type_redistributed (type))
+    {
+      memset(&eigrp->dmetric[type], 0, sizeof(struct eigrp_metrics));
+      zclient_redistribute (ZEBRA_REDISTRIBUTE_DELETE, zclient, type);
+      --eigrp->redistribute;
+    }
+
+//  if (IS_DEBUG_EIGRP (zebra, ZEBRA_REDISTRIBUTE))
+//    zlog_debug ("Redistribute[%s]: Start  Type[%d], Metric[%d]",
+//               ospf_redist_string(type),
+//               metric_type (ospf, type), metric_value (ospf, type));
+
+  return CMD_SUCCESS;
 }
 

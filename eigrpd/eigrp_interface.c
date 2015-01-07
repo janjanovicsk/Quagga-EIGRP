@@ -416,8 +416,14 @@ eigrp_default_iftype (struct interface *ifp)
 }
 
 void
-eigrp_if_free (struct eigrp_interface *ei)
+eigrp_if_free (struct eigrp_interface *ei, int source)
 {
+
+  if (source == INTERFACE_DOWN_BY_VTY)
+    {
+      /*PLACEHOLDER FOR GRACEFULL SHUTDOWN CODE*/
+    }
+
   eigrp_if_down (ei);
 
   list_delete (ei->nbrs);
