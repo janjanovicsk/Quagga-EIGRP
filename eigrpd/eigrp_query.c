@@ -73,9 +73,10 @@ eigrp_query_send_all (struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
     {
       for (ALL_LIST_ELEMENTS(iface->nbrs, node2, nnode2, nbr))
         {
-          if (nbr->state == EIGRP_NEIGHBOR_UP)
+          if (nbr->state == EIGRP_NEIGHBOR_UP){
             eigrp_send_query(nbr, te);
             counter++;
+          }
         }
     }
   return counter;

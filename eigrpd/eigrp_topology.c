@@ -382,12 +382,7 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
   if (msg->data_type == EIGRP_TLV_IPv4_INT)
     {
       int_data = msg->data.ipv4_int_type;
-      if (int_data->metric.bandwith == entry->reported_metric.bandwith
-          && int_data->metric.delay == entry->reported_metric.delay
-          /*
-           * Add more to react on change of additional parameters
-           */
-          )
+      if (eigrp_metrics_is_same(&int_data->metric,&entry->reported_metric))
         {
           return 0; // No change
         }
@@ -434,7 +429,7 @@ eigrp_topology_update_node_flags(struct eigrp_prefix_entry *dest)
 
   for (ALL_LIST_ELEMENTS_RO(dest->entries, node, entry))
     {
-      if (entry->distance == dest->distance) // is successor
+      if (entry->distance == dest->distance && entry->distance != EIGRP_MAX_METRIC) // is successor
         {
           entry->flags |= EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
           entry->flags &= 0xfd; // 1111 1101 set fs flag to zero

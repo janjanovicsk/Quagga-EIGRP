@@ -376,7 +376,7 @@ struct eigrp_prefix_entry
   u_int32_t distance;						// D
   struct eigrp_metrics reported_metric;		// RD for sending
 
-  u_char nt;                                                    //network type
+  u_char nt;                                //network type
   u_char state; 							//route fsm state
   u_char af;								// address family
 
