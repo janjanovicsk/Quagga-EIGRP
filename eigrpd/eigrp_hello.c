@@ -93,7 +93,7 @@ eigrp_hello_timer (struct thread *thread)
 	  IF_NAME(ei), EIGRP_IF_PARAM(ei, v_hello));
 
   /* Sending hello packet. */
-  eigrp_hello_send(ei);
+  eigrp_hello_send(ei, EIGRP_HELLO_NORMAL);
 
   /* Hello timer set. */
   ei->t_hello = thread_add_timer(master, eigrp_hello_timer, ei,
@@ -151,7 +151,7 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
 		    inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
 	  /* Expedited hello sent */
-	    eigrp_hello_send(nbr->ei);
+	    eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL);
 
 	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
 	    eigrp_update_send_init(nbr);
@@ -389,7 +389,7 @@ eigrp_tidlist_encode (struct stream *s)
  * older TLV packet formats.
  */
 static u_int16_t
-eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s)
+eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s, u_char graceful_shutdown)
 {
     u_int16_t length = EIGRP_TLV_PARAMETER_LEN;
 
@@ -397,13 +397,25 @@ eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s)
   stream_putw(s, EIGRP_TLV_PARAMETER);
   stream_putw(s, EIGRP_TLV_PARAMETER_LEN);
 
-  // set k values
-  stream_putc(s, ei->eigrp->k_values[0]); /* K1 */
-  stream_putc(s, ei->eigrp->k_values[1]); /* K2 */
-  stream_putc(s, ei->eigrp->k_values[2]); /* K3 */
-  stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
-  stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
-  stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
+  //if graceful shutdown is needed to be announced, send all 255 in K values
+  if(graceful_shutdown == EIGRP_HELLO_GRACEFUL_SHUTDOWN)
+    {
+      stream_putc(s, 0xff); /* K1 */
+      stream_putc(s, 0xff); /* K2 */
+      stream_putc(s, 0xff); /* K3 */
+      stream_putc(s, 0xff); /* K4 */
+      stream_putc(s, 0xff); /* K5 */
+      stream_putc(s, 0xff); /* K6 */
+    }
+  else // set k values
+    {
+      stream_putc(s, ei->eigrp->k_values[0]); /* K1 */
+      stream_putc(s, ei->eigrp->k_values[1]); /* K2 */
+      stream_putc(s, ei->eigrp->k_values[2]); /* K3 */
+      stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
+      stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
+      stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
+    }
 
   // and set hold time value..
   stream_putw(s, IF_DEF_PARAMS(ei->ifp)->v_wait);
@@ -425,7 +437,7 @@ eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s)
  *
  */
 static struct eigrp_packet *
-eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
+eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u_char graceful_shutdown)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_LEN;
@@ -445,7 +457,10 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack)
         }
 
       // encode Hello packet with approperate TLVs
-      length += eigrp_hello_parameter_encode(ei, ep->s);
+      if(graceful_shutdown == EIGRP_HELLO_GRACEFUL_SHUTDOWN)
+        length += eigrp_hello_parameter_encode(ei, ep->s, EIGRP_HELLO_GRACEFUL_SHUTDOWN);
+      else
+        length += eigrp_hello_parameter_encode(ei, ep->s, EIGRP_HELLO_NORMAL);
 
       // figure out the version of code we're running
       length += eigrp_sw_version_encode(ep->s);
@@ -490,7 +505,7 @@ eigrp_hello_send_ack (struct eigrp_neighbor *nbr)
   struct eigrp_packet *ep;
 
   /* if packet succesfully created, add it to the interface queue */
-  ep = eigrp_hello_encode(nbr->ei, nbr->src.s_addr, nbr->recv_sequence_number);
+  ep = eigrp_hello_encode(nbr->ei, nbr->src.s_addr, nbr->recv_sequence_number, EIGRP_HELLO_NORMAL);
 
   if (ep)
     {
@@ -526,7 +541,7 @@ eigrp_hello_send_ack (struct eigrp_neighbor *nbr)
  * sent immadiatly
  */
 void
-eigrp_hello_send (struct eigrp_interface *ei)
+eigrp_hello_send (struct eigrp_interface *ei, u_char graceful_shutdown)
 {
   struct eigrp_packet *ep = NULL;
 
@@ -540,7 +555,7 @@ eigrp_hello_send (struct eigrp_interface *ei)
     zlog_debug("Queueing [Hello] Interface(%s)", IF_NAME(ei));
 
   /* if packet was succesfully created, then add it to the interface queue */
-  ep = eigrp_hello_encode(ei, htonl(EIGRP_MULTICAST_ADDRESS), 0);
+  ep = eigrp_hello_encode(ei, htonl(EIGRP_MULTICAST_ADDRESS), 0, graceful_shutdown);
 
   if (ep)
     {
@@ -556,8 +571,16 @@ eigrp_hello_send (struct eigrp_interface *ei)
 
       if (ei->eigrp->t_write == NULL)
         {
-          ei->eigrp->t_write =
-	    thread_add_write(master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+          if(graceful_shutdown == EIGRP_HELLO_GRACEFUL_SHUTDOWN)
+            {
+              ei->eigrp->t_write =
+                  thread_execute(master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+            }
+          else
+            {
+              ei->eigrp->t_write =
+                thread_add_write(master, eigrp_write, ei->eigrp, ei->eigrp->fd);
+            }
 	}
     }
 }

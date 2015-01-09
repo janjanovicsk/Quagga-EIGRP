@@ -82,6 +82,9 @@
 #define INTERFACE_DOWN_BY_ZEBRA       1
 #define INTERFACE_DOWN_BY_VTY         2
 
+#define EIGRP_HELLO_NORMAL                    0
+#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         1
+
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
  #define EIGRP_IFTYPE_POINTOPOINT         1

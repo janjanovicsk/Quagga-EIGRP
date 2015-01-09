@@ -237,7 +237,9 @@ eigrp_network_set(struct eigrp *eigrp, struct prefix_ipv4 *p)
       return 0;
     }
 
-  rn->info = (void *) 1;
+  struct prefix_ipv4 *pref = prefix_ipv4_new();
+  PREFIX_COPY_IPV4(pref,p);
+  rn->info = (void *) pref;
 
   /* Schedule Router ID Update. */
 //    if (eigrp->router_id == 0)
@@ -337,11 +339,19 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
   struct route_node *rn;
   struct listnode *node, *nnode;
   struct eigrp_interface *ei;
+  struct prefix *pref;
 
   rn = route_node_lookup(eigrp->networks, (struct prefix *) p);
   if (rn == NULL)
     return 0;
 
+  pref = rn->info;
+  route_unlock_node (rn);
+
+  if (!IPV4_ADDR_SAME (&pref->u.prefix4, &p->prefix))
+      return 0;
+
+  prefix_ipv4_free(rn->info);
   rn->info = NULL;
   route_unlock_node(rn); /* initial reference */
 
@@ -358,6 +368,7 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
 
           if (eigrp_network_match_iface(co, &rn->p))
             {
+              zlog_debug("eigrp_network_unset()2");
               found = 1;
               route_unlock_node(rn);
               break;
@@ -365,10 +376,10 @@ eigrp_network_unset(struct eigrp *eigrp, struct prefix_ipv4 *p)
         }
 
       if (found == 0)
-        eigrp_if_free(ei, INTERFACE_DOWN_BY_VTY);
+        {
+          eigrp_if_free(ei, INTERFACE_DOWN_BY_VTY);
+        }
     }
-
-
 
   return 1;
 }

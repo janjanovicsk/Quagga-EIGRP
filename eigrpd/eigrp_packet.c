@@ -85,10 +85,9 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_int16_t l
   struct keychain *keychain;
 
   unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
+  unsigned char temp[EIGRP_AUTH_TYPE_MD5_LEN];
   MD5_CTX ctx;
   void *ibuf;
-  u_int32_t t;
-  u_int16_t result;
   size_t backup_get, backup_end;
   struct TLV_Authentication_Type *auth_TLV;
 
@@ -102,18 +101,16 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_int16_t l
   stream_get(auth_TLV,s,EIGRP_AUTH_MD5_TLV_SIZE);
   stream_set_getp(s, backup_get);
 
-  auth_TLV->key_sequence = 0;
-
-
   keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
    if(keychain)
      key = key_lookup_for_send(keychain);
+
 
   /* Generate a digest for the entire packet + our secret key. */
   memset(&ctx, 0, sizeof(ctx));
   MD5Init(&ctx);
   MD5Update(&ctx, ibuf, backup_end);
-  MD5Update(&ctx, key->string, EIGRP_AUTH_TYPE_MD5_LEN);
+  MD5Update(&ctx, key->string, strlen(key->string));
   MD5Final(digest, &ctx);
 
   /* Append md5 digest to the end of the stream. */
@@ -1156,6 +1153,9 @@ eigrp_add_authTLV_to_stream (struct stream *s,
   authTLV->length = htons(EIGRP_AUTH_MD5_TLV_SIZE);
   authTLV->auth_type = htons(EIGRP_AUTH_TYPE_MD5);
   authTLV->auth_length = htons(EIGRP_AUTH_TYPE_MD5_LEN);
+  authTLV->key_sequence = 0;
+  memset(authTLV->Nullpad,0,sizeof(authTLV->Nullpad));
+
 
   keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
   if(keychain)
@@ -1172,7 +1172,7 @@ eigrp_add_authTLV_to_stream (struct stream *s,
     {
       authTLV->key_id = htonl(key->index);
       memset(authTLV->digest,0,EIGRP_AUTH_TYPE_MD5_LEN);
-      memcpy(authTLV->digest + (EIGRP_AUTH_TYPE_MD5_LEN-strlen(key->string)), key->string, strlen(key->string));
+//      memcpy(authTLV->digest + (EIGRP_AUTH_TYPE_MD5_LEN-strlen(key->string)), key->string, strlen(key->string));
       stream_put(s,authTLV, sizeof(struct TLV_Authentication_Type));
       eigrp_authTLV_free(authTLV);
       return EIGRP_AUTH_MD5_TLV_SIZE;
