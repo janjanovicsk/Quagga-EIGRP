@@ -47,6 +47,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_topology.h"
 
 
 struct eigrp_neighbor *
@@ -143,9 +144,10 @@ void
 eigrp_nbr_delete (struct eigrp_neighbor *nbr)
 {
 
+  eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
   eigrp_topology_neighbor_down(nbr->ei->eigrp, nbr);
-  /* Cancel all events. *//* Thread lookup cost would be negligible. */
 
+  /* Cancel all events. *//* Thread lookup cost would be negligible. */
   thread_cancel_event (master, nbr);
   eigrp_fifo_free (nbr->multicast_queue);
   eigrp_fifo_free (nbr->retrans_queue);

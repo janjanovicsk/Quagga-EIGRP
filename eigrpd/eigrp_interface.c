@@ -123,7 +123,6 @@ eigrp_if_table_lookup (struct interface *ifp, struct prefix *prefix)
 int
 eigrp_if_delete_hook (struct interface *ifp)
 {
-  int rc = 0;
 
   struct route_node *rn;
 
@@ -134,7 +133,10 @@ eigrp_if_delete_hook (struct interface *ifp)
       eigrp_del_if_params (rn->info);
   route_table_finish (IF_OIFS_PARAMS (ifp));
 
-  return rc;
+  XFREE (MTYPE_EIGRP_IF_INFO, ifp->info);
+  ifp->info = NULL;
+
+  return 0;
 }
 
 void
@@ -324,24 +326,21 @@ eigrp_if_down (struct eigrp_interface *ei)
 {
 
   struct listnode *node, *nnode, *node2, *nnode2;
-  struct eigrp_prefix_entry *tn;
-  struct eigrp_neighbor_entry *te;
+  struct eigrp_neighbor *nbr;
 
   if (ei == NULL)
     return 0;
 
-  THREAD_OFF (ei->t_hello);
   /* Shutdown packet reception and sending */
+  if(ei->t_hello)
+    THREAD_OFF (ei->t_hello);
+
   eigrp_if_stream_unset (ei);
 
-  /*Set infinite metrics to routes learned by this interface and start querry process*/
-  for (ALL_LIST_ELEMENTS (ei->eigrp->topology_table, node, nnode, tn))
+  /*Set infinite metrics to routes learned by this interface and start query process*/
+  for (ALL_LIST_ELEMENTS (ei->nbrs, node, nnode, nbr))
     {
-      for (ALL_LIST_ELEMENTS (tn->entries, node2, nnode2, te))
-        {
-          if (te->ei == ei)
-            te->total_metric.delay = 0xFFFFFFFF;
-        }
+      eigrp_nbr_delete(nbr);
     }
 
   return 1;
@@ -421,15 +420,14 @@ eigrp_if_free (struct eigrp_interface *ei, int source)
 
   if (source == INTERFACE_DOWN_BY_VTY)
     {
-      /*PLACEHOLDER FOR GRACEFULL SHUTDOWN CODE*/
+      THREAD_OFF (ei->t_hello);
+      eigrp_hello_send(ei,EIGRP_HELLO_GRACEFUL_SHUTDOWN);
     }
 
   eigrp_if_down (ei);
 
   list_delete (ei->nbrs);
-
   eigrp_delete_from_if (ei->ifp, ei);
-
   listnode_delete (ei->eigrp->eiflist, ei);
 
   thread_cancel_event (master, ei);

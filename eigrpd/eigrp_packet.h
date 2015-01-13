@@ -64,7 +64,7 @@ extern int eigrp_unack_multicast_packet_retrans (struct thread *);
  * untill there is reason to have their own header, these externs are found in
  * eigrp_hello.c
  */
-extern void eigrp_hello_send (struct eigrp_interface *);
+extern void eigrp_hello_send (struct eigrp_interface *, u_char);
 extern void eigrp_hello_send_ack (struct eigrp_neighbor *);
 extern void eigrp_hello_receive (struct eigrp *, struct ip *, struct eigrp_header *,
 				struct stream *, struct eigrp_interface *, int);

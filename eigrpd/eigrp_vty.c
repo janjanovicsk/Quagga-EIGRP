@@ -128,6 +128,21 @@ DEFUN (router_eigrp,
   return CMD_SUCCESS;
 }
 
+
+DEFUN (no_router_eigrp,
+       no_router_eigrp_cmd,
+       "no router eigrp <1-65535>",
+       "Disable\n"
+       "Routing process\n"
+       "EIGRP configuration\n")
+{
+  vty->node = EIGRP_NODE;
+  vty->index = eigrp_get (argv[0]);
+
+  return CMD_SUCCESS;
+}
+
+
 DEFUN (eigrp_network,
        eigrp_network_cmd,
        "network A.B.C.D/M",
@@ -1024,9 +1039,9 @@ eigrp_vty_init (void)
 {
   install_node (&eigrp_node, eigrp_config_write);
 
-  install_element (CONFIG_NODE, &router_eigrp_cmd);
-
   install_default (EIGRP_NODE);
+
+  install_element (CONFIG_NODE, &router_eigrp_cmd);
 
   install_element (EIGRP_NODE, &eigrp_network_cmd);
   install_element (EIGRP_NODE, &no_eigrp_network_cmd);
