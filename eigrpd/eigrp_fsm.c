@@ -411,7 +411,10 @@ eigrp_fsm_event_nq_fcn(struct eigrp_fsm_action_message *msg)
       ((struct eigrp_neighbor_entry *) successors->head->data)->distance;
   prefix->reported_metric =
       ((struct eigrp_neighbor_entry *) successors->head->data)->total_metric;
-  eigrp_query_send_all(eigrp, msg->entry);
+  if(!eigrp_query_send_all(eigrp, msg->entry))
+  {
+	  eigrp_fsm_event_lr(msg); //in the case that there are no more neighbors left
+  }
 
   return 1;
 }
@@ -480,6 +483,7 @@ eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg)
   eigrp_update_send_all(eigrp, msg->prefix, msg->adv_router->ei);
   eigrp_topology_update_node_flags(prefix);
   eigrp_update_routing_table(prefix);
+  eigrp_update_topology_table_prefix(eigrp->topology_table, prefix);
 
   return 1;
 }
@@ -522,6 +526,7 @@ eigrp_fsm_event_lr_fcs(struct eigrp_fsm_action_message *msg)
   eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
   eigrp_topology_update_node_flags(prefix);
   eigrp_update_routing_table(prefix);
+  eigrp_update_topology_table_prefix(eigrp->topology_table, prefix);
 
   return 1;
 }

@@ -52,6 +52,7 @@ extern void eigrp_topology_update_node_flags (struct eigrp_prefix_entry *);
 extern int eigrp_topology_update_distance ( struct eigrp_fsm_action_message *);
 extern void eigrp_update_routing_table(struct eigrp_prefix_entry *);
 extern void eigrp_topology_neighbor_down(struct eigrp *, struct eigrp_neighbor *);
+extern void eigrp_update_topology_table_prefix(struct list *, struct eigrp_prefix_entry * );
 //extern int eigrp_topology_get_successor_count (struct eigrp_prefix_entry *);
 /* Set all stats to -1 (LSA_SPF_NOT_EXPLORED). */
 /*extern void eigrp_lsdb_clean_stat (struct eigrp_lsdb *lsdb);
