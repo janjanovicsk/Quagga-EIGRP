@@ -243,6 +243,7 @@ eigrp_prefix_entry_delete(struct list *topology,
       list_free(node->entries);
       list_free(node->rij);
       listnode_delete(topology, node);
+      XFREE(MTYPE_EIGRP_PREFIX_ENTRY,node);
     }
 }
 
@@ -254,9 +255,10 @@ void
 eigrp_neighbor_entry_delete(struct eigrp_prefix_entry *node,
     struct eigrp_neighbor_entry *entry)
 {
-  if (listnode_lookup(node->entries, node) != NULL)
+  if (listnode_lookup(node->entries, entry) != NULL)
     {
       listnode_delete(node->entries, entry);
+      XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY,entry);
     }
 }
 
@@ -324,8 +326,8 @@ eigrp_topology_get_successor(struct eigrp_prefix_entry *table_node)
   struct list *successors = list_new();
   ;
   struct eigrp_neighbor_entry *data;
-  struct listnode *node;
-  for (ALL_LIST_ELEMENTS_RO(table_node->entries, node, data))
+  struct listnode *node1, *node2;
+  for (ALL_LIST_ELEMENTS(table_node->entries, node1, node2, data))
     {
       if (data->flags & EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG)
         {
@@ -382,12 +384,7 @@ eigrp_topology_update_distance(struct eigrp_fsm_action_message *msg)
   if (msg->data_type == EIGRP_TLV_IPv4_INT)
     {
       int_data = msg->data.ipv4_int_type;
-      if (int_data->metric.bandwith == entry->reported_metric.bandwith
-          && int_data->metric.delay == entry->reported_metric.delay
-          /*
-           * Add more to react on change of additional parameters
-           */
-          )
+      if (eigrp_metrics_is_same(&int_data->metric,&entry->reported_metric))
         {
           return 0; // No change
         }
@@ -434,7 +431,7 @@ eigrp_topology_update_node_flags(struct eigrp_prefix_entry *dest)
 
   for (ALL_LIST_ELEMENTS_RO(dest->entries, node, entry))
     {
-      if (entry->distance == dest->distance) // is successor
+      if (entry->distance == dest->distance && entry->distance != EIGRP_MAX_METRIC) // is successor
         {
           entry->flags |= EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
           entry->flags &= 0xfd; // 1111 1101 set fs flag to zero
@@ -507,6 +504,24 @@ eigrp_topology_neighbor_down(struct eigrp *eigrp, struct eigrp_neighbor * nbr)
     }
 }
 
+void
+eigrp_update_topology_table_prefix(struct list * table, struct eigrp_prefix_entry * prefix)
+{
+	struct listnode *node1, *node2;
+
+	  struct eigrp_neighbor_entry *entry;
+	      for (ALL_LIST_ELEMENTS(prefix->entries, node1, node2, entry))
+	        {
+	    	  if(entry->distance == EIGRP_MAX_METRIC)
+	    	  {
+	    		  eigrp_neighbor_entry_delete(prefix,entry);
+	    	  }
+	        }
+	      if(prefix->distance == EIGRP_MAX_METRIC && prefix->nt != EIGRP_TOPOLOGY_TYPE_CONNECTED)
+	      {
+	    	  eigrp_prefix_entry_delete(table,prefix);
+	      }
+}
 /*int
  eigrp_topology_get_successor_count (struct eigrp_prefix_entry *prefix)
  {
