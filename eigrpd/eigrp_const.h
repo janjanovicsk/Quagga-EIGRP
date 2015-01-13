@@ -54,7 +54,8 @@
 #define IPPROTO_EIGRPIGP         88
 #endif /* IPPROTO_EIGRPIGP */
 
-#define EIGRP_AUTH_MD5_TLV_SIZE     40
+#define EIGRP_AUTH_MD5_TLV_SIZE          40
+#define EIGRP_NEXT_SEQUENCE_TLV_SIZE     8
 
 /* IP TTL for EIGRP protocol. */
 #define EIGRP_IP_TTL             1
@@ -82,8 +83,9 @@
 #define INTERFACE_DOWN_BY_ZEBRA       1
 #define INTERFACE_DOWN_BY_VTY         2
 
-#define EIGRP_HELLO_NORMAL                    0
-#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         1
+#define EIGRP_HELLO_NORMAL                    0x00
+#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         0x01
+#define EIGRP_HELLO_ADD_SEQUENCE              0x02
 
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
@@ -133,7 +135,7 @@
 	"detail|fastethernet|loopback|static"
 
 #define INT_TYPES_DESC							\
-	"Show detailed peer information\n"				\
+	"Virtual Ethernet interface\n"				\
 	"FastEthernet IEEE 802.3\n"					\
 	"Loopback interface\n"						\
 	"Show static peer information\n"
@@ -226,6 +228,7 @@
 #define EIGRP_TLV_PARAMETER_LEN         (12U)
 #define EIGRP_TLV_AUTH                  (EIGRP_TLV_GENERAL | 0x0002)    /*!< authentication */
 #define EIGRP_TLV_SEQ                   (EIGRP_TLV_GENERAL | 0x0003)    /*!< sequenced packet */
+#define EIGRP_TLV_SEQ_BASE_LEN          (5U)
 #define EIGRP_TLV_SW_VERSION            (EIGRP_TLV_GENERAL | 0x0004)    /*!< software version */
 #define EIGRP_TLV_SW_VERSION_LEN        (8U)
 #define EIGRP_TLV_NEXT_MCAST_SEQ        (EIGRP_TLV_GENERAL | 0x0005)    /*!< sequence number */

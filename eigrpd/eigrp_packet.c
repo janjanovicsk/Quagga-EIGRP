@@ -1217,3 +1217,11 @@ eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *IPv4_InternalTLV)
 
   XFREE(MTYPE_EIGRP_IPV4_INT_TLV, IPv4_InternalTLV);
 }
+
+struct TLV_Sequence_Type *
+eigrp_SequenceTLV_new ()
+{
+  struct TLV_Sequence_Type *new;
+
+  new = XCALLOC(MTYPE_EIGRP_SEQ_TLV,sizeof(struct TLV_Sequence_Type));
+}

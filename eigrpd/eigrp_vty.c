@@ -132,12 +132,129 @@ DEFUN (router_eigrp,
 DEFUN (no_router_eigrp,
        no_router_eigrp_cmd,
        "no router eigrp <1-65535>",
-       "Disable\n"
+       NO_STR
        "Routing process\n"
        "EIGRP configuration\n")
 {
   vty->node = EIGRP_NODE;
-  vty->index = eigrp_get (argv[0]);
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_router_id,
+       eigrp_router_id_cmd,
+       "eigrp router-id A.B.C.D",
+       "EIGRP specific commands\n"
+       "Router ID for this EIGRP process\n"
+       "EIGRP Router-ID in IP address format\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_router_id,
+       no_eigrp_router_id_cmd,
+       "no eigrp router-id A.B.C.D",
+       NO_STR
+       "EIGRP specific commands\n"
+       "Router ID for this EIGRP process\n"
+       "EIGRP Router-ID in IP address format\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_passive_interface,
+       eigrp_passive_interface_cmd,
+       "passive-interface (" INT_TYPES_CMD_STR ")",
+       "Suppress routing updates on an interface\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_passive_interface,
+       no_eigrp_passive_interface_cmd,
+       "no passive-interface (" INT_TYPES_CMD_STR ")",
+       NO_STR
+       "Suppress routing updates on an interface\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_timers_active,
+       eigrp_timers_active_cmd,
+       "timers active-time (<1-65535> | disabled)",
+       "Adjust routing timers\n"
+       "Time limit for active state\n"
+       "Active state time limit in minutes\n"
+       "Disable time limit for active state\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_timers_active,
+       no_eigrp_timers_active_cmd,
+       "no timers active-time (<1-65535> | disabled)",
+       NO_STR
+       "Adjust routing timers\n"
+       "Time limit for active state\n"
+       "Active state time limit in minutes\n"
+       "Disable time limit for active state\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+
+DEFUN (eigrp_metric_weights,
+       eigrp_metric_weights_cmd,
+       "metric weights <0-255> <0-255> <0-255> <0-255> <0-255> ",
+       "Modify metrics and parameters for advertisement\n"
+       "Modify metric coefficients\n"
+       "K1\n"
+       "K2\n"
+       "K3\n"
+       "K4\n"
+       "K5\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_metric_weights,
+       no_eigrp_metric_weights_cmd,
+       "no metric weights <0-255> <0-255> <0-255> <0-255> <0-255>",
+       "Modify metrics and parameters for advertisement\n"
+       "Modify metric coefficients\n"
+       "K1\n"
+       "K2\n"
+       "K3\n"
+       "K4\n"
+       "K5\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
 
   return CMD_SUCCESS;
 }
@@ -418,7 +535,7 @@ DEFUN (eigrp_if_delay,
     {
       for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
         {
-
+          /*TODO: */
         }
     }
 
@@ -459,7 +576,7 @@ DEFUN (no_eigrp_if_delay,
     {
       for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
         {
-
+          /*TODO: */
         }
     }
 
@@ -509,7 +626,7 @@ DEFUN (eigrp_if_bandwidth,
     {
       for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
         {
-
+          /*TODO: */
         }
     }
 
@@ -559,7 +676,7 @@ DEFUN (no_eigrp_if_bandwidth,
     {
       for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
         {
-
+          /*TODO: */
         }
     }
 
@@ -658,6 +775,81 @@ DEFUN (eigrp_if_ip_holdinterval,
 
   return CMD_SUCCESS;
 }
+
+DEFUN (eigrp_ip_summary_address,
+       eigrp_ip_summary_address_cmd,
+       "ip summary-address eigrp <1-65535> A.B.C.D/M",
+       "Interface Internet Protocol config commands\n"
+       "Perform address summarization\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "AS number\n"
+       "Summary <network>/<length>, e.g. 192.168.0.0/16\n")
+{
+  u_int32_t AS;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  AS = atoi (argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((AS < 1) || (AS > 65535))
+    {
+      vty_out (vty, "AS value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_ip_summary_address,
+       no_eigrp_ip_summary_address_cmd,
+       "no ip summary-address eigrp <1-65535> A.B.C.D/M",
+       NO_STR
+       "Interface Internet Protocol config commands\n"
+       "Perform address summarization\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "AS number\n"
+       "Summary <network>/<length>, e.g. 192.168.0.0/16\n")
+{
+  u_int32_t AS;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  AS = atoi (argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((AS < 1) || (AS > 65535))
+    {
+      vty_out (vty, "AS value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+
 
 DEFUN (no_eigrp_if_ip_holdinterval,
        no_eigrp_if_ip_holdinterval_cmd,
@@ -869,7 +1061,7 @@ DEFUN (no_eigrp_redistribute_source_metric,
 DEFUN (eigrp_variance,
     eigrp_variance_cmd,
     "variance <1-128>",
-     "Control load balancing variancev\n"
+     "Control load balancing variance\n"
      "Metric variance multiplier\n")
 {
 
@@ -880,6 +1072,8 @@ DEFUN (eigrp_variance,
     if(eigrp)
       eigrp->variance = atoi(argv[0]);
 
+    /*TODO: */
+
     return CMD_SUCCESS;
 }
 
@@ -888,7 +1082,7 @@ DEFUN (no_eigrp_variance,
     no_eigrp_variance_cmd,
     "no variance <1-128>",
     "Disable\n"
-     "Control load balancing variancev\n"
+     "Control load balancing variance\n"
      "Metric variance multiplier\n")
 {
 
@@ -897,6 +1091,8 @@ DEFUN (no_eigrp_variance,
 
     if(eigrp)
       eigrp->variance = EIGRP_VARIANCE_DEFAULT;
+
+    /*TODO: */
 
     return CMD_SUCCESS;
 }
@@ -1023,6 +1219,11 @@ eigrp_vty_if_init (void)
   install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_authentication_keychain_cmd);
 
+  /*EIGRP Summarization commands*/
+  install_element (INTERFACE_NODE, &eigrp_ip_summary_address_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_ip_summary_address_cmd);
+
+
 }
 
 static void
@@ -1042,12 +1243,20 @@ eigrp_vty_init (void)
   install_default (EIGRP_NODE);
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
-
+  install_element (CONFIG_NODE, &no_router_eigrp_cmd);
   install_element (EIGRP_NODE, &eigrp_network_cmd);
   install_element (EIGRP_NODE, &no_eigrp_network_cmd);
-
   install_element (EIGRP_NODE, &eigrp_variance_cmd);
   install_element (EIGRP_NODE, &no_eigrp_variance_cmd);
+  install_element (EIGRP_NODE, &eigrp_router_id_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_router_id_cmd);
+  install_element (EIGRP_NODE, &eigrp_passive_interface_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_passive_interface_cmd);
+  install_element (EIGRP_NODE, &eigrp_timers_active_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_timers_active_cmd);
+  install_element (EIGRP_NODE, &eigrp_metric_weights_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_metric_weights_cmd);
+
 
   eigrp_vty_zebra_init ();
 }

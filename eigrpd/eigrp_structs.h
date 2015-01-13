@@ -316,7 +316,14 @@ struct TLV_Sequence_Type
   u_int16_t type;
   u_int16_t length;
   u_char addr_length;
-  struct in_addr address;
+  struct in_addr *addresses;
+}__attribute__((packed));
+
+struct TLV_Next_Multicast_Sequence
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_int32_t multicast_sequence;
 }__attribute__((packed));
 
 struct TLV_Software_Type

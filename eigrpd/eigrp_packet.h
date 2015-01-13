@@ -105,4 +105,7 @@ extern int eigrp_make_md5_digest (struct eigrp_interface *, struct stream *,
 extern struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new (void);
 extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 
+extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new ();
+
+
 #endif /* _ZEBRA_EIGRP_PACKET_H */
