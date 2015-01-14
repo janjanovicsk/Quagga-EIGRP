@@ -146,15 +146,16 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
 
       if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN)
 	{
-          eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
 	  zlog_info("Neighbor %s (%s) is pending: new adjacency",
 		    inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
 	  /* Expedited hello sent */
 	    eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL);
 
-	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
-	    eigrp_update_send_init(nbr);
+//	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
+	      eigrp_update_send_init(nbr);
+
+	  eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
 	}
     }
   else

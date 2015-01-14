@@ -107,8 +107,9 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
     }
 
     if((flags & EIGRP_INIT_FLAG) && (!same))
-    {
-        if(nbr->state == EIGRP_NEIGHBOR_PENDING)
+    {   /* When in pending state, send INIT update only if it wasn't
+        already sent before (only if init_sequence is 0) */
+        if((nbr->state == EIGRP_NEIGHBOR_PENDING) && (nbr->init_sequence_number == 0))
           eigrp_update_send_init(nbr);
 
         if (nbr->state == EIGRP_NEIGHBOR_UP)

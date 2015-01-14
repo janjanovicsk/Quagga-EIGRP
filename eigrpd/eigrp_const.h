@@ -37,7 +37,7 @@
 #define EIGRP_NEIGHBOR_STATE_MAX      3
 
 /*Packet requiring ack will be retransmitted again after this time*/
-#define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
+#define EIGRP_PACKET_RETRANS_TIME        2 /* in seconds */
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1
