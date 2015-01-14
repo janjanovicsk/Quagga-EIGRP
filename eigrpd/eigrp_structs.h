@@ -71,6 +71,7 @@ struct eigrp
   u_int16_t vrid;		/* Virtual Router ID */
   u_char    k_values[6];	/*Array for K values configuration*/
   u_char variance;              /*Metric variance multiplier*/
+  u_char max_paths;             /*Maximum allowed paths for 1 prefix*/
 
   /* EIGRP Router ID. */
   u_int32_t router_id; /* Configured automatically. */

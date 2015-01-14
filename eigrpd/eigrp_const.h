@@ -41,6 +41,7 @@
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1
+#define EIGRP_MAX_PATHS_DEFAULT 4
 
 
 /* Return values of functions involved in packet verification */

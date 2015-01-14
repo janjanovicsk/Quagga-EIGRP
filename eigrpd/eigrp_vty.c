@@ -1066,11 +1066,23 @@ DEFUN (eigrp_variance,
 {
 
     struct eigrp *eigrp;
+    u_char variance;
 
     eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+    variance = atoi(argv[0]);
+    /* hello range is <1-65535> */
+    if ((variance < 1) || (variance > 128))
+      {
+        vty_out (vty, "Variance value is invalid%s", VTY_NEWLINE);
+        return CMD_WARNING;
+      }
 
-    if(eigrp)
-      eigrp->variance = atoi(argv[0]);
+      eigrp->variance = variance;
 
     /*TODO: */
 
@@ -1088,14 +1100,77 @@ DEFUN (no_eigrp_variance,
 
     struct eigrp *eigrp;
     eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
 
-    if(eigrp)
-      eigrp->variance = EIGRP_VARIANCE_DEFAULT;
+    eigrp->variance = EIGRP_VARIANCE_DEFAULT;
 
     /*TODO: */
 
     return CMD_SUCCESS;
 }
+
+DEFUN (eigrp_maximum_paths,
+    eigrp_maximum_paths_cmd,
+    "maximum-paths  <1-32>",
+    "Forward packets over multiple paths\n"
+    "Number of paths\n")
+{
+
+    struct eigrp *eigrp;
+    u_char max;
+
+    eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+
+    max = atoi(argv[0]);
+    /* hello range is <1-65535> */
+    if ((max < 1) || (max > 32))
+      {
+        vty_out (vty, "Maximum-paths value is invalid%s", VTY_NEWLINE);
+        return CMD_WARNING;
+      }
+
+      eigrp->max_paths = max;
+
+    /*TODO: */
+
+    return CMD_SUCCESS;
+}
+
+
+DEFUN (no_eigrp_maximum_paths,
+    no_eigrp_maximum_paths_cmd,
+    "no maximum-paths <1-32>",
+    NO_STR
+    "Forward packets over multiple paths\n"
+    "Number of paths\n")
+{
+
+    struct eigrp *eigrp;
+
+    eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+
+    eigrp->max_paths = EIGRP_MAX_PATHS_DEFAULT;
+
+    /*TODO: */
+
+    return CMD_SUCCESS;
+}
+
+
 
 static struct cmd_node eigrp_node =
 {

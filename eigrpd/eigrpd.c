@@ -186,6 +186,8 @@ eigrp_new (const char *AS)
   inet_aton("127.0.0.1", &new->neighbor_self->src);
 
   new->variance = EIGRP_VARIANCE_DEFAULT;
+  new->max_paths = EIGRP_MAX_PATHS_DEFAULT;
+
 
   return new;
 }
