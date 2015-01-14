@@ -1331,6 +1331,8 @@ eigrp_vty_init (void)
   install_element (EIGRP_NODE, &no_eigrp_timers_active_cmd);
   install_element (EIGRP_NODE, &eigrp_metric_weights_cmd);
   install_element (EIGRP_NODE, &no_eigrp_metric_weights_cmd);
+  install_element (EIGRP_NODE, &eigrp_maximum_paths_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_maximum_paths_cmd);
 
 
   eigrp_vty_zebra_init ();
