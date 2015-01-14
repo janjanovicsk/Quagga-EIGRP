@@ -55,7 +55,7 @@
 #include "eigrpd/eigrp_fsm.h"
 
 void
-eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
+eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_LEN;
@@ -66,7 +66,7 @@ eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
   eigrp_packet_header_init(EIGRP_OPC_REPLY, nbr->ei, ep->s, 0,
                            nbr->ei->eigrp->sequence_number, 0);
 
-  length += eigrp_add_internalTLV_to_stream(ep->s, te);
+  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(nbr->ei, ep->s, length);

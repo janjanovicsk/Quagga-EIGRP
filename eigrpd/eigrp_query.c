@@ -121,17 +121,16 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup_ipv4(
               eigrp->topology_table, dest_addr);
 
-          temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
-              sizeof(struct eigrp_neighbor_entry));
-          temp_tn = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY,
-              sizeof(struct eigrp_prefix_entry));
-          temp_te->total_metric.delay = 0xFFFFFFFF;
-          temp_te->prefix = temp_tn;
-          temp_tn->destination_ipv4 = dest_addr;
-
-          eigrp_send_reply(nbr, temp_te);
-          XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
-          XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
+//          temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
+//              sizeof(struct eigrp_neighbor_entry));
+//          temp_tn = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY,
+//              sizeof(struct eigrp_prefix_entry));
+//          temp_te->total_metric.delay = 0xFFFFFFFF;
+//          temp_te->prefix = temp_tn;
+//          temp_tn->destination_ipv4 = dest_addr;
+//
+//          XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
+//          XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
 
           /* If the destination exists (it should, but one never know)*/
           if (dest != NULL)
