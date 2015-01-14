@@ -108,14 +108,21 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 
     if((flags & EIGRP_INIT_FLAG) && (!same))
     {
+        if(nbr->state == EIGRP_NEIGHBOR_PENDING)
+          eigrp_update_send_init(nbr);
+
         if (nbr->state == EIGRP_NEIGHBOR_UP)
           {
             eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+            eigrp_topology_neighbor_down(nbr->ei->eigrp,nbr);
+            nbr->recv_sequence_number = ntohl(eigrph->sequence);
+            zlog_info("Neighbor %s (%s) is down: peer restarted",
+                      inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+            eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
+            zlog_info("Neighbor %s (%s) is pending: new adjacency",
+                      inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
             eigrp_update_send_init(nbr);
           }
-
-        if(nbr->state == EIGRP_NEIGHBOR_PENDING)
-          eigrp_update_send_init(nbr);
     }
 
   /*If there is topology information*/
