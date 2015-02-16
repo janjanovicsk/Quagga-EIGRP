@@ -56,6 +56,20 @@
 #endif /* IPPROTO_EIGRPIGP */
 
 #define EIGRP_AUTH_MD5_TLV_SIZE          40
+#define EIGRP_AUTH_SHA256_TLV_SIZE          56
+
+/*Cisco routers use only first 44 bytes of basic hello for their MD5 calculations*/
+#define EIGRP_MD5_BASIC_COMPUTE       44
+#define EIGRP_MD5_UPDATE_INIT_COMPUTE       40
+
+
+
+#define EIGRP_AUTH_BASIC_HELLO_FLAG       0x01
+#define EIGRP_AUTH_TID_HELLO_FLAG       0x02
+#define EIGRP_AUTH_UPDATE_INIT_FLAG       0x04
+#define EIGRP_AUTH_UPDATE_FLAG            0x08
+#define EIGRP_AUTH_EXTRA_SALT_FLAG        0x10
+
 #define EIGRP_NEXT_SEQUENCE_TLV_SIZE     8
 
 /* IP TTL for EIGRP protocol. */

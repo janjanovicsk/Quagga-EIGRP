@@ -86,6 +86,11 @@ config_write_interfaces (struct vty *vty, struct eigrp *eigrp)
           vty_out (vty, " ip authentication mode eigrp %d md5%s", eigrp->AS, VTY_NEWLINE);
         }
 
+      if ((IF_DEF_PARAMS (ei->ifp)->auth_type) == EIGRP_AUTH_TYPE_SHA256)
+        {
+          vty_out (vty, " ip authentication mode eigrp %d hmac-sha-256%s", eigrp->AS, VTY_NEWLINE);
+        }
+
       if(IF_DEF_PARAMS (ei->ifp)->auth_keychain)
         {
           vty_out (vty, " ip authentication key-chain eigrp %d %s%s",eigrp->AS,IF_DEF_PARAMS (ei->ifp)->auth_keychain, VTY_NEWLINE);
@@ -876,15 +881,38 @@ DEFUN (no_eigrp_if_ip_holdinterval,
   return CMD_SUCCESS;
 }
 
+static int
+str2auth_type (const char *str, struct interface *ifp)
+{
+  /* Sanity check. */
+   if (str == NULL)
+     return CMD_WARNING;
+
+  if(strncmp(str, "md5",3) == 0)
+    {
+      IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+      return CMD_SUCCESS;
+    }
+  else if(strncmp(str, "hmac-sha-256",12) == 0)
+    {
+      IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_SHA256;
+      return CMD_SUCCESS;
+    }
+
+  return CMD_WARNING;
+
+}
+
 DEFUN (eigrp_authentication_mode,
        eigrp_authentication_mode_cmd,
-       "ip authentication mode eigrp <1-65535> md5",
+       "ip authentication mode eigrp <1-65535> (md5|hmac-sha-256)",
        "Interface Internet Protocol config commands\n"
        "Authentication subcommands\n"
        "Mode\n"
        "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
        "Autonomous system number\n"
-       "Keyed message digest\n")
+       "Keyed message digest\n"
+       "HMAC SHA256 algorithm \n")
 {
   struct eigrp *eigrp;
   struct interface *ifp;
@@ -897,21 +925,25 @@ DEFUN (eigrp_authentication_mode,
     }
 
   ifp = vty->index;
-  IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+//  if(strncmp(argv[2], "md5",3))
+//    IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+//  else if(strncmp(argv[2], "hmac-sha-256",12))
+//    IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_SHA256;
 
-  return CMD_SUCCESS;
+  return str2auth_type(argv[1], ifp);
 }
 
 DEFUN (no_eigrp_authentication_mode,
        no_eigrp_authentication_mode_cmd,
-       "no ip authentication mode eigrp <1-65535> md5",
+       "no ip authentication mode eigrp <1-65535> (md5|hmac-sha-256)",
        "Disable\n"
        "Interface Internet Protocol config commands\n"
        "Authentication subcommands\n"
        "Mode\n"
        "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
        "Autonomous system number\n"
-       "Keyed message digest\n")
+       "Keyed message digest\n"
+       "HMAC SHA256 algorithm \n")
 {
   struct eigrp *eigrp;
   struct interface *ifp;

@@ -163,14 +163,35 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
       if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN)
 	{
 	  if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5) == 255)
-	    zlog_info ("Neighbor %s (%s) going down: Peer Termination",
-		       inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
+	    {
+              zlog_info ("Neighbor %s (%s) going down: Peer Termination",
+                         inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
+              eigrp_nbr_delete (nbr);
+	    }
 	  else
-	    zlog_info ("Neighbor %s (%s) going down: Kvalue mismatch",
-		       inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
-	  eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+	    {
+              zlog_info ("Neighbor %s (%s) going down: Kvalue mismatch",
+                         inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
+              eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+	    }
 	}
     }
+}
+
+static u_char
+eigrp_hello_authentication_decode(struct stream *s, struct eigrp_tlv_hdr_type *tlv_header, struct eigrp_neighbor *nbr)
+{
+
+  struct TLV_MD5_Authentication_Type *md5;
+
+  md5 = (struct TLV_MD5_Authentication_Type *) tlv_header;
+
+  if(md5->auth_type == EIGRP_AUTH_TYPE_MD5)
+    return eigrp_check_md5_digest(s, tlv_header, nbr, EIGRP_AUTH_BASIC_HELLO_FLAG);
+  else if (md5->auth_type == EIGRP_AUTH_TYPE_SHA256)
+    return eigrp_check_sha256_digest(s, (struct TLV_SHA256_Authentication_Type *) tlv_header, nbr, EIGRP_AUTH_BASIC_HELLO_FLAG);
+
+  return 0;
 }
 
 /**
@@ -285,7 +306,13 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 	    eigrp_hello_parameter_decode(nbr, tlv_header);
 	    break;
 	  case EIGRP_TLV_AUTH:
-	    break;
+	    {
+//              if(eigrp_hello_authentication_decode(s,tlv_header,nbr) == 0)
+//                return;
+//              else
+//                break;
+              break;
+	    }
 	  case EIGRP_TLV_SEQ:
 	    break;
 	  case EIGRP_TLV_SW_VERSION:
@@ -548,7 +575,11 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
       // encode Authentication TLV
       if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
         {
-          length += eigrp_add_authTLV_to_stream(ep->s,ei);
+          length += eigrp_add_authTLV_MD5_to_stream(ep->s,ei);
+        }
+      else if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_SHA256) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
+        {
+          length += eigrp_add_authTLV_SHA256_to_stream(ep->s,ei);
         }
 
       // encode Hello packet with approperate TLVs
@@ -577,7 +608,11 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
 
       if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
         {
-          eigrp_make_md5_digest(ei,ep->s,length);
+          eigrp_make_md5_digest(ei,ep->s, EIGRP_AUTH_BASIC_HELLO_FLAG);
+        }
+      else if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_SHA256) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
+        {
+          eigrp_make_sha256_digest(ei,ep->s, EIGRP_AUTH_BASIC_HELLO_FLAG);
         }
 
       // EIGRP Checksum

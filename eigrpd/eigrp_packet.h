@@ -55,7 +55,7 @@ extern void eigrp_send_packet_reliably (struct eigrp_neighbor *);
 extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv (struct stream *);
 extern u_int16_t eigrp_add_internalTLV_to_stream (struct stream *, struct eigrp_prefix_entry *);
 
-extern u_int16_t eigrp_add_authTLV_to_stream (struct stream *, struct eigrp_interface *);
+extern u_int16_t eigrp_add_authTLV_MD5_to_stream (struct stream *, struct eigrp_interface *);
 
 extern int eigrp_unack_packet_retrans (struct thread *);
 extern int eigrp_unack_multicast_packet_retrans (struct thread *);
@@ -96,16 +96,23 @@ extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_prefix_entry
 extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
 
-extern struct TLV_Authentication_Type *eigrp_authTLV_new (void);
-extern void eigrp_authTLV_free (struct TLV_Authentication_Type *);
+extern struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new (void);
+extern void eigrp_authTLV_MD5_free (struct TLV_MD5_Authentication_Type *);
+extern struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new (void);
+extern void eigrp_authTLV_SHA256_free (struct TLV_SHA256_Authentication_Type *);
+
 extern int eigrp_make_md5_digest (struct eigrp_interface *, struct stream *,
-                                  u_int16_t);
+                                  u_char);
+extern int eigrp_check_md5_digest (struct stream *, struct TLV_MD5_Authentication_Type *,
+                            struct eigrp_neighbor *, u_char);
+extern int eigrp_make_sha256_digest (struct eigrp_interface *, struct stream *, u_char);
+extern int eigrp_check_sha256_digest (struct stream *, struct TLV_SHA256_Authentication_Type *,
+                            struct eigrp_neighbor *, u_char );
 
 
 extern struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new (void);
 extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 
-extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new ();
-
+extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new (void);
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

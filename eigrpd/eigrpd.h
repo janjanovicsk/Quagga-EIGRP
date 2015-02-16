@@ -35,7 +35,7 @@
 #include "log.h"
 
 /* Set EIGRP version is "classic" - wide metrics comes next */
-#define EIGRP_MAJOR_VERSION	1
+#define EIGRP_MAJOR_VERSION     1
 #define EIGRP_MINOR_VERSION	2
 
 /* Extern variables. */

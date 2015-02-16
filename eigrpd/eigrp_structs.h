@@ -299,7 +299,7 @@ struct TLV_Parameter_Type
   u_int16_t hold_time;
 }__attribute__((packed));
 
-struct TLV_Authentication_Type
+struct TLV_MD5_Authentication_Type
 {
   u_int16_t type;
   u_int16_t length;
@@ -309,6 +309,19 @@ struct TLV_Authentication_Type
   u_int32_t key_sequence;
   u_char Nullpad[8];
   u_char digest[EIGRP_AUTH_TYPE_MD5_LEN];
+
+}__attribute__((packed));
+
+struct TLV_SHA256_Authentication_Type
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_int16_t auth_type;
+  u_int16_t auth_length;
+  u_int32_t key_id;
+  u_int32_t key_sequence;
+  u_char Nullpad[8];
+  u_char digest[EIGRP_AUTH_TYPE_SHA256_LEN];
 
 }__attribute__((packed));
 
