@@ -23,7 +23,7 @@
 
 #include "linklist.h"
 #include "memory.h"
-
+
 /* Allocate new list. */
 struct list *
 list_new (void)
@@ -51,7 +51,7 @@ listnode_free (struct listnode *node)
 {
   XFREE (MTYPE_LINK_NODE, node);
 }
-
+
 /* Add new data to the list. */
 void
 listnode_add (struct list *list, void *val)
@@ -159,6 +159,13 @@ listnode_add_after (struct list *list, struct listnode *pp, void *val)
   list->count++;
 }
 
+/* Move given listnode to tail of the list */
+void
+listnode_move_to_tail (struct list *l, struct listnode *n)
+{
+  LISTNODE_DETACH(l,n);
+  LISTNODE_ATTACH(l,n);
+}
 
 /* Delete specific date pointer from the list. */
 void
@@ -242,7 +249,7 @@ listnode_lookup (struct list *list, void *data)
       return node;
   return NULL;
 }
-
+
 /* Delete the node from list.  For ospfd and ospf6d. */
 void
 list_delete_node (struct list *list, struct listnode *node)
@@ -258,7 +265,7 @@ list_delete_node (struct list *list, struct listnode *node)
   list->count--;
   listnode_free (node);
 }
-
+
 /* ospf_spf.c */
 void
 list_add_node_prev (struct list *list, struct listnode *current, void *val)

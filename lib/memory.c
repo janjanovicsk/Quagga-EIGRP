@@ -32,7 +32,7 @@
 static void alloc_inc (int);
 static void alloc_dec (int);
 static void log_memstats(int log_priority);
-
+
 static const struct message mstr [] =
 {
   { MTYPE_THREAD, "thread" },
@@ -42,7 +42,7 @@ static const struct message mstr [] =
   { MTYPE_IF, "interface" },
   { 0, NULL },
 };
-
+
 /* Fatal memory allocation error occured. */
 static void __attribute__ ((noreturn))
 zerror (const char *fname, int type, size_t size)
@@ -150,7 +150,7 @@ zstrdup (int type, const char *str)
   alloc_inc (type);
   return dup;
 }
-
+
 #ifdef MEMORY_LOG
 static struct 
 {
@@ -259,7 +259,7 @@ alloc_dec (int type)
 {
   mstat[type].alloc--;
 }
-
+
 /* Looking up memory status from vty interface. */
 #include "vector.h"
 #include "vty.h"
@@ -521,6 +521,17 @@ DEFUN (show_memory_isis,
   return CMD_SUCCESS;
 }
 
+DEFUN (show_memory_pim,
+       show_memory_pim_cmd,
+       "show memory pim",
+       SHOW_STR
+       "Memory statistics\n"
+       "PIM memory\n")
+{
+  show_memory_vty (vty, memory_list_pim);
+  return CMD_SUCCESS;
+}
+
 void
 memory_init (void)
 {
@@ -545,6 +556,7 @@ memory_init (void)
   install_element (VIEW_NODE, &show_memory_ospf_cmd);
   install_element (VIEW_NODE, &show_memory_ospf6_cmd);
   install_element (VIEW_NODE, &show_memory_isis_cmd);
+  install_element (VIEW_NODE, &show_memory_pim_cmd);
 
   install_element (ENABLE_NODE, &show_memory_cmd);
   install_element (ENABLE_NODE, &show_memory_all_cmd);
@@ -557,8 +569,9 @@ memory_init (void)
   install_element (ENABLE_NODE, &show_memory_ospf_cmd);
   install_element (ENABLE_NODE, &show_memory_ospf6_cmd);
   install_element (ENABLE_NODE, &show_memory_isis_cmd);
+  install_element (ENABLE_NODE, &show_memory_pim_cmd);
 }
-
+
 /* Stats querying from users */
 /* Return a pointer to a human friendly string describing
  * the byte count passed in. E.g:

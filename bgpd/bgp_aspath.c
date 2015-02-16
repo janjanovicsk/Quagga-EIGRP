@@ -34,7 +34,7 @@ Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 #include "bgpd/bgp_aspath.h"
 #include "bgpd/bgp_debug.h"
 #include "bgpd/bgp_attr.h"
-
+
 /* Attr. Flags and Attr. Type Code. */
 #define AS_HEADER_SIZE        2	 
 
@@ -90,7 +90,7 @@ static struct hash *ashash;
 
 /* Stream for SNMP. See aspath_snmp_pathseg */
 static struct stream *snmp_stream;
-
+
 /* Callers are required to initialize the memory */
 static as_t *
 assegment_data_new (int num)
@@ -308,7 +308,7 @@ assegment_normalise (struct assegment *head)
     }
   return head;
 }
-
+
 static struct aspath *
 aspath_new (void)
 {
@@ -474,6 +474,19 @@ aspath_highest (struct aspath *aspath)
       seg = seg->next;
     }
   return highest;
+}
+
+/* Return the left-most ASN in path */
+as_t
+aspath_leftmost (struct aspath *aspath)
+{
+  struct assegment *seg = aspath->segments;
+  as_t leftmost = 0;
+
+  if (seg && seg->length && seg->type == AS_SEQUENCE)
+    leftmost = seg->as[0];
+
+  return leftmost;
 }
 
 /* Return 1 if there are any 4-byte ASes in the path */
@@ -1362,46 +1375,50 @@ aspath_filter_exclude (struct aspath * source, struct aspath * exclude_list)
 
 /* Add specified AS to the leftmost of aspath. */
 static struct aspath *
-aspath_add_one_as (struct aspath *aspath, as_t asno, u_char type)
+aspath_add_asns (struct aspath *aspath, as_t asno, u_char type, unsigned num)
 {
   struct assegment *assegment = aspath->segments;
+  int i;
 
-  /* In case of empty aspath. */
-  if (assegment == NULL || assegment->length == 0)
+  if (assegment && assegment->type == type)
     {
-      aspath->segments = assegment_new (type, 1);
-      aspath->segments->as[0] = asno;
-      
-      if (assegment)
-	assegment_free (assegment);
-
-      return aspath;
+      /* extend existing segment */
+      aspath->segments = assegment_prepend_asns (aspath->segments, asno, num);
     }
-
-  if (assegment->type == type)
-    aspath->segments = assegment_prepend_asns (aspath->segments, asno, 1);
   else 
     {
-      /* create new segment
-       * push it onto head of aspath's segment chain 
-       */
-      struct assegment *newsegment;
-      
-      newsegment = assegment_new (type, 1);
-      newsegment->as[0] = asno;
-      
-      newsegment->next = assegment;
+      /* prepend with new segment */
+      struct assegment *newsegment = assegment_new (type, num);
+      for (i = 0; i < num; i++)
+	newsegment->as[i] = asno;
+
+      /* insert potentially replacing empty segment */
+      if (assegment && assegment->length == 0)
+	{
+	  newsegment->next = assegment->next;
+	  assegment_free (assegment);
+	}
+       else
+	  newsegment->next = assegment;
       aspath->segments = newsegment;
     }
 
+  aspath_str_update (aspath);
   return aspath;
+}
+
+/* Add specified AS to the leftmost of aspath num times. */
+struct aspath *
+aspath_add_seq_n (struct aspath *aspath, as_t asno, unsigned num)
+{
+  return aspath_add_asns (aspath, asno, AS_SEQUENCE, num);
 }
 
 /* Add specified AS to the leftmost of aspath. */
 struct aspath *
 aspath_add_seq (struct aspath *aspath, as_t asno)
 {
-  return aspath_add_one_as (aspath, asno, AS_SEQUENCE);
+  return aspath_add_asns (aspath, asno, AS_SEQUENCE, 1);
 }
 
 /* Compare leftmost AS value for MED check.  If as1's leftmost AS and
@@ -1600,7 +1617,7 @@ aspath_delete_confed_seq (struct aspath *aspath)
 struct aspath*
 aspath_add_confed_seq (struct aspath *aspath, as_t asno)
 {
-  return aspath_add_one_as (aspath, asno, AS_CONFED_SEQUENCE);
+  return aspath_add_asns (aspath, asno, AS_CONFED_SEQUENCE, 1);
 }
 
 /* Add new as value to as path structure. */
@@ -1657,7 +1674,7 @@ aspath_count (void)
 {
   return ashash->count;
 }     
-
+
 /* 
    Theoretically, one as path can have:
 
@@ -1811,7 +1828,7 @@ aspath_str2aspath (const char *str)
 
   return aspath;
 }
-
+
 /* Make hash value by raw aspath data. */
 unsigned int
 aspath_key_make (void *p)
@@ -1868,7 +1885,7 @@ aspath_finish (void)
   if (snmp_stream)
     stream_free (snmp_stream);
 }
-
+
 /* return and as path value */
 const char *
 aspath_print (struct aspath *as)

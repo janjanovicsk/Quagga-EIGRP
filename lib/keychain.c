@@ -233,7 +233,7 @@ key_delete (struct keychain *keychain, struct key *key)
     free (key->string);
   key_free (key);
 }
-
+
 DEFUN (key_chain,
        key_chain_cmd,
        "key chain WORD",
@@ -742,7 +742,7 @@ DEFUN (accept_lifetime_duration_month_day,
   return key_lifetime_duration_set (vty, &key->accept, argv[0], argv[2],
 				    argv[1], argv[3], argv[4]);
 }
-
+
 DEFUN (send_lifetime_day_month_day_month,
        send_lifetime_day_month_day_month_cmd,
        "send-lifetime HH:MM:SS <1-31> MONTH <1993-2035> HH:MM:SS <1-31> MONTH <1993-2035>",
@@ -900,7 +900,6 @@ DEFUN (send_lifetime_duration_month_day,
   return key_lifetime_duration_set (vty, &key->send, argv[0], argv[2], argv[1],
 				    argv[3], argv[4]);
 }
-
 
 DEFUN (show_ip_keychain,
        show_ip_keychain_cmd,

@@ -27,6 +27,7 @@
 #include "memory.h"
 #include "log.h"
 #include "hash.h"
+#include "pqueue.h"
 #include "command.h"
 #include "sigevent.h"
 
@@ -44,7 +45,7 @@ extern int agentx_enabled;
 #include <mach/mach_time.h>
 #endif
 
-
+
 /* Recent absolute time of day */
 struct timeval recent_time;
 static struct timeval last_recent_time;
@@ -53,9 +54,9 @@ static struct timeval relative_time;
 static struct timeval relative_time_base;
 /* init flag */
 static unsigned short timers_inited;
-
+
 static struct hash *cpu_record = NULL;
-
+
 /* Struct timeval's tv_usec one second value.  */
 #define TIMER_SECOND_MICRO 1000000L
 
@@ -101,13 +102,13 @@ timeval_cmp (struct timeval a, struct timeval b)
 	  ? a.tv_usec - b.tv_usec : a.tv_sec - b.tv_sec);
 }
 
-static unsigned long
+unsigned long
 timeval_elapsed (struct timeval a, struct timeval b)
 {
   return (((a.tv_sec - b.tv_sec) * TIMER_SECOND_MICRO)
 	  + (a.tv_usec - b.tv_usec));
 }
-
+
 #if !defined(HAVE_CLOCK_MONOTONIC) && !defined(__APPLE__)
 static void
 quagga_gettimeofday_relative_adjust (void)
@@ -246,7 +247,7 @@ recent_relative_time (void)
 {
   return relative_time;
 }
-
+
 static unsigned int
 cpu_record_hash_key (struct cpu_thread_history *a)
 {
@@ -266,7 +267,7 @@ cpu_record_hash_alloc (struct cpu_thread_history *a)
   struct cpu_thread_history *new;
   new = XCALLOC (MTYPE_THREAD_STATS, sizeof (struct cpu_thread_history));
   new->func = a->func;
-  strcpy(new->funcname, a->funcname);
+  new->funcname = a->funcname;
   return new;
 }
 
@@ -333,7 +334,7 @@ cpu_record_print(struct vty *vty, thread_type filter)
   void *args[3] = {&tmp, vty, &filter};
 
   memset(&tmp, 0, sizeof tmp);
-  strcpy(tmp.funcname, "TOTAL");
+  tmp.funcname = "TOTAL";
   tmp.types = filter;
 
 #ifdef HAVE_RUSAGE
@@ -495,47 +496,50 @@ DEFUN(clear_thread_cpu,
   cpu_record_clear (filter);
   return CMD_SUCCESS;
 }
-
-/* List allocation and head/tail print out. */
-static void
-thread_list_debug (struct thread_list *list)
+
+static int
+thread_timer_cmp(void *a, void *b)
 {
-  printf ("count [%d] head [%p] tail [%p]\n",
-	  list->count, list->head, list->tail);
+  struct thread *thread_a = a;
+  struct thread *thread_b = b;
+
+  long cmp = timeval_cmp(thread_a->u.sands, thread_b->u.sands);
+
+  if (cmp < 0)
+    return -1;
+  if (cmp > 0)
+    return 1;
+  return 0;
 }
 
-/* Debug print for thread_master. */
-static void  __attribute__ ((unused))
-thread_master_debug (struct thread_master *m)
+static void
+thread_timer_update(void *node, int actual_position)
 {
-  printf ("-----------\n");
-  printf ("readlist  : ");
-  thread_list_debug (&m->read);
-  printf ("writelist : ");
-  thread_list_debug (&m->write);
-  printf ("timerlist : ");
-  thread_list_debug (&m->timer);
-  printf ("eventlist : ");
-  thread_list_debug (&m->event);
-  printf ("unuselist : ");
-  thread_list_debug (&m->unuse);
-  printf ("bgndlist : ");
-  thread_list_debug (&m->background);
-  printf ("total alloc: [%ld]\n", m->alloc);
-  printf ("-----------\n");
+  struct thread *thread = node;
+
+  thread->index = actual_position;
 }
-
+
 /* Allocate new thread master.  */
 struct thread_master *
 thread_master_create ()
 {
+  struct thread_master *rv;
+
   if (cpu_record == NULL) 
     cpu_record 
       = hash_create ((unsigned int (*) (void *))cpu_record_hash_key,
 		     (int (*) (const void *, const void *))cpu_record_hash_cmp);
-    
-  return (struct thread_master *) XCALLOC (MTYPE_THREAD_MASTER,
-					   sizeof (struct thread_master));
+
+  rv = XCALLOC (MTYPE_THREAD_MASTER, sizeof (struct thread_master));
+
+  /* Initialize the timer queues */
+  rv->timer = pqueue_create();
+  rv->background = pqueue_create();
+  rv->timer->cmp = rv->background->cmp = thread_timer_cmp;
+  rv->timer->update = rv->background->update = thread_timer_update;
+
+  return rv;
 }
 
 /* Add a new thread to the list.  */
@@ -549,22 +553,6 @@ thread_list_add (struct thread_list *list, struct thread *thread)
   else
     list->head = thread;
   list->tail = thread;
-  list->count++;
-}
-
-/* Add a new thread just before the point.  */
-static void
-thread_list_add_before (struct thread_list *list, 
-			struct thread *point, 
-			struct thread *thread)
-{
-  thread->next = point;
-  thread->prev = point->prev;
-  if (point->prev)
-    point->prev->next = thread;
-  else
-    list->head = thread;
-  point->prev = thread;
   list->count++;
 }
 
@@ -594,7 +582,6 @@ thread_add_unuse (struct thread_master *m, struct thread *thread)
   assert (thread->prev == NULL);
   assert (thread->type == THREAD_UNUSED);
   thread_list_add (&m->unuse, thread);
-  /* XXX: Should we deallocate funcname here? */
 }
 
 /* Free all unused thread. */
@@ -613,17 +600,29 @@ thread_list_free (struct thread_master *m, struct thread_list *list)
     }
 }
 
+static void
+thread_queue_free (struct thread_master *m, struct pqueue *queue)
+{
+  int i;
+
+  for (i = 0; i < queue->size; i++)
+    XFREE(MTYPE_THREAD, queue->array[i]);
+
+  m->alloc -= queue->size;
+  pqueue_delete(queue);
+}
+
 /* Stop thread scheduler. */
 void
 thread_master_free (struct thread_master *m)
 {
   thread_list_free (m, &m->read);
   thread_list_free (m, &m->write);
-  thread_list_free (m, &m->timer);
+  thread_queue_free (m, m->timer);
   thread_list_free (m, &m->event);
   thread_list_free (m, &m->ready);
   thread_list_free (m, &m->unuse);
-  thread_list_free (m, &m->background);
+  thread_queue_free (m, m->background);
   
   XFREE (MTYPE_THREAD_MASTER, m);
 
@@ -663,35 +662,13 @@ thread_timer_remain_second (struct thread *thread)
     return 0;
 }
 
-/* Trim blankspace and "()"s */
-void
-strip_funcname (char *dest, const char *funcname)
-{
-  char buff[FUNCNAME_LEN];
-  char tmp, *e, *b = buff;
-
-  strncpy(buff, funcname, sizeof(buff));
-  buff[ sizeof(buff) -1] = '\0';
-  e = buff +strlen(buff) -1;
-
-  /* Wont work for funcname ==  "Word (explanation)"  */
-
-  while (*b == ' ' || *b == '(')
-    ++b;
-  while (*e == ' ' || *e == ')')
-    --e;
-  e++;
-
-  tmp = *e;
-  *e = '\0';
-  strcpy (dest, b);
-  *e = tmp;
-}
+#define debugargdef  const char *funcname, const char *schedfrom, int fromln
+#define debugargpass funcname, schedfrom, fromln
 
 /* Get new thread.  */
 static struct thread *
 thread_get (struct thread_master *m, u_char type,
-	    int (*func) (struct thread *), void *arg, const char* funcname)
+	    int (*func) (struct thread *), void *arg, debugargdef)
 {
   struct thread *thread = thread_trim_head (&m->unuse);
 
@@ -705,8 +682,11 @@ thread_get (struct thread_master *m, u_char type,
   thread->master = m;
   thread->func = func;
   thread->arg = arg;
-  
-  strip_funcname (thread->funcname, funcname);
+  thread->index = -1;
+
+  thread->funcname = funcname;
+  thread->schedfrom = schedfrom;
+  thread->schedfrom_line = fromln;
 
   return thread;
 }
@@ -714,7 +694,8 @@ thread_get (struct thread_master *m, u_char type,
 /* Add new read thread. */
 struct thread *
 funcname_thread_add_read (struct thread_master *m, 
-		 int (*func) (struct thread *), void *arg, int fd, const char* funcname)
+		 int (*func) (struct thread *), void *arg, int fd,
+		 debugargdef)
 {
   struct thread *thread;
 
@@ -726,7 +707,7 @@ funcname_thread_add_read (struct thread_master *m,
       return NULL;
     }
 
-  thread = thread_get (m, THREAD_READ, func, arg, funcname);
+  thread = thread_get (m, THREAD_READ, func, arg, debugargpass);
   FD_SET (fd, &m->readfd);
   thread->u.fd = fd;
   thread_list_add (&m->read, thread);
@@ -737,7 +718,8 @@ funcname_thread_add_read (struct thread_master *m,
 /* Add new write thread. */
 struct thread *
 funcname_thread_add_write (struct thread_master *m,
-		 int (*func) (struct thread *), void *arg, int fd, const char* funcname)
+		 int (*func) (struct thread *), void *arg, int fd,
+		 debugargdef)
 {
   struct thread *thread;
 
@@ -749,7 +731,7 @@ funcname_thread_add_write (struct thread_master *m,
       return NULL;
     }
 
-  thread = thread_get (m, THREAD_WRITE, func, arg, funcname);
+  thread = thread_get (m, THREAD_WRITE, func, arg, debugargpass);
   FD_SET (fd, &m->writefd);
   thread->u.fd = fd;
   thread_list_add (&m->write, thread);
@@ -762,21 +744,20 @@ funcname_thread_add_timer_timeval (struct thread_master *m,
                                    int (*func) (struct thread *), 
                                   int type,
                                   void *arg, 
-                                  struct timeval *time_relative, 
-                                  const char* funcname)
+                                  struct timeval *time_relative,
+				  debugargdef)
 {
   struct thread *thread;
-  struct thread_list *list;
+  struct pqueue *queue;
   struct timeval alarm_time;
-  struct thread *tt;
 
   assert (m != NULL);
 
   assert (type == THREAD_TIMER || type == THREAD_BACKGROUND);
   assert (time_relative);
   
-  list = ((type == THREAD_TIMER) ? &m->timer : &m->background);
-  thread = thread_get (m, type, func, arg, funcname);
+  queue = ((type == THREAD_TIMER) ? m->timer : m->background);
+  thread = thread_get (m, type, func, arg, debugargpass);
 
   /* Do we need jitter here? */
   quagga_get_relative (NULL);
@@ -784,16 +765,7 @@ funcname_thread_add_timer_timeval (struct thread_master *m,
   alarm_time.tv_usec = relative_time.tv_usec + time_relative->tv_usec;
   thread->u.sands = timeval_adjust(alarm_time);
 
-  /* Sort by timeval. */
-  for (tt = list->head; tt; tt = tt->next)
-    if (timeval_cmp (thread->u.sands, tt->u.sands) <= 0)
-      break;
-
-  if (tt)
-    thread_list_add_before (list, tt, thread);
-  else
-    thread_list_add (list, thread);
-
+  pqueue_enqueue(thread, queue);
   return thread;
 }
 
@@ -802,7 +774,8 @@ funcname_thread_add_timer_timeval (struct thread_master *m,
 struct thread *
 funcname_thread_add_timer (struct thread_master *m,
 		           int (*func) (struct thread *), 
-		           void *arg, long timer, const char* funcname)
+		           void *arg, long timer,
+			   debugargdef)
 {
   struct timeval trel;
 
@@ -812,14 +785,15 @@ funcname_thread_add_timer (struct thread_master *m,
   trel.tv_usec = 0;
 
   return funcname_thread_add_timer_timeval (m, func, THREAD_TIMER, arg, 
-                                            &trel, funcname);
+                                            &trel, debugargpass);
 }
 
 /* Add timer event thread with "millisecond" resolution */
 struct thread *
 funcname_thread_add_timer_msec (struct thread_master *m,
                                 int (*func) (struct thread *), 
-                                void *arg, long timer, const char* funcname)
+                                void *arg, long timer,
+				debugargdef)
 {
   struct timeval trel;
 
@@ -829,15 +803,15 @@ funcname_thread_add_timer_msec (struct thread_master *m,
   trel.tv_usec = 1000*(timer % 1000);
 
   return funcname_thread_add_timer_timeval (m, func, THREAD_TIMER, 
-                                            arg, &trel, funcname);
+                                            arg, &trel, debugargpass);
 }
 
 /* Add a background thread, with an optional millisec delay */
 struct thread *
 funcname_thread_add_background (struct thread_master *m,
                                 int (*func) (struct thread *),
-                                void *arg, long delay, 
-                                const char *funcname)
+                                void *arg, long delay,
+				debugargdef)
 {
   struct timeval trel;
   
@@ -855,19 +829,20 @@ funcname_thread_add_background (struct thread_master *m,
     }
 
   return funcname_thread_add_timer_timeval (m, func, THREAD_BACKGROUND,
-                                            arg, &trel, funcname);
+                                            arg, &trel, debugargpass);
 }
 
 /* Add simple event thread. */
 struct thread *
 funcname_thread_add_event (struct thread_master *m,
-		  int (*func) (struct thread *), void *arg, int val, const char* funcname)
+		  int (*func) (struct thread *), void *arg, int val,
+		  debugargdef)
 {
   struct thread *thread;
 
   assert (m != NULL);
 
-  thread = thread_get (m, THREAD_EVENT, func, arg, funcname);
+  thread = thread_get (m, THREAD_EVENT, func, arg, debugargpass);
   thread->u.val = val;
   thread_list_add (&m->event, thread);
 
@@ -878,7 +853,8 @@ funcname_thread_add_event (struct thread_master *m,
 void
 thread_cancel (struct thread *thread)
 {
-  struct thread_list *list;
+  struct thread_list *list = NULL;
+  struct pqueue *queue = NULL;
   
   switch (thread->type)
     {
@@ -893,7 +869,7 @@ thread_cancel (struct thread *thread)
       list = &thread->master->write;
       break;
     case THREAD_TIMER:
-      list = &thread->master->timer;
+      queue = thread->master->timer;
       break;
     case THREAD_EVENT:
       list = &thread->master->event;
@@ -902,13 +878,28 @@ thread_cancel (struct thread *thread)
       list = &thread->master->ready;
       break;
     case THREAD_BACKGROUND:
-      list = &thread->master->background;
+      queue = thread->master->background;
       break;
     default:
       return;
       break;
     }
-  thread_list_delete (list, thread);
+
+  if (queue)
+    {
+      assert(thread->index >= 0);
+      assert(thread == queue->array[thread->index]);
+      pqueue_remove_at(thread->index, queue);
+    }
+  else if (list)
+    {
+      thread_list_delete (list, thread);
+    }
+  else
+    {
+      assert(!"Thread should be either in queue or list!");
+    }
+
   thread->type = THREAD_UNUSED;
   thread_add_unuse (thread->master, thread);
 }
@@ -958,11 +949,12 @@ thread_cancel_event (struct thread_master *m, void *arg)
 }
 
 static struct timeval *
-thread_timer_wait (struct thread_list *tlist, struct timeval *timer_val)
+thread_timer_wait (struct pqueue *queue, struct timeval *timer_val)
 {
-  if (!thread_empty (tlist))
+  if (queue->size)
     {
-      *timer_val = timeval_subtract (tlist->head->u.sands, relative_time);
+      struct thread *next_timer = queue->array[0];
+      *timer_val = timeval_subtract (next_timer->u.sands, relative_time);
       return timer_val;
     }
   return NULL;
@@ -1006,18 +998,17 @@ thread_process_fd (struct thread_list *list, fd_set *fdset, fd_set *mfdset)
 
 /* Add all timers that have popped to the ready list. */
 static unsigned int
-thread_timer_process (struct thread_list *list, struct timeval *timenow)
+thread_timer_process (struct pqueue *queue, struct timeval *timenow)
 {
   struct thread *thread;
-  struct thread *next;
   unsigned int ready = 0;
   
-  for (thread = list->head; thread; thread = next)
+  while (queue->size)
     {
-      next = thread->next;
+      thread = queue->array[0];
       if (timeval_cmp (*timenow, thread->u.sands) < 0)
         return ready;
-      thread_list_delete (list, thread);
+      pqueue_dequeue(queue);
       thread->type = THREAD_READY;
       thread_list_add (&thread->master->ready, thread);
       ready++;
@@ -1093,8 +1084,8 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
       if (m->ready.count == 0)
         {
           quagga_get_relative (NULL);
-          timer_wait = thread_timer_wait (&m->timer, &timer_val);
-          timer_wait_bg = thread_timer_wait (&m->background, &timer_val_bg);
+          timer_wait = thread_timer_wait (m->timer, &timer_val);
+          timer_wait_bg = thread_timer_wait (m->background, &timer_val_bg);
           
           if (timer_wait_bg &&
               (!timer_wait || (timeval_cmp (*timer_wait, *timer_wait_bg) > 0)))
@@ -1150,7 +1141,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
          priority than I/O threads, so let's push them onto the ready
 	 list in front of the I/O threads. */
       quagga_get_relative (NULL);
-      thread_timer_process (&m->timer, &relative_time);
+      thread_timer_process (m->timer, &relative_time);
       
       /* Got IO, process it */
       if (num > 0)
@@ -1171,7 +1162,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
 #endif
 
       /* Background timer/events, lowest priority */
-      thread_timer_process (&m->background, &relative_time);
+      thread_timer_process (m->background, &relative_time);
       
       if ((thread = thread_trim_head (&m->ready)) != NULL)
         return thread_run (m, thread, fetch);
@@ -1226,6 +1217,8 @@ thread_getrusage (RUSAGE_T *r)
 #endif /* HAVE_CLOCK_MONOTONIC */
 }
 
+struct thread *thread_current = NULL;
+
 /* We check thread consumed time. If the system has getrusage, we'll
    use that to get in-depth stats on the performance of the thread in addition
    to wall clock time stats from gettimeofday. */
@@ -1246,7 +1239,7 @@ thread_call (struct thread *thread)
       struct cpu_thread_history tmp;
       
       tmp.func = thread->func;
-      strcpy(tmp.funcname, thread->funcname);
+      tmp.funcname = thread->funcname;
       
       thread->hist = hash_get (cpu_record, &tmp, 
                     (void * (*) (void *))cpu_record_hash_alloc);
@@ -1255,7 +1248,9 @@ thread_call (struct thread *thread)
   GETRUSAGE (&before);
   thread->real = before.real;
 
+  thread_current = thread;
   (*thread->func) (thread);
+  thread_current = NULL;
 
   GETRUSAGE (&after);
 
@@ -1294,7 +1289,7 @@ funcname_thread_execute (struct thread_master *m,
                 int (*func)(struct thread *), 
                 void *arg,
                 int val,
-		const char* funcname)
+		debugargdef)
 {
   struct thread dummy; 
 
@@ -1306,7 +1301,11 @@ funcname_thread_execute (struct thread_master *m,
   dummy.func = func;
   dummy.arg = arg;
   dummy.u.val = val;
-  strip_funcname (dummy.funcname, funcname);
+
+  dummy.funcname = funcname;
+  dummy.schedfrom = schedfrom;
+  dummy.schedfrom_line = fromln;
+
   thread_call (&dummy);
 
   return NULL;

@@ -51,6 +51,7 @@ const char *zlog_proto_names[] =
   "BABEL",
   "OSPF6",
   "ISIS",
+  "PIM",
   "MASC",
   "EIGRP",
   NULL,
@@ -70,7 +71,7 @@ const char *zlog_priority[] =
 };
   
 
-
+
 /* For time string format. */
 
 size_t
@@ -146,7 +147,7 @@ time_print(FILE *fp, struct timestamp_control *ctl)
   fprintf(fp, "%s ", ctl->buf);
 }
   
-
+
 /* va_list version of zlog. */
 static void
 vzlog (struct zlog *zl, int priority, const char *format, va_list args)
@@ -426,6 +427,40 @@ zlog_signal(int signo, const char *action
 			 NULL
 #endif
 			);
+
+  s = buf;
+  if (!thread_current)
+    s = str_append (LOC, "no thread information available\n");
+  else
+    {
+      s = str_append (LOC, "in thread ");
+      s = str_append (LOC, thread_current->funcname);
+      s = str_append (LOC, " scheduled from ");
+      s = str_append (LOC, thread_current->schedfrom);
+      s = str_append (LOC, ":");
+      s = num_append (LOC, thread_current->schedfrom_line);
+      s = str_append (LOC, "\n");
+    }
+
+#define DUMP(FD) write(FD, buf, s-buf);
+  /* If no file logging configured, try to write to fallback log file. */
+  if (logfile_fd >= 0)
+    DUMP(logfile_fd)
+  if (!zlog_default)
+    DUMP(STDERR_FILENO)
+  else
+    {
+      if (PRI <= zlog_default->maxlvl[ZLOG_DEST_STDOUT])
+        DUMP(STDOUT_FILENO)
+      /* Remove trailing '\n' for monitor and syslog */
+      *--s = '\0';
+      if (PRI <= zlog_default->maxlvl[ZLOG_DEST_MONITOR])
+        vty_log_fixed(buf,s-buf);
+      if (PRI <= zlog_default->maxlvl[ZLOG_DEST_SYSLOG])
+	syslog_sigsafe(PRI|zlog_default->facility,msgstart,s-msgstart);
+    }
+#undef DUMP
+
 #undef PRI
 #undef LOC
 }
@@ -444,8 +479,8 @@ zlog_backtrace_sigsafe(int priority, void *program_counter)
 #define LOC s,buf+sizeof(buf)-s
 
 #ifdef HAVE_GLIBC_BACKTRACE
-  if (((size = backtrace(array,array_size(array)) <= 0) ||
-      ((size_t)size > array_size(array))))
+  size = backtrace(array, array_size(array));
+  if (size <= 0 || (size_t)size > array_size(array))
     return;
 
 #define DUMP(FD) { \
@@ -527,8 +562,8 @@ zlog_backtrace(int priority)
   int size, i;
   char **strings;
 
-  if (((size = backtrace(array,array_size(array))) <= 0) ||
-      ((size_t)size > array_size(array)))
+  size = backtrace(array, array_size(array));
+  if (size <= 0 || (size_t)size > array_size(array))
     {
       zlog_err("Cannot get backtrace, returned invalid # of frames %d "
 	       "(valid range is between 1 and %lu)",
@@ -605,6 +640,16 @@ PLOG_FUNC(plog_debug, LOG_DEBUG)
 
 #undef PLOG_FUNC
 
+void zlog_thread_info (int log_level)
+{
+  if (thread_current)
+    zlog(NULL, log_level, "Current thread function %s, scheduled from "
+	 "file %s, line %u", thread_current->funcname,
+	 thread_current->schedfrom, thread_current->schedfrom_line);
+  else
+    zlog(NULL, log_level, "Current thread not known/applicable");
+}
+
 void
 _zlog_assert_failed (const char *assertion, const char *file,
 		     unsigned int line, const char *function)
@@ -617,10 +662,11 @@ _zlog_assert_failed (const char *assertion, const char *file,
   zlog(NULL, LOG_CRIT, "Assertion `%s' failed in file %s, line %u, function %s",
        assertion,file,line,(function ? function : "?"));
   zlog_backtrace(LOG_CRIT);
+  zlog_thread_info(LOG_CRIT);
   abort();
 }
 
-
+
 /* Open log stream */
 struct zlog *
 openzlog (const char *progname, zlog_proto_t protocol,
@@ -757,7 +803,7 @@ zlog_rotate (struct zlog *zl)
 
   return 1;
 }
-
+
 /* Message lookup function. */
 const char *
 lookup (const struct message *mes, int key)
