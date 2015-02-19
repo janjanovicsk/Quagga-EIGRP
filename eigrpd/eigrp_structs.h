@@ -145,7 +145,15 @@ struct eigrp_interface
   u_int32_t hello_in; /* Hello message input count. */
   u_int32_t update_in; /* Update message input count. */
   u_int32_t query_in; /* Querry message input count. */
-  u_int32_t reply_in; /* Querry message input count. */
+  u_int32_t reply_in; /* Reply message input count. */
+  u_int32_t hello_out; /* Hello message output count. */
+  u_int32_t update_out; /* Update message output count. */
+  u_int32_t query_out; /* Query message output count. */
+  u_int32_t reply_out; /* Reply message output count. */
+  u_int32_t siaQuery_in;
+  u_int32_t siaQuery_out;
+  u_int32_t ack_out;
+  u_int32_t ack_in;
 
   u_int32_t crypt_seqnum;             /* Cryptographic Sequence Number */
 };
