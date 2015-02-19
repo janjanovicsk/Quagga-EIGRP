@@ -43,9 +43,21 @@ extern unsigned long term_debug_eigrp_nei;
 
 /* packet debug flags */
 extern unsigned long term_debug_eigrp_packet[];
-#define EIGRP_DEBUG_HELLO		0x01
-#define EIGRP_DEBUG_SEND		0x02
-#define EIGRP_DEBUG_RECV		0x04
+#define EIGRP_DEBUG_UPDATE		0x01
+#define EIGRP_DEBUG_REQUEST		0x02
+#define EIGRP_DEBUG_QUERY		0x04
+#define EIGRP_DEBUG_REPLY		0x08
+#define EIGRP_DEBUG_HELLO		0x10
+#define EIGRP_DEBUG_PROBE		0x40
+#define EIGRP_DEBUG_ACK 		0x80
+#define EIGRP_DEBUG_SIAQUERY	0x200
+#define EIGRP_DEBUG_SIAREPLY	0x400
+#define EIGRP_DEBUG_STUB 		0x800
+
+#define EIGRP_DEBUG_SEND			0x01
+#define EIGRP_DEBUG_RECV			0x02
+#define EIGRP_DEBUG_SEND_RECV		0x03
+#define EIGRP_DEBUG_PACKET_DETAIL	0x04
 
 /* zebra debug flags */
 extern unsigned long term_debug_eigrp_zebra;
@@ -128,5 +140,7 @@ extern void show_ip_eigrp_interface_sub (struct vty *, struct eigrp *,
 extern void show_ip_eigrp_neighbor_sub (struct vty *, struct eigrp_neighbor *, int);
 extern void show_ip_eigrp_prefix_entry (struct vty *, struct eigrp_prefix_entry *);
 extern void show_ip_eigrp_neighbor_entry (struct vty *, struct eigrp *, struct eigrp_neighbor_entry *);
+
+extern void eigrp_debug_init (void);
 
 #endif /* _ZEBRA_EIGRPD_DUMP_H_ */

@@ -48,6 +48,7 @@
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
@@ -280,6 +281,7 @@ main (int argc, char **argv)
   /*EIGRPd init*/
   eigrp_if_init ();
   eigrp_zebra_init ();
+  eigrp_debug_init ();
 
   /* Get configuration file. */
   /* EIGRP VTY inits */

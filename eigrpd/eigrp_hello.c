@@ -279,7 +279,7 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
   /* neighbor must be valid, eigrp_nbr_get creates if none existed */
   assert(nbr);
   
-  if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+  if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV))
     zlog_debug("Processing Hello size[%u] int(%s) nbr(%s)",
 	       size, ifindex2ifname(nbr->ei->ifp->ifindex), 
 	       inet_ntoa(nbr->src));

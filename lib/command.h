@@ -459,6 +459,7 @@ struct cmd_token
 #define RIP_STR "RIP information\n"
 #define BGP_STR "BGP information\n"
 #define OSPF_STR "OSPF information\n"
+#define EIGRP_STR "EIGRP information\n"
 #define NEIGHBOR_STR "Specify neighbor router\n"
 #define DEBUG_STR "Debugging functions (see also 'undebug')\n"
 #define UNDEBUG_STR "Disable debugging functions (see also 'debug')\n"
