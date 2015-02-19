@@ -311,6 +311,33 @@ DEFUN (no_eigrp_network,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_neighbor,
+       eigrp_neighbor_cmd,
+       "neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_neighbor,
+       no_eigrp_neighbor_cmd,
+       "no neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       NO_STR
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+
+  return CMD_SUCCESS;
+}
+
 DEFUN (show_ip_eigrp_topology,
        show_ip_eigrp_topology_cmd,
        "show ip eigrp topology",
@@ -1365,6 +1392,9 @@ eigrp_vty_init (void)
   install_element (EIGRP_NODE, &no_eigrp_metric_weights_cmd);
   install_element (EIGRP_NODE, &eigrp_maximum_paths_cmd);
   install_element (EIGRP_NODE, &no_eigrp_maximum_paths_cmd);
+  install_element (EIGRP_NODE, &eigrp_neighbor_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_neighbor_cmd);
+
 
 
   eigrp_vty_zebra_init ();
