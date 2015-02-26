@@ -54,8 +54,8 @@ extern void eigrp_send_packet_reliably (struct eigrp_neighbor *);
 
 extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv (struct stream *);
 extern u_int16_t eigrp_add_internalTLV_to_stream (struct stream *, struct eigrp_prefix_entry *);
-
 extern u_int16_t eigrp_add_authTLV_MD5_to_stream (struct stream *, struct eigrp_interface *);
+extern u_int16_t eigrp_add_authTLV_SHA256_to_stream (struct stream *, struct eigrp_interface *);
 
 extern int eigrp_unack_packet_retrans (struct thread *);
 extern int eigrp_unack_multicast_packet_retrans (struct thread *);

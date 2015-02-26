@@ -38,6 +38,8 @@
 
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        2 /* in seconds */
+#define EIGRP_PACKET_RETRANS_MAX         16 /* number of retrans attempts */
+#define PLAINTEXT_LENGTH                 81
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1

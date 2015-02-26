@@ -290,7 +290,7 @@ eigrp_if_up (struct eigrp_interface *ei)
   if (tn == NULL)
     {
       tn = eigrp_prefix_entry_new ();
-
+      tn->serno = eigrp->serno;
       tn->destination_ipv4 = dest_addr;
       tn->af = AF_INET;
       tn->nt = EIGRP_TOPOLOGY_TYPE_CONNECTED;

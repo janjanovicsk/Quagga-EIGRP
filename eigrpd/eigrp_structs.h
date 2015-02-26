@@ -94,8 +94,12 @@ struct eigrp
 
   struct route_table *networks; /* EIGRP config networks. */
 
-
   struct list *topology_table;
+
+  u_int64_t serno; /* Global serial number counter for topology entry changes*/
+  u_int64_t serno_last_update; /* Highest serial number of information send by last update*/
+  struct list *topology_changes_internalIPV4;
+  struct list *topology_changes_externalIPV4;
 
   /*Neighbor self*/
   struct eigrp_neighbor *neighbor_self;
@@ -414,6 +418,8 @@ struct eigrp_prefix_entry
 
   //If network type is REMOTE_EXTERNAL, pointer will have reference to its external TLV
   struct TLV_IPv4_External_type *extTLV;
+
+  u_int64_t serno; /*Serial number for this entry. Increased with each change of entry*/
 };
 
 /* EIGRP Topology table record structure */

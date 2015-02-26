@@ -167,6 +167,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
             {
               /*Here comes topology information save*/
               tnode = eigrp_prefix_entry_new();
+              tnode->serno = eigrp->serno;
               tnode->destination_ipv4 = dest_addr;
               tnode->af = AF_INET;
               tnode->state = EIGRP_FSM_STATE_PASSIVE;
