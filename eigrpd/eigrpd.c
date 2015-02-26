@@ -186,6 +186,12 @@ eigrp_new (const char *AS)
   inet_aton("127.0.0.1", &new->neighbor_self->src);
 
   new->variance = EIGRP_VARIANCE_DEFAULT;
+  new->max_paths = EIGRP_MAX_PATHS_DEFAULT;
+
+  new->serno = 0;
+  new->serno_last_update = 0;
+  new->topology_changes_externalIPV4 = list_new ();
+  new->topology_changes_internalIPV4 = list_new ();
 
   return new;
 }
@@ -262,8 +268,10 @@ eigrp_finish_final (struct eigrp *eigrp)
   if (zclient)
     zclient_free(zclient);
 
-  list_free(eigrp->eiflist);
-  list_free(eigrp->oi_write_q);
+  list_delete(eigrp->eiflist);
+  list_delete(eigrp->oi_write_q);
+  list_delete(eigrp->topology_changes_externalIPV4);
+  list_delete(eigrp->topology_changes_internalIPV4);
 
   eigrp_topology_cleanup(eigrp->topology_table);
   eigrp_topology_free(eigrp->topology_table);

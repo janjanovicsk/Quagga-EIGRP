@@ -121,16 +121,17 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup_ipv4(
               eigrp->topology_table, dest_addr);
 
-          temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
-              sizeof(struct eigrp_neighbor_entry));
-          temp_tn = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY,
-              sizeof(struct eigrp_prefix_entry));
-          temp_te->total_metric.delay = 0xFFFFFFFF;
-          temp_te->prefix = temp_tn;
-          temp_tn->destination_ipv4 = dest_addr;
 
-          XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
-          XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
+//          temp_te = XCALLOC(MTYPE_EIGRP_NEIGHBOR_ENTRY,
+//              sizeof(struct eigrp_neighbor_entry));
+//          temp_tn = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY,
+//              sizeof(struct eigrp_prefix_entry));
+//          temp_te->total_metric.delay = 0xFFFFFFFF;
+//          temp_te->prefix = temp_tn;
+//          temp_tn->destination_ipv4 = dest_addr;
+//
+//          XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
+//          XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
 
           /* If the destination exists (it should, but one never know)*/
           if (dest != NULL)
@@ -168,9 +169,21 @@ eigrp_send_query (struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
   eigrp_packet_header_init(EIGRP_OPC_QUERY, nbr->ei, ep->s, 0,
                            nbr->ei->eigrp->sequence_number, 0);
 
+  // encode Authentication TLV, if needed
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
+    }
+
   length += eigrp_add_internalTLV_to_stream(ep->s, te);
 
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_EXTRA_SALT_FLAG);
+    }
+
   listnode_add(te->prefix->rij, nbr);
+
   /* EIGRP Checksum */
   eigrp_packet_checksum(nbr->ei, ep->s, length);
 

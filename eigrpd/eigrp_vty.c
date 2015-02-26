@@ -86,6 +86,11 @@ config_write_interfaces (struct vty *vty, struct eigrp *eigrp)
           vty_out (vty, " ip authentication mode eigrp %d md5%s", eigrp->AS, VTY_NEWLINE);
         }
 
+      if ((IF_DEF_PARAMS (ei->ifp)->auth_type) == EIGRP_AUTH_TYPE_SHA256)
+        {
+          vty_out (vty, " ip authentication mode eigrp %d hmac-sha-256%s", eigrp->AS, VTY_NEWLINE);
+        }
+
       if(IF_DEF_PARAMS (ei->ifp)->auth_keychain)
         {
           vty_out (vty, " ip authentication key-chain eigrp %d %s%s",eigrp->AS,IF_DEF_PARAMS (ei->ifp)->auth_keychain, VTY_NEWLINE);
@@ -132,12 +137,129 @@ DEFUN (router_eigrp,
 DEFUN (no_router_eigrp,
        no_router_eigrp_cmd,
        "no router eigrp <1-65535>",
-       "Disable\n"
+       NO_STR
        "Routing process\n"
        "EIGRP configuration\n")
 {
   vty->node = EIGRP_NODE;
-  vty->index = eigrp_get (argv[0]);
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_router_id,
+       eigrp_router_id_cmd,
+       "eigrp router-id A.B.C.D",
+       "EIGRP specific commands\n"
+       "Router ID for this EIGRP process\n"
+       "EIGRP Router-ID in IP address format\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_router_id,
+       no_eigrp_router_id_cmd,
+       "no eigrp router-id A.B.C.D",
+       NO_STR
+       "EIGRP specific commands\n"
+       "Router ID for this EIGRP process\n"
+       "EIGRP Router-ID in IP address format\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_passive_interface,
+       eigrp_passive_interface_cmd,
+       "passive-interface (" INT_TYPES_CMD_STR ")",
+       "Suppress routing updates on an interface\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_passive_interface,
+       no_eigrp_passive_interface_cmd,
+       "no passive-interface (" INT_TYPES_CMD_STR ")",
+       NO_STR
+       "Suppress routing updates on an interface\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_timers_active,
+       eigrp_timers_active_cmd,
+       "timers active-time (<1-65535> | disabled)",
+       "Adjust routing timers\n"
+       "Time limit for active state\n"
+       "Active state time limit in minutes\n"
+       "Disable time limit for active state\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_timers_active,
+       no_eigrp_timers_active_cmd,
+       "no timers active-time (<1-65535> | disabled)",
+       NO_STR
+       "Adjust routing timers\n"
+       "Time limit for active state\n"
+       "Active state time limit in minutes\n"
+       "Disable time limit for active state\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+
+DEFUN (eigrp_metric_weights,
+       eigrp_metric_weights_cmd,
+       "metric weights <0-255> <0-255> <0-255> <0-255> <0-255> ",
+       "Modify metrics and parameters for advertisement\n"
+       "Modify metric coefficients\n"
+       "K1\n"
+       "K2\n"
+       "K3\n"
+       "K4\n"
+       "K5\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_metric_weights,
+       no_eigrp_metric_weights_cmd,
+       "no metric weights <0-255> <0-255> <0-255> <0-255> <0-255>",
+       "Modify metrics and parameters for advertisement\n"
+       "Modify metric coefficients\n"
+       "K1\n"
+       "K2\n"
+       "K3\n"
+       "K4\n"
+       "K5\n")
+{
+  struct eigrp *eigrp = vty->index;
+  /*TODO: */
 
   return CMD_SUCCESS;
 }
@@ -185,6 +307,33 @@ DEFUN (no_eigrp_network,
     vty_out (vty,"Can't find specified network configuration.%s", VTY_NEWLINE);
     return CMD_WARNING;
   }
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (eigrp_neighbor,
+       eigrp_neighbor_cmd,
+       "neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_neighbor,
+       no_eigrp_neighbor_cmd,
+       "no neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       NO_STR
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
 
   return CMD_SUCCESS;
 }
@@ -408,19 +557,6 @@ DEFUN (eigrp_if_delay,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = delay;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -448,20 +584,6 @@ DEFUN (no_eigrp_if_delay,
 
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = EIGRP_DELAY_DEFAULT;
-
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -499,19 +621,6 @@ DEFUN (eigrp_if_bandwidth,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -559,7 +668,7 @@ DEFUN (no_eigrp_if_bandwidth,
     {
       for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
         {
-
+          /*TODO: */
         }
     }
 
@@ -659,6 +768,81 @@ DEFUN (eigrp_if_ip_holdinterval,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_ip_summary_address,
+       eigrp_ip_summary_address_cmd,
+       "ip summary-address eigrp <1-65535> A.B.C.D/M",
+       "Interface Internet Protocol config commands\n"
+       "Perform address summarization\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "AS number\n"
+       "Summary <network>/<length>, e.g. 192.168.0.0/16\n")
+{
+  u_int32_t AS;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  AS = atoi (argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((AS < 1) || (AS > 65535))
+    {
+      vty_out (vty, "AS value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_ip_summary_address,
+       no_eigrp_ip_summary_address_cmd,
+       "no ip summary-address eigrp <1-65535> A.B.C.D/M",
+       NO_STR
+       "Interface Internet Protocol config commands\n"
+       "Perform address summarization\n"
+       "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
+       "AS number\n"
+       "Summary <network>/<length>, e.g. 192.168.0.0/16\n")
+{
+  u_int32_t AS;
+  struct eigrp *eigrp;
+  struct interface *ifp;
+
+  eigrp = eigrp_lookup ();
+  if (eigrp == NULL)
+    {
+      vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+      return CMD_SUCCESS;
+    }
+
+  AS = atoi (argv[0]);
+
+  /* hello range is <1-65535> */
+  if ((AS < 1) || (AS > 65535))
+    {
+      vty_out (vty, "AS value is invalid%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ifp = vty->index;
+
+  /*TODO: */
+
+  return CMD_SUCCESS;
+}
+
+
+
 DEFUN (no_eigrp_if_ip_holdinterval,
        no_eigrp_if_ip_holdinterval_cmd,
        "no ip hold-time eigrp",
@@ -684,15 +868,38 @@ DEFUN (no_eigrp_if_ip_holdinterval,
   return CMD_SUCCESS;
 }
 
+static int
+str2auth_type (const char *str, struct interface *ifp)
+{
+  /* Sanity check. */
+   if (str == NULL)
+     return CMD_WARNING;
+
+  if(strncmp(str, "md5",3) == 0)
+    {
+      IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+      return CMD_SUCCESS;
+    }
+  else if(strncmp(str, "hmac-sha-256",12) == 0)
+    {
+      IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_SHA256;
+      return CMD_SUCCESS;
+    }
+
+  return CMD_WARNING;
+
+}
+
 DEFUN (eigrp_authentication_mode,
        eigrp_authentication_mode_cmd,
-       "ip authentication mode eigrp <1-65535> md5",
+       "ip authentication mode eigrp <1-65535> (md5|hmac-sha-256)",
        "Interface Internet Protocol config commands\n"
        "Authentication subcommands\n"
        "Mode\n"
        "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
        "Autonomous system number\n"
-       "Keyed message digest\n")
+       "Keyed message digest\n"
+       "HMAC SHA256 algorithm \n")
 {
   struct eigrp *eigrp;
   struct interface *ifp;
@@ -705,21 +912,25 @@ DEFUN (eigrp_authentication_mode,
     }
 
   ifp = vty->index;
-  IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+//  if(strncmp(argv[2], "md5",3))
+//    IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_MD5;
+//  else if(strncmp(argv[2], "hmac-sha-256",12))
+//    IF_DEF_PARAMS (ifp)->auth_type = EIGRP_AUTH_TYPE_SHA256;
 
-  return CMD_SUCCESS;
+  return str2auth_type(argv[1], ifp);
 }
 
 DEFUN (no_eigrp_authentication_mode,
        no_eigrp_authentication_mode_cmd,
-       "no ip authentication mode eigrp <1-65535> md5",
+       "no ip authentication mode eigrp <1-65535> (md5|hmac-sha-256)",
        "Disable\n"
        "Interface Internet Protocol config commands\n"
        "Authentication subcommands\n"
        "Mode\n"
        "Enhanced Interior Gateway Routing Protocol (EIGRP)\n"
        "Autonomous system number\n"
-       "Keyed message digest\n")
+       "Keyed message digest\n"
+       "HMAC SHA256 algorithm \n")
 {
   struct eigrp *eigrp;
   struct interface *ifp;
@@ -869,16 +1080,30 @@ DEFUN (no_eigrp_redistribute_source_metric,
 DEFUN (eigrp_variance,
     eigrp_variance_cmd,
     "variance <1-128>",
-     "Control load balancing variancev\n"
+     "Control load balancing variance\n"
      "Metric variance multiplier\n")
 {
 
     struct eigrp *eigrp;
+    u_char variance;
 
     eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+    variance = atoi(argv[0]);
+    /* hello range is <1-65535> */
+    if ((variance < 1) || (variance > 128))
+      {
+        vty_out (vty, "Variance value is invalid%s", VTY_NEWLINE);
+        return CMD_WARNING;
+      }
 
-    if(eigrp)
-      eigrp->variance = atoi(argv[0]);
+      eigrp->variance = variance;
+
+    /*TODO: */
 
     return CMD_SUCCESS;
 }
@@ -888,18 +1113,83 @@ DEFUN (no_eigrp_variance,
     no_eigrp_variance_cmd,
     "no variance <1-128>",
     "Disable\n"
-     "Control load balancing variancev\n"
+     "Control load balancing variance\n"
      "Metric variance multiplier\n")
 {
 
     struct eigrp *eigrp;
     eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
 
-    if(eigrp)
-      eigrp->variance = EIGRP_VARIANCE_DEFAULT;
+    eigrp->variance = EIGRP_VARIANCE_DEFAULT;
+
+    /*TODO: */
 
     return CMD_SUCCESS;
 }
+
+DEFUN (eigrp_maximum_paths,
+    eigrp_maximum_paths_cmd,
+    "maximum-paths  <1-32>",
+    "Forward packets over multiple paths\n"
+    "Number of paths\n")
+{
+
+    struct eigrp *eigrp;
+    u_char max;
+
+    eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+
+    max = atoi(argv[0]);
+    /* hello range is <1-65535> */
+    if ((max < 1) || (max > 32))
+      {
+        vty_out (vty, "Maximum-paths value is invalid%s", VTY_NEWLINE);
+        return CMD_WARNING;
+      }
+
+      eigrp->max_paths = max;
+
+    /*TODO: */
+
+    return CMD_SUCCESS;
+}
+
+
+DEFUN (no_eigrp_maximum_paths,
+    no_eigrp_maximum_paths_cmd,
+    "no maximum-paths <1-32>",
+    NO_STR
+    "Forward packets over multiple paths\n"
+    "Number of paths\n")
+{
+
+    struct eigrp *eigrp;
+
+    eigrp = eigrp_lookup ();
+    if (eigrp == NULL)
+      {
+        vty_out (vty, "EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+      }
+
+    eigrp->max_paths = EIGRP_MAX_PATHS_DEFAULT;
+
+    /*TODO: */
+
+    return CMD_SUCCESS;
+}
+
+
 
 static struct cmd_node eigrp_node =
 {
@@ -1023,6 +1313,11 @@ eigrp_vty_if_init (void)
   install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_authentication_keychain_cmd);
 
+  /*EIGRP Summarization commands*/
+  install_element (INTERFACE_NODE, &eigrp_ip_summary_address_cmd);
+  install_element (INTERFACE_NODE, &no_eigrp_ip_summary_address_cmd);
+
+
 }
 
 static void
@@ -1042,12 +1337,25 @@ eigrp_vty_init (void)
   install_default (EIGRP_NODE);
 
   install_element (CONFIG_NODE, &router_eigrp_cmd);
-
+  install_element (CONFIG_NODE, &no_router_eigrp_cmd);
   install_element (EIGRP_NODE, &eigrp_network_cmd);
   install_element (EIGRP_NODE, &no_eigrp_network_cmd);
-
   install_element (EIGRP_NODE, &eigrp_variance_cmd);
   install_element (EIGRP_NODE, &no_eigrp_variance_cmd);
+  install_element (EIGRP_NODE, &eigrp_router_id_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_router_id_cmd);
+  install_element (EIGRP_NODE, &eigrp_passive_interface_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_passive_interface_cmd);
+  install_element (EIGRP_NODE, &eigrp_timers_active_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_timers_active_cmd);
+  install_element (EIGRP_NODE, &eigrp_metric_weights_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_metric_weights_cmd);
+  install_element (EIGRP_NODE, &eigrp_maximum_paths_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_maximum_paths_cmd);
+  install_element (EIGRP_NODE, &eigrp_neighbor_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_neighbor_cmd);
+
+
 
   eigrp_vty_zebra_init ();
 }

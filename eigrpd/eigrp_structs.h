@@ -71,6 +71,7 @@ struct eigrp
   u_int16_t vrid;		/* Virtual Router ID */
   u_char    k_values[6];	/*Array for K values configuration*/
   u_char variance;              /*Metric variance multiplier*/
+  u_char max_paths;             /*Maximum allowed paths for 1 prefix*/
 
   /* EIGRP Router ID. */
   u_int32_t router_id; /* Configured automatically. */
@@ -93,8 +94,12 @@ struct eigrp
 
   struct route_table *networks; /* EIGRP config networks. */
 
-
   struct list *topology_table;
+
+  u_int64_t serno; /* Global serial number counter for topology entry changes*/
+  u_int64_t serno_last_update; /* Highest serial number of information send by last update*/
+  struct list *topology_changes_internalIPV4;
+  struct list *topology_changes_externalIPV4;
 
   /*Neighbor self*/
   struct eigrp_neighbor *neighbor_self;
@@ -144,7 +149,15 @@ struct eigrp_interface
   u_int32_t hello_in; /* Hello message input count. */
   u_int32_t update_in; /* Update message input count. */
   u_int32_t query_in; /* Querry message input count. */
-  u_int32_t reply_in; /* Querry message input count. */
+  u_int32_t reply_in; /* Reply message input count. */
+  u_int32_t hello_out; /* Hello message output count. */
+  u_int32_t update_out; /* Update message output count. */
+  u_int32_t query_out; /* Query message output count. */
+  u_int32_t reply_out; /* Reply message output count. */
+  u_int32_t siaQuery_in;
+  u_int32_t siaQuery_out;
+  u_int32_t ack_out;
+  u_int32_t ack_in;
 
   u_int32_t crypt_seqnum;             /* Cryptographic Sequence Number */
 };
@@ -298,7 +311,7 @@ struct TLV_Parameter_Type
   u_int16_t hold_time;
 }__attribute__((packed));
 
-struct TLV_Authentication_Type
+struct TLV_MD5_Authentication_Type
 {
   u_int16_t type;
   u_int16_t length;
@@ -311,12 +324,32 @@ struct TLV_Authentication_Type
 
 }__attribute__((packed));
 
+struct TLV_SHA256_Authentication_Type
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_int16_t auth_type;
+  u_int16_t auth_length;
+  u_int32_t key_id;
+  u_int32_t key_sequence;
+  u_char Nullpad[8];
+  u_char digest[EIGRP_AUTH_TYPE_SHA256_LEN];
+
+}__attribute__((packed));
+
 struct TLV_Sequence_Type
 {
   u_int16_t type;
   u_int16_t length;
   u_char addr_length;
-  struct in_addr address;
+  struct in_addr *addresses;
+}__attribute__((packed));
+
+struct TLV_Next_Multicast_Sequence
+{
+  u_int16_t type;
+  u_int16_t length;
+  u_int32_t multicast_sequence;
 }__attribute__((packed));
 
 struct TLV_Software_Type
@@ -385,6 +418,8 @@ struct eigrp_prefix_entry
 
   //If network type is REMOTE_EXTERNAL, pointer will have reference to its external TLV
   struct TLV_IPv4_External_type *extTLV;
+
+  u_int64_t serno; /*Serial number for this entry. Increased with each change of entry*/
 };
 
 /* EIGRP Topology table record structure */

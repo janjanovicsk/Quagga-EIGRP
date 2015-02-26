@@ -65,15 +65,6 @@ eigrp_nbr_new (struct eigrp_interface *ei)
 
   eigrp_nbr_state_set (nbr, EIGRP_NEIGHBOR_DOWN);
 
-//  nbr->state = EIGRP_NEIGHBOR_DOWN;
-//  if (ei!=NULL)
-//    nbr->v_holddown = EIGRP_IF_PARAM (ei,v_wait);
-//  else
-//    nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
-//
-//  nbr->retrans_queue = eigrp_fifo_new ();
-//  nbr->multicast_queue = eigrp_fifo_new ();
-
   return nbr;
 }
 
@@ -201,6 +192,7 @@ eigrp_nbr_state_set (struct eigrp_neighbor *nbr, u_char state)
 
       // hold time..
       nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
+      THREAD_OFF(nbr->t_holddown);
 
       /* out with the old */
       if (nbr->multicast_queue)
@@ -250,9 +242,9 @@ eigrp_nbr_state_update (struct eigrp_neighbor *nbr)
     case EIGRP_NEIGHBOR_DOWN:
       {
 	/*Start Hold Down Timer for neighbor*/
-	THREAD_OFF(nbr->t_holddown);
-	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired,
-			nbr, nbr->v_holddown);
+//	THREAD_OFF(nbr->t_holddown);
+//	THREAD_TIMER_ON(master, nbr->t_holddown, holddown_timer_expired,
+//			nbr, nbr->v_holddown);
 	break;
       }
     case EIGRP_NEIGHBOR_PENDING:

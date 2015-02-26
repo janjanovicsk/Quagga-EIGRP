@@ -53,8 +53,9 @@ typedef enum
   ZLOG_BABEL,
   ZLOG_OSPF6,
   ZLOG_ISIS,
+  ZLOG_PIM,
   ZLOG_MASC,
-  ZLOG_EIGRP,
+  ZLOG_EIGRP
 } zlog_proto_t;
 
 /* If maxlvl is set to ZLOG_DISABLED, then no messages will be sent
@@ -132,6 +133,8 @@ extern void plog_notice (struct zlog *, const char *format, ...)
   PRINTF_ATTRIBUTE(2, 3);
 extern void plog_debug (struct zlog *, const char *format, ...)
   PRINTF_ATTRIBUTE(2, 3);
+
+extern void zlog_thread_info (int log_level);
 
 /* Set logging level for the given destination.  If the log_level
    argument is ZLOG_DISABLED, then the destination is disabled.

@@ -143,7 +143,7 @@ unsigned long term_debug_ospf_lsa = 0;
 unsigned long term_debug_ospf_zebra = 0;
 unsigned long term_debug_ospf_nssa = 0;
 
-
+
 
 const char *
 ospf_redist_string(u_int route_type)
@@ -218,7 +218,7 @@ ospf_if_name_string (struct ospf_interface *oi)
   return buf;
 }
 
-
+
 void
 ospf_nbr_state_message (struct ospf_neighbor *nbr, char *buf, size_t size)
 {
@@ -247,16 +247,21 @@ ospf_timeval_dump (struct timeval *t, char *buf, size_t size)
 #define HOUR_IN_SECONDS		(60*MINUTE_IN_SECONDS)
 #define DAY_IN_SECONDS		(24*HOUR_IN_SECONDS)
 #define WEEK_IN_SECONDS		(7*DAY_IN_SECONDS)
-  unsigned long w, d, h, m, s, ms;
+  unsigned long w, d, h, m, s, ms, us;
   
   if (!t)
     return "inactive";
   
-  w = d = h = m = s = ms = 0;
+  w = d = h = m = s = ms = us = 0;
   memset (buf, 0, size);
-  
-  ms = t->tv_usec / 1000;
-  
+
+  us = t->tv_usec;
+  if (us >= 1000)
+    {
+      ms = us / 1000;
+      us %= 1000;
+    }
+
   if (ms >= 1000)
     {
       t->tv_sec += ms / 1000;
@@ -297,9 +302,11 @@ ospf_timeval_dump (struct timeval *t, char *buf, size_t size)
     snprintf (buf, size, "%ldh%02ldm%02lds", h, m, t->tv_sec);
   else if (m)
     snprintf (buf, size, "%ldm%02lds", m, t->tv_sec);
-  else
+  else if (ms)
     snprintf (buf, size, "%ld.%03lds", t->tv_sec, ms);
-  
+  else
+    snprintf (buf, size, "%ld usecs", t->tv_usec);
+
   return buf;
 }
 
@@ -746,7 +753,7 @@ ospf_packet_dump (struct stream *s)
   stream_set_getp (s, gp);
 }
 
-
+
 /*
    [no] debug ospf packet (hello|dd|ls-request|ls-update|ls-ack|all)
                           [send|recv [detail]]
@@ -956,7 +963,7 @@ ALIAS (no_debug_ospf_packet,
        "Packet received\n"
        "Detail Information\n")
 
-
+
 DEFUN (debug_ospf_ism,
        debug_ospf_ism_cmd,
        "debug ospf ism",
@@ -1058,7 +1065,7 @@ ALIAS (no_debug_ospf_ism,
        "ISM Event Information\n"
        "ISM Timer Information\n")
 
-
+
 DEFUN (debug_ospf_nsm,
        debug_ospf_nsm_cmd,
        "debug ospf nsm",
@@ -1161,7 +1168,7 @@ ALIAS (no_debug_ospf_nsm,
        "NSM Event Information\n"
        "NSM Timer Information\n")
 
-
+
 DEFUN (debug_ospf_lsa,
        debug_ospf_lsa_cmd,
        "debug ospf lsa",
@@ -1274,7 +1281,7 @@ ALIAS (no_debug_ospf_lsa,
        "LSA Install/Delete\n"
        "LSA Refres\n")
 
-
+
 DEFUN (debug_ospf_zebra,
        debug_ospf_zebra_cmd,
        "debug ospf zebra",
@@ -1366,7 +1373,7 @@ ALIAS (no_debug_ospf_zebra,
        "OSPF Zebra information\n"
        "Zebra interface\n"
        "Zebra redistribute\n")
-
+
 DEFUN (debug_ospf_event,
        debug_ospf_event_cmd,
        "debug ospf event",
@@ -1421,7 +1428,7 @@ DEFUN (no_debug_ospf_nssa,
   return CMD_SUCCESS;
 }
 
-
+
 DEFUN (show_debugging_ospf,
        show_debugging_ospf_cmd,
        "show debugging ospf",

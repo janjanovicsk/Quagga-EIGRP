@@ -48,6 +48,7 @@
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
@@ -77,6 +78,50 @@ struct zebra_privs_t eigrpd_privs =
   .cap_num_p = array_size (_caps_p),
   .cap_num_i = 0
 };
+
+/* EIGRPd options. */
+struct option longopts[] =
+{
+  { "daemon",      no_argument,       NULL, 'd'},
+  { "config_file", required_argument, NULL, 'f'},
+  { "pid_file",    required_argument, NULL, 'i'},
+  { "socket",      required_argument, NULL, 'z'},
+  { "dryrun",      no_argument,       NULL, 'C'},
+  { "help",        no_argument,       NULL, 'h'},
+  { "vty_addr",    required_argument, NULL, 'A'},
+  { "vty_port",    required_argument, NULL, 'P'},
+  { "user",        required_argument, NULL, 'u'},
+  { "group",       required_argument, NULL, 'g'},
+  { "version",     no_argument,       NULL, 'v'},
+  { 0 }
+};
+
+/* Help information display. */
+static void __attribute__ ((noreturn))
+usage (char *progname, int status)
+{
+  if (status != 0)
+    fprintf (stderr, "Try `%s --help' for more information.\n", progname);
+  else
+    {
+      printf ("Usage : %s [OPTION...]\n\
+Daemon which manages EIGRP.\n\n\
+-d, --daemon       Runs in daemon mode\n\
+-f, --config_file  Set configuration file name\n\
+-i, --pid_file     Set process identifier file name\n\
+-z, --socket       Set path of zebra socket\n\
+-A, --vty_addr     Set vty's bind address\n\
+-P, --vty_port     Set vty's port number\n\
+-u, --user         User to run as\n\
+-g, --group        Group to run as\n\
+-v, --version      Print program version\n\
+-C, --dryrun       Check configuration for validity and exit\n\
+-h, --help         Display this help and exit\n\
+\n\
+Report bugs to %s\n", progname, ZEBRA_BUG_ADDRESS);
+    }
+  exit (status);
+}
 
 /* Master of threads. */
 struct thread_master *master;
@@ -148,6 +193,68 @@ main (int argc, char **argv)
   /* get program name */
   progname = ((p = strrchr (argv[0], '/')) ? ++p : argv[0]);
   
+  while (1)
+    {
+      int opt;
+
+      opt = getopt_long (argc, argv, "df:i:z:hA:P:u:g:vC", longopts, 0);
+
+      if (opt == EOF)
+        break;
+
+      switch (opt)
+        {
+        case 0:
+          break;
+        case 'd':
+          daemon_mode = 1;
+          break;
+        case 'f':
+          config_file = optarg;
+          break;
+        case 'A':
+          vty_addr = optarg;
+          break;
+        case 'i':
+          pid_file = optarg;
+          break;
+        case 'z':
+          zclient_serv_path_set (optarg);
+          break;
+        case 'P':
+          /* Deal with atoi() returning 0 on failure, and eigrpd not
+             listening on eigrpd port... */
+          if (strcmp(optarg, "0") == 0)
+            {
+              vty_port = 0;
+              break;
+            }
+          vty_port = atoi (optarg);
+          if (vty_port <= 0 || vty_port > 0xffff)
+            vty_port = EIGRP_VTY_PORT;
+          break;
+        case 'u':
+          eigrpd_privs.user = optarg;
+          break;
+        case 'g':
+          eigrpd_privs.group = optarg;
+          break;
+        case 'v':
+          print_version (progname);
+          exit (0);
+          break;
+        case 'C':
+          dryrun = 1;
+          break;
+        case 'h':
+          usage (progname, 0);
+          break;
+        default:
+          usage (progname, 1);
+          break;
+        }
+    }
+
     /* Invoked by a priviledged user? -- endo. */
   if (geteuid () != 0)
     {
@@ -174,9 +281,8 @@ main (int argc, char **argv)
   /*EIGRPd init*/
   eigrp_if_init ();
   eigrp_zebra_init ();
+  eigrp_debug_init ();
 
-
-  sort_node ();
   /* Get configuration file. */
   /* EIGRP VTY inits */
   eigrp_vty_init ();

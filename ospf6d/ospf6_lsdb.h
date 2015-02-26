@@ -34,21 +34,6 @@ struct ospf6_lsdb
   void (*hook_remove) (struct ospf6_lsa *);
 };
 
-#define OSPF6_LSDB_MAXAGE_REMOVER(lsdb)                                  \
-  do {                                                                   \
-    struct ospf6_lsa *lsa;                                               \
-    for (lsa = ospf6_lsdb_head (lsdb); lsa; lsa = ospf6_lsdb_next (lsa)) \
-      {                                                                  \
-        if (! OSPF6_LSA_IS_MAXAGE (lsa))                                 \
-          continue;                                                      \
-        if (lsa->retrans_count != 0)                                     \
-          continue;                                                      \
-        if (IS_OSPF6_DEBUG_LSA_TYPE (lsa->header->type))                 \
-          zlog_debug ("Remove MaxAge %s", lsa->name);                    \
-        ospf6_lsdb_remove (lsa, lsdb);                                   \
-      }                                                                  \
-  } while (0)
-
 /* Function Prototypes */
 extern struct ospf6_lsdb *ospf6_lsdb_create (void *data);
 extern void ospf6_lsdb_delete (struct ospf6_lsdb *lsdb);
@@ -79,13 +64,17 @@ extern struct ospf6_lsa *ospf6_lsdb_type_next (u_int16_t type,
                                                struct ospf6_lsa *lsa);
 
 extern void ospf6_lsdb_remove_all (struct ospf6_lsdb *lsdb);
+extern void ospf6_lsdb_lsa_unlock (struct ospf6_lsa *lsa);
 
-#define OSPF6_LSDB_SHOW_LEVEL_NORMAL   0
-#define OSPF6_LSDB_SHOW_LEVEL_DETAIL   1
-#define OSPF6_LSDB_SHOW_LEVEL_INTERNAL 2
-#define OSPF6_LSDB_SHOW_LEVEL_DUMP     3
+enum ospf_lsdb_show_level {
+ OSPF6_LSDB_SHOW_LEVEL_NORMAL = 0,
+ OSPF6_LSDB_SHOW_LEVEL_DETAIL,
+ OSPF6_LSDB_SHOW_LEVEL_INTERNAL,
+ OSPF6_LSDB_SHOW_LEVEL_DUMP,
+};
 
-extern void ospf6_lsdb_show (struct vty *vty, int level, u_int16_t *type,
+extern void ospf6_lsdb_show (struct vty *vty,
+                             enum ospf_lsdb_show_level level, u_int16_t *type,
                              u_int32_t *id, u_int32_t *adv_router,
                              struct ospf6_lsdb *lsdb);
 
@@ -94,5 +83,6 @@ extern u_int32_t ospf6_new_ls_id (u_int16_t type, u_int32_t adv_router,
 extern u_int32_t ospf6_new_ls_seqnum (u_int16_t type, u_int32_t id,
                                       u_int32_t adv_router,
                                       struct ospf6_lsdb *lsdb);
+extern int ospf6_lsdb_maxage_remover (struct ospf6_lsdb *lsdb);
 
 #endif /* OSPF6_LSDB_H */

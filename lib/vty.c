@@ -57,7 +57,7 @@ static void vty_event (enum event, int, struct vty *);
 
 /* Extern host structure from command.c */
 extern struct host host;
-
+
 /* Vector which store each vty structure. */
 static vector vtyvec;
 
@@ -89,7 +89,7 @@ static u_char restricted_mode = 0;
 /* Integrated configuration file path */
 char integrate_default[] = SYSCONFDIR INTEGRATE_DEFAULT_CONFIG;
 
-
+
 /* VTY standard output function. */
 int
 vty_out (struct vty *vty, const char *format, ...)
@@ -455,7 +455,7 @@ vty_command (struct vty *vty, char *buf)
 
   return ret;
 }
-
+
 static const char telnet_backward_char = 0x08;
 static const char telnet_space_char = ' ';
 
@@ -713,6 +713,7 @@ vty_end_config (struct vty *vty)
     case KEYCHAIN_NODE:
     case KEYCHAIN_KEY_NODE:
     case MASC_NODE:
+    case PIM_NODE:
     case VTY_NODE:
       vty_config_unlock (vty);
       vty->node = ENABLE_NODE;
@@ -931,23 +932,23 @@ vty_complete_command (struct vty *vty)
 
 static void
 vty_describe_fold (struct vty *vty, int cmd_width,
-		   unsigned int desc_width, struct desc *desc)
+		   unsigned int desc_width, struct cmd_token *token)
 {
   char *buf;
   const char *cmd, *p;
   int pos;
 
-  cmd = desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd;
+  cmd = token->cmd[0] == '.' ? token->cmd + 1 : token->cmd;
 
   if (desc_width <= 0)
     {
-      vty_out (vty, "  %-*s  %s%s", cmd_width, cmd, desc->str, VTY_NEWLINE);
+      vty_out (vty, "  %-*s  %s%s", cmd_width, cmd, token->desc, VTY_NEWLINE);
       return;
     }
 
-  buf = XCALLOC (MTYPE_TMP, strlen (desc->str) + 1);
+  buf = XCALLOC (MTYPE_TMP, strlen (token->desc) + 1);
 
-  for (p = desc->str; strlen (p) > desc_width; p += pos + 1)
+  for (p = token->desc; strlen (p) > desc_width; p += pos + 1)
     {
       for (pos = desc_width; pos > 0; pos--)
       if (*(p + pos) == ' ')
@@ -976,7 +977,7 @@ vty_describe_command (struct vty *vty)
   vector vline;
   vector describe;
   unsigned int i, width, desc_width;
-  struct desc *desc, *desc_cr = NULL;
+  struct cmd_token *token, *token_cr = NULL;
 
   vline = cmd_make_strvec (vty->buf);
 
@@ -1010,15 +1011,15 @@ vty_describe_command (struct vty *vty)
   /* Get width of command string. */
   width = 0;
   for (i = 0; i < vector_active (describe); i++)
-    if ((desc = vector_slot (describe, i)) != NULL)
+    if ((token = vector_slot (describe, i)) != NULL)
       {
 	unsigned int len;
 
-	if (desc->cmd[0] == '\0')
+	if (token->cmd[0] == '\0')
 	  continue;
 
-	len = strlen (desc->cmd);
-	if (desc->cmd[0] == '.')
+	len = strlen (token->cmd);
+	if (token->cmd[0] == '.')
 	  len--;
 
 	if (width < len)
@@ -1030,27 +1031,27 @@ vty_describe_command (struct vty *vty)
 
   /* Print out description. */
   for (i = 0; i < vector_active (describe); i++)
-    if ((desc = vector_slot (describe, i)) != NULL)
+    if ((token = vector_slot (describe, i)) != NULL)
       {
-	if (desc->cmd[0] == '\0')
+	if (token->cmd[0] == '\0')
 	  continue;
 	
-	if (strcmp (desc->cmd, command_cr) == 0)
+	if (strcmp (token->cmd, command_cr) == 0)
 	  {
-	    desc_cr = desc;
+	    token_cr = token;
 	    continue;
 	  }
 
-	if (!desc->str)
+	if (!token->desc)
 	  vty_out (vty, "  %-s%s",
-		   desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd,
+		   token->cmd[0] == '.' ? token->cmd + 1 : token->cmd,
 		   VTY_NEWLINE);
-	else if (desc_width >= strlen (desc->str))
+	else if (desc_width >= strlen (token->desc))
 	  vty_out (vty, "  %-*s  %s%s", width,
-		   desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd,
-		   desc->str, VTY_NEWLINE);
+		   token->cmd[0] == '.' ? token->cmd + 1 : token->cmd,
+		   token->desc, VTY_NEWLINE);
 	else
-	  vty_describe_fold (vty, width, desc_width, desc);
+	  vty_describe_fold (vty, width, desc_width, token);
 
 #if 0
 	vty_out (vty, "  %-*s %s%s", width
@@ -1059,18 +1060,18 @@ vty_describe_command (struct vty *vty)
 #endif /* 0 */
       }
 
-  if ((desc = desc_cr))
+  if ((token = token_cr))
     {
-      if (!desc->str)
+      if (!token->desc)
 	vty_out (vty, "  %-s%s",
-		 desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd,
+		 token->cmd[0] == '.' ? token->cmd + 1 : token->cmd,
 		 VTY_NEWLINE);
-      else if (desc_width >= strlen (desc->str))
+      else if (desc_width >= strlen (token->desc))
 	vty_out (vty, "  %-*s  %s%s", width,
-		 desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd,
-		 desc->str, VTY_NEWLINE);
+		 token->cmd[0] == '.' ? token->cmd + 1 : token->cmd,
+		 token->desc, VTY_NEWLINE);
       else
-	vty_describe_fold (vty, width, desc_width, desc);
+	vty_describe_fold (vty, width, desc_width, token);
     }
 
 out:
@@ -1117,6 +1118,7 @@ vty_stop_input (struct vty *vty)
     case KEYCHAIN_NODE:
     case KEYCHAIN_KEY_NODE:
     case MASC_NODE:
+    case PIM_NODE:
     case VTY_NODE:
       vty_config_unlock (vty);
       vty->node = ENABLE_NODE;
@@ -1773,7 +1775,7 @@ vty_accept (struct thread *thread)
   return 0;
 }
 
-#if defined(HAVE_IPV6) && !defined(NRL)
+#ifdef HAVE_IPV6
 static void
 vty_serv_sock_addrinfo (const char *hostname, unsigned short port)
 {
@@ -1838,7 +1840,7 @@ vty_serv_sock_addrinfo (const char *hostname, unsigned short port)
 
   freeaddrinfo (ainfo_save);
 }
-#else /* HAVE_IPV6 && ! NRL */
+#else /* HAVE_IPV6 */
 
 /* Make vty server socket. */
 static void
@@ -1856,9 +1858,11 @@ vty_serv_sock_family (const char* addr, unsigned short port, int family)
     {
       case AF_INET:
         naddr=&su.sin.sin_addr;
+        break;
 #ifdef HAVE_IPV6
       case AF_INET6:
         naddr=&su.sin6.sin6_addr;
+        break;
 #endif	
     }
 
@@ -1904,7 +1908,7 @@ vty_serv_sock_family (const char* addr, unsigned short port, int family)
   /* Add vty server event. */
   vty_event (VTY_SERV, accept_sock, NULL);
 }
-#endif /* HAVE_IPV6 && ! NRL */
+#endif /* HAVE_IPV6 */
 
 #ifdef VTYSH
 /* For sockaddr_un. */
@@ -2139,12 +2143,7 @@ vty_serv_sock (const char *addr, unsigned short port, const char *path)
     {
 
 #ifdef HAVE_IPV6
-#ifdef NRL
-      vty_serv_sock_family (addr, port, AF_INET);
-      vty_serv_sock_family (addr, port, AF_INET6);
-#else /* ! NRL */
       vty_serv_sock_addrinfo (addr, port);
-#endif /* NRL*/
 #else /* ! HAVE_IPV6 */
       vty_serv_sock_family (addr,port, AF_INET);
 #endif /* HAVE_IPV6 */
@@ -2227,28 +2226,37 @@ vty_read_file (FILE *confp)
 {
   int ret;
   struct vty *vty;
+  unsigned int line_num = 0;
 
   vty = vty_new ();
-  vty->fd = 0;			/* stdout */
-  vty->type = VTY_TERM;
+  vty->fd = dup(STDERR_FILENO); /* vty_close() will close this */
+  if (vty->fd < 0)
+  {
+    /* Fine, we couldn't make a new fd. vty_close doesn't close stdout. */
+    vty->fd = STDOUT_FILENO;
+  }
+  vty->type = VTY_FILE;
   vty->node = CONFIG_NODE;
   
   /* Execute configuration file */
-  ret = config_from_file (vty, confp);
+  ret = config_from_file (vty, confp, &line_num);
+
+  /* Flush any previous errors before printing messages below */
+  buffer_flush_all (vty->obuf, vty->fd);
 
   if ( !((ret == CMD_SUCCESS) || (ret == CMD_ERR_NOTHING_TODO)) ) 
     {
       switch (ret)
        {
          case CMD_ERR_AMBIGUOUS:
-           fprintf (stderr, "Ambiguous command.\n");
+           fprintf (stderr, "*** Error reading config: Ambiguous command.\n");
            break;
          case CMD_ERR_NO_MATCH:
-           fprintf (stderr, "There is no such command.\n");
+           fprintf (stderr, "*** Error reading config: There is no such command.\n");
            break;
        }
-      fprintf (stderr, "Error occured during reading below line.\n%s\n", 
-	       vty->buf);
+      fprintf (stderr, "*** Error occured processing line %u, below:\n%s\n",
+		       line_num, vty->buf);
       vty_close (vty);
       exit (1);
     }
@@ -2447,7 +2455,7 @@ vty_log (const char *level, const char *proto_str,
 
 /* Async-signal-safe version of vty_log for fixed strings. */
 void
-vty_log_fixed (const char *buf, size_t len)
+vty_log_fixed (char *buf, size_t len)
 {
   unsigned int i;
   struct iovec iov[2];
@@ -2456,7 +2464,7 @@ vty_log_fixed (const char *buf, size_t len)
   if (!vtyvec)
     return;
   
-  iov[0].iov_base = (void *)buf;
+  iov[0].iov_base = buf;
   iov[0].iov_len = len;
   iov[1].iov_base = (void *)"\r\n";
   iov[1].iov_len = 2;
@@ -2492,7 +2500,7 @@ vty_config_unlock (struct vty *vty)
     }
   return vty->config;
 }
-
+
 /* Master of the threads. */
 static struct thread_master *master;
 
@@ -2549,7 +2557,7 @@ vty_event (enum event event, int sock, struct vty *vty)
       break;
     }
 }
-
+
 DEFUN (config_who,
        config_who_cmd,
        "who",

@@ -132,7 +132,7 @@ Report bugs to %s\n", progname, ZEBRA_BUG_ADDRESS);
     }
   exit (status);
 }
-
+
 /* SIGHUP handler. */
 static void 
 sighup (void)
@@ -174,7 +174,7 @@ struct quagga_signal_t ospf_signals[] =
     .handler = &sigint,
   },
 };
-
+
 /* OSPFd main routine. */
 int
 main (int argc, char **argv)
@@ -310,7 +310,14 @@ main (int argc, char **argv)
   ospf_opaque_init ();
 #endif /* HAVE_OPAQUE_LSA */
   
-  sort_node ();
+  /* Need to initialize the default ospf structure, so the interface mode
+     commands can be duly processed if they are received before 'router ospf',
+     when quagga(ospfd) is restarted */
+  if (!ospf_get())
+    {
+      zlog_err("OSPF instance init failed: %s", strerror(errno));
+      exit (1);
+    }
 
   /* Get configuration file. */
   vty_read_config (config_file, config_default);

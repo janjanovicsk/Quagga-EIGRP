@@ -206,6 +206,8 @@ vtysh_config_parse_line (const char *line)
   	config = config_get (ISIS_NODE, line);
       else if (strncmp (line, "router bgp", strlen ("router bgp")) == 0)
 	config = config_get (BGP_NODE, line);
+      else if (strncmp (line, "router eigrp", strlen ("router eigrp")) == 0)
+        config = config_get (EIGRP_NODE, line);
       else if (strncmp (line, "route-map", strlen ("route-map")) == 0)
 	config = config_get (RMAP_NODE, line);
       else if (strncmp (line, "access-list", strlen ("access-list")) == 0)

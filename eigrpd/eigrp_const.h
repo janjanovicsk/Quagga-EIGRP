@@ -37,10 +37,13 @@
 #define EIGRP_NEIGHBOR_STATE_MAX      3
 
 /*Packet requiring ack will be retransmitted again after this time*/
-#define EIGRP_PACKET_RETRANS_TIME        5 /* in seconds */
+#define EIGRP_PACKET_RETRANS_TIME        2 /* in seconds */
+#define EIGRP_PACKET_RETRANS_MAX         16 /* number of retrans attempts */
+#define PLAINTEXT_LENGTH                 81
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1
+#define EIGRP_MAX_PATHS_DEFAULT 4
 
 
 /* Return values of functions involved in packet verification */
@@ -54,7 +57,22 @@
 #define IPPROTO_EIGRPIGP         88
 #endif /* IPPROTO_EIGRPIGP */
 
-#define EIGRP_AUTH_MD5_TLV_SIZE     40
+#define EIGRP_AUTH_MD5_TLV_SIZE          40
+#define EIGRP_AUTH_SHA256_TLV_SIZE          56
+
+/*Cisco routers use only first 44 bytes of basic hello for their MD5 calculations*/
+#define EIGRP_MD5_BASIC_COMPUTE       44
+#define EIGRP_MD5_UPDATE_INIT_COMPUTE       40
+
+
+
+#define EIGRP_AUTH_BASIC_HELLO_FLAG       0x01
+#define EIGRP_AUTH_TID_HELLO_FLAG       0x02
+#define EIGRP_AUTH_UPDATE_INIT_FLAG       0x04
+#define EIGRP_AUTH_UPDATE_FLAG            0x08
+#define EIGRP_AUTH_EXTRA_SALT_FLAG        0x10
+
+#define EIGRP_NEXT_SEQUENCE_TLV_SIZE     8
 
 /* IP TTL for EIGRP protocol. */
 #define EIGRP_IP_TTL             1
@@ -82,8 +100,9 @@
 #define INTERFACE_DOWN_BY_ZEBRA       1
 #define INTERFACE_DOWN_BY_VTY         2
 
-#define EIGRP_HELLO_NORMAL                    0
-#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         1
+#define EIGRP_HELLO_NORMAL                    0x00
+#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         0x01
+#define EIGRP_HELLO_ADD_SEQUENCE              0x02
 
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
@@ -133,7 +152,7 @@
 	"detail|fastethernet|loopback|static"
 
 #define INT_TYPES_DESC							\
-	"Show detailed peer information\n"				\
+	"Virtual Ethernet interface\n"				\
 	"FastEthernet IEEE 802.3\n"					\
 	"Loopback interface\n"						\
 	"Show static peer information\n"
@@ -226,6 +245,7 @@
 #define EIGRP_TLV_PARAMETER_LEN         (12U)
 #define EIGRP_TLV_AUTH                  (EIGRP_TLV_GENERAL | 0x0002)    /*!< authentication */
 #define EIGRP_TLV_SEQ                   (EIGRP_TLV_GENERAL | 0x0003)    /*!< sequenced packet */
+#define EIGRP_TLV_SEQ_BASE_LEN          (5U)
 #define EIGRP_TLV_SW_VERSION            (EIGRP_TLV_GENERAL | 0x0004)    /*!< software version */
 #define EIGRP_TLV_SW_VERSION_LEN        (8U)
 #define EIGRP_TLV_NEXT_MCAST_SEQ        (EIGRP_TLV_GENERAL | 0x0005)    /*!< sequence number */

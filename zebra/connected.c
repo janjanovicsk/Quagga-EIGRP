@@ -36,7 +36,7 @@
 #include "zebra/interface.h"
 #include "zebra/connected.h"
 extern struct zebra_t zebrad;
-
+
 /* communicate the withdrawal of a connected address */
 static void
 connected_withdraw (struct connected *ifc)
@@ -96,7 +96,7 @@ connected_announce (struct interface *ifp, struct connected *ifc)
 #endif
     }
 }
-
+
 /* If same interface address is already exist... */
 struct connected *
 connected_check (struct interface *ifp, struct prefix *p)
@@ -347,7 +347,7 @@ connected_up_ipv6 (struct interface *ifp, struct connected *ifc)
   /* Apply mask to the network. */
   apply_mask_ipv6 (&p);
 
-#if ! defined (MUSICA) && ! defined (LINUX)
+#ifndef LINUX
   /* XXX: It is already done by rib_bogus_ipv6 within rib_add_ipv6 */
   if (IN6_IS_ADDR_UNSPECIFIED (&p.prefix))
     return;

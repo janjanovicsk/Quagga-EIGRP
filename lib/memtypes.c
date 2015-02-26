@@ -54,7 +54,7 @@ struct memory_list memory_list_lib[] =
   { MTYPE_ROUTE_MAP_RULE,	"Route map rule"		},
   { MTYPE_ROUTE_MAP_RULE_STR,	"Route map rule str"		},
   { MTYPE_ROUTE_MAP_COMPILED,	"Route map compiled"		},
-  { MTYPE_DESC,			"Command desc"			},
+  { MTYPE_CMD_TOKENS,		"Command desc"			},
   { MTYPE_KEY,			"Key"				},
   { MTYPE_KEYCHAIN,		"Key chain"			},
   { MTYPE_IF_RMAP,		"Interface route map"		},
@@ -255,22 +255,39 @@ struct memory_list memory_list_isis[] =
   { -1, NULL },
 };
 
+struct memory_list memory_list_pim[] =
+{
+  { MTYPE_PIM_CHANNEL_OIL,       "PIM SSM (S,G) channel OIL"      },
+  { MTYPE_PIM_INTERFACE,         "PIM interface"	          },
+  { MTYPE_PIM_IGMP_JOIN,         "PIM interface IGMP static join" },
+  { MTYPE_PIM_IGMP_SOCKET,       "PIM interface IGMP socket"      },
+  { MTYPE_PIM_IGMP_GROUP,        "PIM interface IGMP group"       },
+  { MTYPE_PIM_IGMP_GROUP_SOURCE, "PIM interface IGMP source"      },
+  { MTYPE_PIM_NEIGHBOR,          "PIM interface neighbor"         },
+  { MTYPE_PIM_IFCHANNEL,         "PIM interface (S,G) state"      },
+  { MTYPE_PIM_UPSTREAM,          "PIM upstream (S,G) state"       },
+  { MTYPE_PIM_SSMPINGD,          "PIM sspimgd socket"             },
+  { -1, NULL },
+};
+
 struct memory_list memory_list_eigrp[] =
 {
-  { MTYPE_EIGRP_TOP,             "EIGRP top"                    },
-  { MTYPE_EIGRP_IF_INFO,         "EIGRP if info"                },
-  { MTYPE_EIGRP_IF_PARAMS,       "EIGRP if params"              },
-  { MTYPE_EIGRP_IF,              "EIGRP interface"              },
-  { MTYPE_EIGRP_FIFO,            "EIGRP FIFO queue"             },
-  { MTYPE_EIGRP_HEADER_FIFO,     "EIGRP Header FIFO queue"      },
-  { MTYPE_EIGRP_TOPOLOGY,        "EIGRP Topology table"	        },
-  { MTYPE_EIGRP_PREFIX_ENTRY,    "EIGRP Topology table prefix"	},
-  { MTYPE_EIGRP_NEIGHBOR_ENTRY,  "EIGRP Topology table entry"	},
-  { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"       },
-  { MTYPE_EIGRP_NEIGHBOR,        "EIGRP neighbor structure"     },
-  { MTYPE_EIGRP_IPV4_INT_TLV,    "EIGRP Internal IPv4 TLV "     },
-  { MTYPE_EIGRP_AUTH_TLV,        "EIGRP Authentication TLV "    },
-  { MTYPE_EIGRP_FSM_MSG,         "EIGRP FSM action message"     },
+  { MTYPE_EIGRP_TOP,             "EIGRP top"                      },
+  { MTYPE_EIGRP_IF_INFO,         "EIGRP if info"                  },
+  { MTYPE_EIGRP_IF_PARAMS,       "EIGRP if params"                },
+  { MTYPE_EIGRP_IF,              "EIGRP interface"                },
+  { MTYPE_EIGRP_FIFO,            "EIGRP FIFO queue"               },
+  { MTYPE_EIGRP_HEADER_FIFO,     "EIGRP Header FIFO queue"        },
+  { MTYPE_EIGRP_TOPOLOGY,        "EIGRP Topology table"           },
+  { MTYPE_EIGRP_PREFIX_ENTRY,    "EIGRP Topology table prefix"    },
+  { MTYPE_EIGRP_NEIGHBOR_ENTRY,  "EIGRP Topology table entry"     },
+  { MTYPE_EIGRP_PACKET,          "EIGRP packet structure"         },
+  { MTYPE_EIGRP_NEIGHBOR,        "EIGRP neighbor structure"       },
+  { MTYPE_EIGRP_IPV4_INT_TLV,    "EIGRP Internal IPv4 TLV "       },
+  { MTYPE_EIGRP_AUTH_TLV,        "EIGRP Authentication MD5 TLV"   },
+  { MTYPE_EIGRP_AUTH_SHA256_TLV, "EIGRP Authentication SHA256 TLV"},
+  { MTYPE_EIGRP_SEQ_TLV,         "EIGRP Sequence TLV "            },
+  { MTYPE_EIGRP_FSM_MSG,         "EIGRP FSM action message"       },
   { -1, NULL },
 };
 
@@ -290,6 +307,7 @@ struct mlist mlists[] __attribute__ ((unused)) = {
   { memory_list_ospf6,	"OSPF6"	},
   { memory_list_isis,	"ISIS"	},
   { memory_list_bgp,	"BGP"	},
+  { memory_list_pim,	"PIM"	},
   { memory_list_eigrp,  "EIGRP" },
   { NULL, NULL},
 };

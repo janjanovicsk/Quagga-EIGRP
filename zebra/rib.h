@@ -253,16 +253,66 @@ struct nexthop
 #define NEXTHOP_FLAG_ACTIVE     (1 << 0) /* This nexthop is alive. */
 #define NEXTHOP_FLAG_FIB        (1 << 1) /* FIB nexthop. */
 #define NEXTHOP_FLAG_RECURSIVE  (1 << 2) /* Recursive nexthop. */
+#define NEXTHOP_FLAG_ONLINK     (1 << 3) /* Nexthop should be installed onlink. */
 
-  /* Nexthop address or interface name. */
+  /* Nexthop address */
   union g_addr gate;
-
-  /* Recursive lookup nexthop. */
-  u_char rtype;
-  unsigned int rifindex;
-  union g_addr rgate;
   union g_addr src;
+
+  /* Nexthops obtained by recursive resolution.
+   *
+   * If the nexthop struct needs to be resolved recursively,
+   * NEXTHOP_FLAG_RECURSIVE will be set in flags and the nexthops
+   * obtained by recursive resolution will be added to `resolved'.
+   * Only one level of recursive resolution is currently supported. */
+  struct nexthop *resolved;
 };
+
+/* The following for loop allows to iterate over the nexthop
+ * structure of routes.
+ *
+ * We have to maintain quite a bit of state:
+ *
+ * nexthop:   The pointer to the current nexthop, either in the
+ *            top-level chain or in the resolved chain of ni.
+ * tnexthop:  The pointer to the current nexthop in the top-level
+ *            nexthop chain.
+ * recursing: Information if nh currently is in the top-level chain
+ *            (0) or in a resolved chain (1).
+ *
+ * Initialization: Set `nexthop' and `tnexthop' to the head of the
+ * top-level chain. As nexthop is in the top level chain, set recursing
+ * to 0.
+ *
+ * Iteration check: Check that the `nexthop' pointer is not NULL.
+ *
+ * Iteration step: This is the tricky part. Check if `nexthop' has
+ * NEXTHOP_FLAG_RECURSIVE set. If yes, this implies that `nexthop' is in
+ * the top level chain and has at least one nexthop attached to
+ * `nexthop->resolved'. As we want to descend into `nexthop->resolved',
+ * set `recursing' to 1 and set `nexthop' to `nexthop->resolved'.
+ * `tnexthop' is left alone in that case so we can remember which nexthop
+ * in the top level chain we are currently handling.
+ *
+ * If NEXTHOP_FLAG_RECURSIVE is not set, `nexthop' will progress in its
+ * current chain. If we are recursing, `nexthop' will be set to
+ * `nexthop->next' and `tnexthop' will be left alone. If we are not
+ * recursing, both `tnexthop' and `nexthop' will be set to `nexthop->next'
+ * as we are progressing in the top level chain.
+ *   If we encounter `nexthop->next == NULL', we will clear the `recursing'
+ * flag as we arived either at the end of the resolved chain or at the end
+ * of the top level chain. In both cases, we set `tnexthop' and `nexthop'
+ * to `tnexthop->next', progressing to the next position in the top-level
+ * chain and possibly to its end marked by NULL.
+ */
+#define ALL_NEXTHOPS_RO(head, nexthop, tnexthop, recursing) \
+  (tnexthop) = (nexthop) = (head), (recursing) = 0; \
+  (nexthop); \
+  (nexthop) = CHECK_FLAG((nexthop)->flags, NEXTHOP_FLAG_RECURSIVE) \
+    ? (((recursing) = 1), (nexthop)->resolved) \
+    : ((nexthop)->next ? ((recursing) ? (nexthop)->next \
+                                      : ((tnexthop) = (nexthop)->next)) \
+                       : (((recursing) = 0),((tnexthop) = (tnexthop)->next)))
 
 /* Routing table instance.  */
 struct vrf
@@ -323,6 +373,21 @@ typedef struct rib_tables_iter_t_
   rib_tables_iter_state_t state;
 } rib_tables_iter_t;
 
+/* RPF lookup behaviour */
+enum multicast_mode
+{
+  MCAST_NO_CONFIG = 0,	/* MIX_MRIB_FIRST, but no show in config write */
+  MCAST_MRIB_ONLY,	/* MRIB only */
+  MCAST_URIB_ONLY,	/* URIB only */
+  MCAST_MIX_MRIB_FIRST,	/* MRIB, if nothing at all then URIB */
+  MCAST_MIX_DISTANCE,	/* MRIB & URIB, lower distance wins */
+  MCAST_MIX_PFXLEN,	/* MRIB & URIB, longer prefix wins */
+			/* on equal value, MRIB wins for last 2 */
+};
+
+extern void multicast_mode_ipv4_set (enum multicast_mode mode);
+extern enum multicast_mode multicast_mode_ipv4_get (void);
+
 extern const char *nexthop_type_to_str (enum nexthop_types_t nh_type);
 extern struct nexthop *nexthop_ifindex_add (struct rib *, unsigned int);
 extern struct nexthop *nexthop_ifname_add (struct rib *, char *);
@@ -333,9 +398,12 @@ extern struct nexthop *nexthop_ipv4_ifindex_add (struct rib *,
                                                  struct in_addr *,
                                                  struct in_addr *,
                                                  unsigned int);
+extern int nexthop_has_fib_child(struct nexthop *);
 extern void rib_lookup_and_dump (struct prefix_ipv4 *);
 extern void rib_lookup_and_pushup (struct prefix_ipv4 *);
-extern void rib_dump (const char *, const struct prefix_ipv4 *, const struct rib *);
+#define rib_dump(prefix ,rib) _rib_dump(__func__, prefix, rib)
+extern void _rib_dump (const char *,
+		       union prefix46constptr, const struct rib *);
 extern int rib_lookup_ipv4_route (struct prefix_ipv4 *, union sockunion *);
 #define ZEBRA_RIB_LOOKUP_ERROR -1
 #define ZEBRA_RIB_FOUND_EXACT 0
@@ -365,7 +433,10 @@ extern int rib_delete_ipv4 (int type, int flags, struct prefix_ipv4 *p,
 		            struct in_addr *gate, unsigned int ifindex, 
 		            u_int32_t, safi_t safi);
 
-extern struct rib *rib_match_ipv4 (struct in_addr);
+extern struct rib *rib_match_ipv4_safi (struct in_addr addr, safi_t safi,
+					int skip_bgp, struct route_node **rn_out);
+extern struct rib *rib_match_ipv4_multicast (struct in_addr addr,
+					     struct route_node **rn_out);
 
 extern struct rib *rib_lookup_ipv4 (struct prefix_ipv4 *);
 
@@ -377,12 +448,12 @@ extern void rib_init (void);
 extern unsigned long rib_score_proto (u_char proto);
 
 extern int
-static_add_ipv4 (struct prefix *p, struct in_addr *gate, const char *ifname,
-       u_char flags, u_char distance, u_int32_t vrf_id);
-
+static_add_ipv4_safi (safi_t safi, struct prefix *p, struct in_addr *gate,
+		      const char *ifname, u_char flags, u_char distance,
+		      u_int32_t vrf_id);
 extern int
-static_delete_ipv4 (struct prefix *p, struct in_addr *gate, const char *ifname,
-		    u_char distance, u_int32_t vrf_id);
+static_delete_ipv4_safi (safi_t safi, struct prefix *p, struct in_addr *gate,
+			 const char *ifname, u_char distance, u_int32_t vrf_id);
 
 #ifdef HAVE_IPV6
 extern int
