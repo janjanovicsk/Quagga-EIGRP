@@ -428,10 +428,10 @@ eigrp_topology_update_node_flags(struct eigrp_prefix_entry *dest)
 {
   struct listnode *node;
   struct eigrp_neighbor_entry *entry;
-
+  struct eigrp * eigrp = eigrp_lookup();
   for (ALL_LIST_ELEMENTS_RO(dest->entries, node, entry))
     {
-      if (entry->distance == dest->distance && entry->distance != EIGRP_MAX_METRIC) // is successor
+      if ((entry->distance <= (u_int64_t)(dest->distance*eigrp->variance)) && entry->distance != EIGRP_MAX_METRIC) // is successor
         {
           entry->flags |= EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
           entry->flags &= 0xfd; // 1111 1101 set fs flag to zero

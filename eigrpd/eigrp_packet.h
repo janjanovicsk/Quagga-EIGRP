@@ -92,7 +92,7 @@ extern u_int32_t eigrp_query_send_all (struct eigrp *, struct eigrp_neighbor_ent
 /*
  * These externs are found in eigrp_reply.c
  */
-extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
+extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
 extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
 

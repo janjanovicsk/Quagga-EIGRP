@@ -129,7 +129,6 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           temp_te->prefix = temp_tn;
           temp_tn->destination_ipv4 = dest_addr;
 
-          eigrp_send_reply(nbr, temp_te);
           XFREE(MTYPE_EIGRP_NEIGHBOR_ENTRY, temp_te);
           XFREE(MTYPE_EIGRP_PREFIX_ENTRY, temp_tn);
 

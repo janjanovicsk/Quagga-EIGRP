@@ -461,7 +461,7 @@ eigrp_fsm_event_keep_state(struct eigrp_fsm_action_message *msg)
     }
 
   if (msg->packet_type == EIGRP_OPC_QUERY)
-    eigrp_send_reply(msg->adv_router, msg->entry);
+    eigrp_send_reply(msg->adv_router, prefix);
 
   return 1;
 }
