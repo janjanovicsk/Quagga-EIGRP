@@ -1,5 +1,5 @@
 /*
- * EIGRP Sending and Receiving EIGRP Reply Packets.
+ * EIGRP Sending and Receiving EIGRP SIA-Reply Packets.
  * Copyright (C) 2013-2014
  * Authors:
  *   Donnie Savage
@@ -40,7 +40,6 @@
 #include "sockopt.h"
 #include "checksum.h"
 #include "md5.h"
-#include "keychain.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -54,61 +53,21 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
+
+/*EIGRP SIA-REPLY read function*/
 void
-eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
-{
-  struct eigrp_packet *ep;
-  u_int16_t length = EIGRP_HEADER_LEN;
-
-  ep = eigrp_packet_new(nbr->ei->ifp->mtu);
-
-  /* Prepare EIGRP INIT UPDATE header */
-  eigrp_packet_header_init(EIGRP_OPC_REPLY, nbr->ei, ep->s, 0,
-                           nbr->ei->eigrp->sequence_number, 0);
-
-  // encode Authentication TLV, if needed
-  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
-    {
-      length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
-    }
-
-  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
-
-  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
-    {
-      eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_UPDATE_FLAG);
-    }
-
-  /* EIGRP Checksum */
-  eigrp_packet_checksum(nbr->ei, ep->s, length);
-
-  ep->length = length;
-  ep->dst.s_addr = nbr->src.s_addr;
-
-  /*This ack number we await from neighbor*/
-  ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
-  /*Put packet to retransmission queue*/
-  eigrp_fifo_push_head(nbr->retrans_queue, ep);
-
-  if (nbr->retrans_queue->count == 1)
-    {
-      eigrp_send_packet_reliably(nbr);
-    }
-}
-
-/*EIGRP REPLY read function*/
-void
-eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph,
+eigrp_siareply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *eigrph,
                      struct stream * s, struct eigrp_interface *ei, int size)
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
+  struct eigrp_prefix_entry *temp_tn;
+  struct eigrp_neighbor_entry *temp_te;
 
   u_int16_t type;
 
   /* increment statistics. */
-  ei->reply_in++;
+  ei->siaReply_in++;
 
   /* get neighbor struct */
   nbr = eigrp_nbr_get(ei, eigrph, iph);
@@ -133,32 +92,76 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           dest_addr->prefixlen = tlv->prefix_length;
           struct eigrp_prefix_entry *dest = eigrp_topology_table_lookup_ipv4(
               eigrp->topology_table, dest_addr);
-          /*
-           * Destination must exists
-           */
-          assert(dest);
 
-          struct eigrp_fsm_action_message *msg;
-          msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
-              sizeof(struct eigrp_fsm_action_message));
-          struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
-              dest->entries, nbr);
-
-          assert(entry); //testing
-
-          msg->packet_type = EIGRP_OPC_REPLY;
-          msg->eigrp = eigrp;
-          msg->data_type = EIGRP_TLV_IPv4_INT;
-          msg->adv_router = nbr;
-          msg->data.ipv4_int_type = tlv;
-          msg->entry = entry;
-          msg->prefix = dest;
-          int event = eigrp_get_fsm_event(msg);
-          eigrp_fsm_event(msg, event);
-
+          /* If the destination exists (it should, but one never know)*/
+          if (dest != NULL)
+            {
+              struct eigrp_fsm_action_message *msg;
+              msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
+                  sizeof(struct eigrp_fsm_action_message));
+              struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
+                  dest->entries, nbr);
+              msg->packet_type = EIGRP_OPC_SIAQUERY;
+              msg->eigrp = eigrp;
+              msg->data_type = EIGRP_TLV_IPv4_INT;
+              msg->adv_router = nbr;
+              msg->data.ipv4_int_type = tlv;
+              msg->entry = entry;
+              msg->prefix = dest;
+              int event = eigrp_get_fsm_event(msg);
+              eigrp_fsm_event(msg, event);
+            }
           eigrp_IPv4_InternalTLV_free (tlv);
         }
     }
   eigrp_hello_send_ack(nbr);
 }
+
+void
+eigrp_send_siareply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
+{
+  struct eigrp_packet *ep, *duplicate;
+  u_int16_t length = EIGRP_HEADER_LEN;
+  struct listnode *node, *nnode, *node2, *nnode2;
+
+  ep = eigrp_packet_new(nbr->ei->ifp->mtu);
+
+  /* Prepare EIGRP INIT UPDATE header */
+  eigrp_packet_header_init(EIGRP_OPC_SIAREPLY, nbr->ei, ep->s, 0,
+                            nbr->ei->eigrp->sequence_number, 0);
+
+  // encode Authentication TLV, if needed
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
+    }
+
+    length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_UPDATE_FLAG);
+    }
+
+  /* EIGRP Checksum */
+    eigrp_packet_checksum(nbr->ei, ep->s, length);
+
+    ep->length = length;
+    ep->dst.s_addr = nbr->src.s_addr;
+
+    /*This ack number we await from neighbor*/
+    ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+    if (nbr->state == EIGRP_NEIGHBOR_UP)
+      {
+        /*Put packet to retransmission queue*/
+        eigrp_fifo_push_head(nbr->retrans_queue, ep);
+
+        if (nbr->retrans_queue->count == 1)
+          {
+            eigrp_send_packet_reliably(nbr);
+          }
+      }
+}
+
 

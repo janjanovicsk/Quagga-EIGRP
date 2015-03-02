@@ -156,6 +156,8 @@ struct eigrp_interface
   u_int32_t reply_out; /* Reply message output count. */
   u_int32_t siaQuery_in;
   u_int32_t siaQuery_out;
+  u_int32_t siaReply_in;
+  u_int32_t siaReply_out;
   u_int32_t ack_out;
   u_int32_t ack_in;
 

@@ -96,6 +96,20 @@ extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_prefix_entry
 extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
 
+/*
+ * These externs are found in eigrp_siaquery.c
+ */
+extern void eigrp_send_siaquery (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
+extern void eigrp_siaquery_receive (struct eigrp *, struct ip *, struct eigrp_header *,
+                     struct stream *, struct eigrp_interface *, int);
+
+/*
+ * These externs are found in eigrp_siareply.c
+ */
+extern void eigrp_send_siareply (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
+extern void eigrp_siareply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
+                     struct stream *, struct eigrp_interface *, int);
+
 extern struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new (void);
 extern void eigrp_authTLV_MD5_free (struct TLV_MD5_Authentication_Type *);
 extern struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new (void);
