@@ -55,7 +55,7 @@
 
 
 u_int32_t
-eigrp_query_send_all (struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
+eigrp_query_send_all (struct eigrp *eigrp, struct eigrp_prefix_entry *prefix)
 {
   struct eigrp_interface *iface;
   struct listnode *node, *node2, *nnode2;
@@ -74,7 +74,7 @@ eigrp_query_send_all (struct eigrp *eigrp, struct eigrp_neighbor_entry *te)
       for (ALL_LIST_ELEMENTS(iface->nbrs, node2, nnode2, nbr))
         {
           if (nbr->state == EIGRP_NEIGHBOR_UP){
-            eigrp_send_query(nbr, te);
+            eigrp_send_query(nbr, prefix);
             counter++;
           }
         }
@@ -149,7 +149,9 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
               msg->entry = entry;
               msg->prefix = dest;
               int event = eigrp_get_fsm_event(msg);
-              EIGRP_FSM_EVENT_SCHEDULE(msg, event);
+              eigrp_fsm_event(msg, event);
+              eigrp_query_send_all(eigrp,dest);
+              eigrp_update_send_all(eigrp,dest,nbr->ei);
             }
           eigrp_IPv4_InternalTLV_free (tlv);
         }
@@ -158,7 +160,7 @@ eigrp_query_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 }
 
 void
-eigrp_send_query (struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
+eigrp_send_query (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *prefix)
 {
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_LEN;
@@ -175,14 +177,14 @@ eigrp_send_query (struct eigrp_neighbor *nbr, struct eigrp_neighbor_entry *te)
       length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
     }
 
-  length += eigrp_add_internalTLV_to_stream(ep->s, te);
+  length += eigrp_add_internalTLV_to_stream(ep->s, prefix);
 
   if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
     {
       eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_EXTRA_SALT_FLAG);
     }
 
-  listnode_add(te->prefix->rij, nbr);
+  listnode_add(prefix->rij, nbr);
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(nbr->ei, ep->s, length);

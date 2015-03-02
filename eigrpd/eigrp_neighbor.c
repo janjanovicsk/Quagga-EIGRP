@@ -265,3 +265,30 @@ eigrp_nbr_state_update (struct eigrp_neighbor *nbr)
       }
     }
 }
+
+int eigrp_nbr_count_get(void){
+
+	struct eigrp_interface *iface;
+	struct listnode *node, *node2, *nnode2;
+	struct eigrp_neighbor *nbr;
+	struct eigrp *eigrp = eigrp_lookup();
+	u_int32_t counter;
+
+	if (eigrp == NULL)
+	  {
+	    zlog_debug("EIGRP Routing Process not enabled");
+	    return 0;
+	  }
+
+	counter=0;
+	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
+	  {
+	    for (ALL_LIST_ELEMENTS(iface->nbrs, node2, nnode2, nbr))
+	      {
+	        if (nbr->state == EIGRP_NEIGHBOR_UP){
+	          counter++;
+	        }
+	      }
+	  }
+	return counter;
+}

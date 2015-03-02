@@ -412,6 +412,7 @@ struct eigrp_prefix_entry
   u_char nt;                                //network type
   u_char state; 							//route fsm state
   u_char af;								// address family
+  u_char req_action;						// required action
 
   struct prefix_ipv4 *destination_ipv4;		// pointer to struct with ipv4 address
   struct prefix_ipv6 *destination_ipv6;		// pointer to struct with ipv6 address

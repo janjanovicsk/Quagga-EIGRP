@@ -138,6 +138,10 @@
 #define EIGRP_FSM_STATE_ACTIVE_2             3
 #define EIGRP_FSM_STATE_ACTIVE_3             4
 
+/*EIGRP FSM events return values*/
+#define EIGRP_FSM_NEED_UPDATE				1
+#define EIGRP_FSM_NEED_QUERY				2
+
 /*EIGRP FSM events*/
 #define EIGRP_FSM_EVENT_NQ_FCN                  0 /*input event other than query from succ, FC not satisfied*/
 #define EIGRP_FSM_EVENT_LR                      1 /*last reply, FD is reset*/

@@ -161,7 +161,9 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               msg->entry = entry;
               msg->prefix = dest;
               int event = eigrp_get_fsm_event(msg);
-              EIGRP_FSM_EVENT_SCHEDULE(msg, event);
+              eigrp_fsm_event(msg, event);
+              eigrp_query_send_all(eigrp,dest);
+              eigrp_update_send_all(eigrp,dest,nbr->ei);
             }
           else
             {
