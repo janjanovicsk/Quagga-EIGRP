@@ -63,8 +63,8 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
-  struct eigrp_prefix_entry *tnode;
-  struct eigrp_neighbor_entry *tentry;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
   u_int32_t flags;
   u_int16_t type;
   uint16_t  length;
@@ -97,14 +97,6 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
                size, ifindex2ifname(nbr->ei->ifp->ifindex),
                inet_ntoa(nbr->src),
                nbr->recv_sequence_number, flags);
-
-  /*
-   * We don't need to send separate Ack for INIT Update. INIT will be acked in EOT Update.
-   */
-  if ((nbr->state == EIGRP_NEIGHBOR_UP) && !(flags & EIGRP_INIT_FLAG))
-    {
-      eigrp_hello_send_ack(nbr);
-    }
 
     if((flags & EIGRP_INIT_FLAG) && (!same))
     {   /* When in pending state, send INIT update only if it wasn't
@@ -162,44 +154,55 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               msg->prefix = dest;
               int event = eigrp_get_fsm_event(msg);
               eigrp_fsm_event(msg, event);
-              eigrp_query_send_all(eigrp,dest);
-              eigrp_update_send_all(eigrp,dest,nbr->ei);
             }
           else
             {
               /*Here comes topology information save*/
-              tnode = eigrp_prefix_entry_new();
-              tnode->serno = eigrp->serno;
-              tnode->destination_ipv4 = dest_addr;
-              tnode->af = AF_INET;
-              tnode->state = EIGRP_FSM_STATE_PASSIVE;
-              tnode->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
+              pe = eigrp_prefix_entry_new();
+              pe->serno = eigrp->serno;
+              pe->destination_ipv4 = dest_addr;
+              pe->af = AF_INET;
+              pe->state = EIGRP_FSM_STATE_PASSIVE;
+              pe->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
-              tentry = eigrp_neighbor_entry_new();
-              tentry->ei = ei;
-              tentry->adv_router = nbr;
-              tentry->reported_metric = tlv->metric;
-              tentry->reported_distance = eigrp_calculate_metrics(eigrp,
+              ne = eigrp_neighbor_entry_new();
+              ne->ei = ei;
+              ne->adv_router = nbr;
+              ne->reported_metric = tlv->metric;
+              ne->reported_distance = eigrp_calculate_metrics(eigrp,
                   &tlv->metric);
 
-              tentry->distance = eigrp_calculate_total_metrics(eigrp, tentry);
+              ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
 
-              tnode->fdistance = tnode->distance = tnode->rdistance =
-                  tentry->distance;
-              tentry->prefix = tnode;
-              tentry->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
+              pe->fdistance = pe->distance = pe->rdistance =
+                  ne->distance;
+              ne->prefix = pe;
+              ne->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
 
-              eigrp_prefix_entry_add(eigrp->topology_table, tnode);
-              eigrp_neighbor_entry_add(tnode, tentry);
-              tnode->distance = tnode->fdistance = tnode->rdistance =
-                  tentry->distance;
-              tnode->reported_metric = tentry->total_metric;
-              eigrp_topology_update_node_flags(tnode);
-              eigrp_update_send_all(eigrp, tnode, ei);
+              eigrp_prefix_entry_add(eigrp->topology_table, pe);
+              eigrp_neighbor_entry_add(pe, ne);
+              pe->distance = pe->fdistance = pe->rdistance =
+                  ne->distance;
+              pe->reported_metric = ne->total_metric;
+              eigrp_topology_update_node_flags(pe);
+
+              pe->req_action |= EIGRP_FSM_NEED_UPDATE;
+              listnode_add(eigrp->topology_changes_internalIPV4, pe);
             }
           eigrp_IPv4_InternalTLV_free (tlv);
         }
     }
+
+  /*
+   * We don't need to send separate Ack for INIT Update. INIT will be acked in EOT Update.
+   */
+  if ((nbr->state == EIGRP_NEIGHBOR_UP) && !(flags & EIGRP_INIT_FLAG))
+    {
+      eigrp_hello_send_ack(nbr);
+    }
+
+  eigrp_query_send_all(eigrp);
+  eigrp_update_send_all(eigrp, ei);
 }
 
 /*send EIGRP Update packet*/
@@ -303,12 +306,8 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
     zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
                ep->length, ep->sequence_number, inet_ntoa(ep->dst));
 
-//  ep_multicast = eigrp_packet_duplicate(ep, nbr);
-//  ep_multicast->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
-
   /*Put packet to retransmission queue*/
   eigrp_fifo_push_head(nbr->retrans_queue, ep);
-//  eigrp_fifo_push_head(nbr->ei->obuf, ep_multicast);
 
   if (nbr->retrans_queue->count == 1)
     {
@@ -318,11 +317,13 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
 }
 
 void
-eigrp_update_send (struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
+eigrp_update_send (struct eigrp_interface *ei)
 {
   struct eigrp_packet *ep, *duplicate;
   struct listnode *node, *nnode, *node2, *nnode2;
   struct eigrp_neighbor *nbr;
+  struct eigrp_prefix_entry *pe;
+  u_char has_tlv;
 
   u_int16_t length = EIGRP_HEADER_LEN;
 
@@ -338,15 +339,25 @@ eigrp_update_send (struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
       length += eigrp_add_authTLV_MD5_to_stream(ep->s,ei);
     }
 
-      if ((pe->nt == EIGRP_TOPOLOGY_TYPE_REMOTE) || (pe->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED))
-        length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+  has_tlv = 0;
+  for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes_internalIPV4, node, nnode, pe))
+    {
+      if(pe->req_action & EIGRP_FSM_NEED_UPDATE)
+        {
+          length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+          has_tlv = 1;
+        }
+    }
 
-      if (pe->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL)
-        //TODO: Send update in TLV_IPv4_External_type
+  if(!has_tlv)
+    {
+      eigrp_packet_free(ep);
+      return;
+    }
 
   if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
     {
-      eigrp_make_md5_digest(ei,ep->s, EIGRP_AUTH_EXTRA_SALT_FLAG);
+      eigrp_make_md5_digest(ei,ep->s, EIGRP_AUTH_UPDATE_FLAG);
     }
 
   /* EIGRP Checksum */
@@ -366,52 +377,40 @@ eigrp_update_send (struct eigrp_interface *ei, struct eigrp_prefix_entry *pe)
     {
       if (nbr->state == EIGRP_NEIGHBOR_UP)
         {
-          duplicate = eigrp_packet_duplicate(ep, nbr);
-          duplicate->dst.s_addr = nbr->src.s_addr;
           /*Put packet to retransmission queue*/
-          eigrp_fifo_push_head(nbr->multicast_queue, duplicate);
+          eigrp_fifo_push_head(nbr->retrans_queue, ep);
 
-          if (nbr->multicast_queue->count == 1)
+          if (nbr->retrans_queue->count == 1)
             {
-              /*Start retransmission timer*/
-              THREAD_TIMER_ON(master, duplicate->t_retrans_timer,
-                  eigrp_unack_multicast_packet_retrans, nbr,
-                  EIGRP_PACKET_RETRANS_TIME);
+              eigrp_send_packet_reliably(nbr);
             }
         }
     }
-
-  eigrp_fifo_push_head(ei->obuf, ep);
-
-  /* Hook thread to write packet. */
-  if (ei->on_write_q == 0)
-    {
-      listnode_add(ei->eigrp->oi_write_q, ei);
-      ei->on_write_q = 1;
-    }
-  if (ei->eigrp->t_write == NULL)
-    ei->eigrp->t_write =
-        thread_add_write(master, eigrp_write, ei->eigrp, ei->eigrp->fd);
-
-  ei->eigrp->sequence_number++;
 }
 
 void
-eigrp_update_send_all (struct eigrp *eigrp, struct eigrp_prefix_entry *pe,
-                       struct eigrp_interface *exception)
+eigrp_update_send_all (struct eigrp *eigrp, struct eigrp_interface *exception)
 {
-  /* TODO: Split horizont with poison reverse*/
-
 
   struct eigrp_interface *iface;
-  struct listnode *node;
+  struct listnode *node, *node2, *nnode2;
+  struct eigrp_prefix_entry *pe;
 
   for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface))
     {
       if (iface != exception)
-        eigrp_update_send(iface, pe);
+        {
+          eigrp_update_send(iface);
+        }
+    }
+
+  for (ALL_LIST_ELEMENTS(eigrp->topology_changes_internalIPV4, node2, nnode2, pe))
+    {
+      if(pe->req_action & EIGRP_FSM_NEED_UPDATE)
+        {
+          pe->req_action &= ~EIGRP_FSM_NEED_UPDATE;
+          listnode_delete(eigrp->topology_changes_internalIPV4, pe);
+          zlog_debug("UPDATE COUNT: %d", eigrp->topology_changes_internalIPV4->count);
+        }
     }
 }
-
-
-

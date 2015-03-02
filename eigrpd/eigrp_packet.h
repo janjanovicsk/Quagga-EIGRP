@@ -73,10 +73,10 @@ extern int  eigrp_hello_timer (struct thread *);
 /*
  * These externs are found in eigrp_update.c
  */
-extern void eigrp_update_send (struct eigrp_interface *, struct eigrp_prefix_entry *);
+extern void eigrp_update_send (struct eigrp_interface *);
 extern void eigrp_update_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                 struct stream *, struct eigrp_interface *, int);
-extern void eigrp_update_send_all (struct eigrp *, struct eigrp_prefix_entry *, struct eigrp_interface *);
+extern void eigrp_update_send_all (struct eigrp *, struct eigrp_interface *);
 extern void eigrp_update_send_init (struct eigrp_neighbor *);
 extern void eigrp_update_send_EOT (struct eigrp_neighbor *);
 
@@ -84,10 +84,10 @@ extern void eigrp_update_send_EOT (struct eigrp_neighbor *);
  * These externs are found in eigrp_query.c
  */
 
-extern void eigrp_send_query (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
+extern void eigrp_send_query (struct eigrp_interface *);
 extern void eigrp_query_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
-extern u_int32_t eigrp_query_send_all (struct eigrp *, struct eigrp_prefix_entry *);
+extern u_int32_t eigrp_query_send_all (struct eigrp *);
 
 /*
  * These externs are found in eigrp_reply.c

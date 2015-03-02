@@ -398,7 +398,6 @@ int eigrp_fsm_event_keep_state(struct eigrp_fsm_action_message *msg) {
 				eigrp_send_reply(msg->adv_router, msg->entry);
 			prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
 			listnode_add((eigrp_lookup())->topology_changes_internalIPV4,prefix);
-//			eigrp_update_send_all(msg->eigrp, prefix, entry->adv_router->ei);
 		}
 		eigrp_topology_update_node_flags(prefix);
 		eigrp_update_routing_table(prefix);
@@ -426,7 +425,6 @@ int eigrp_fsm_event_lr(struct eigrp_fsm_action_message *msg) {
 	prefix->state = EIGRP_FSM_STATE_PASSIVE;
 	prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
 	listnode_add(eigrp->topology_changes_internalIPV4,prefix);
-//  eigrp_update_send_all(eigrp, msg->prefix, msg->adv_router->ei);
 	eigrp_topology_update_node_flags(prefix);
 	eigrp_update_routing_table(prefix);
 	eigrp_update_topology_table_prefix(eigrp->topology_table, prefix);
@@ -467,7 +465,6 @@ int eigrp_fsm_event_lr_fcs(struct eigrp_fsm_action_message *msg) {
 						prefix)->head->data))->adv_router, prefix);
 	prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
 	listnode_add(eigrp->topology_changes_internalIPV4,prefix);
-//  eigrp_update_send_all(eigrp, prefix, msg->adv_router->ei);
 	eigrp_topology_update_node_flags(prefix);
 	eigrp_update_routing_table(prefix);
 	eigrp_update_topology_table_prefix(eigrp->topology_table, prefix);

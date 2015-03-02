@@ -244,8 +244,8 @@ eigrp_lookup_if_params (struct interface *ifp, struct in_addr addr)
 int
 eigrp_if_up (struct eigrp_interface *ei)
 {
-  struct eigrp_prefix_entry *tn;
-  struct eigrp_neighbor_entry *te;
+  struct eigrp_prefix_entry *pe;
+  struct eigrp_neighbor_entry *ne;
   struct eigrp_metrics metric;
   struct eigrp_interface *ei2;
   struct listnode *node, *nnode;
@@ -285,38 +285,43 @@ eigrp_if_up (struct eigrp_interface *ei)
   dest_addr->prefix = ei->connected->address->u.prefix4;
   dest_addr->prefixlen = ei->connected->address->prefixlen;
   apply_mask_ipv4 (dest_addr);
-  tn = eigrp_topology_table_lookup_ipv4 (eigrp->topology_table, dest_addr);
+  pe = eigrp_topology_table_lookup_ipv4 (eigrp->topology_table, dest_addr);
 
-  if (tn == NULL)
+  if (pe == NULL)
     {
-      tn = eigrp_prefix_entry_new ();
-      tn->serno = eigrp->serno;
-      tn->destination_ipv4 = dest_addr;
-      tn->af = AF_INET;
-      tn->nt = EIGRP_TOPOLOGY_TYPE_CONNECTED;
+      pe = eigrp_prefix_entry_new ();
+      pe->serno = eigrp->serno;
+      pe->destination_ipv4 = dest_addr;
+      pe->af = AF_INET;
+      pe->nt = EIGRP_TOPOLOGY_TYPE_CONNECTED;
 
-      tn->state = EIGRP_FSM_STATE_PASSIVE;
-      tn->fdistance = eigrp_calculate_metrics (eigrp, &metric);
-      eigrp_prefix_entry_add (eigrp->topology_table, tn);
+      pe->state = EIGRP_FSM_STATE_PASSIVE;
+      pe->fdistance = eigrp_calculate_metrics (eigrp, &metric);
+      pe->req_action |= EIGRP_FSM_NEED_UPDATE;
+      eigrp_prefix_entry_add (eigrp->topology_table, pe);
+      listnode_add(eigrp->topology_changes_internalIPV4, pe);
     }
-  te = eigrp_neighbor_entry_new ();
-  te->ei = ei;
-  te->reported_metric = metric;
-  te->total_metric = metric;
-  te->distance = eigrp_calculate_metrics (eigrp, &metric);
-  te->reported_distance = 0;
-  te->prefix = tn;
-  te->adv_router = eigrp->neighbor_self;
-  te->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
-  eigrp_neighbor_entry_add (tn, te);
+  ne = eigrp_neighbor_entry_new ();
+  ne->ei = ei;
+  ne->reported_metric = metric;
+  ne->total_metric = metric;
+  ne->distance = eigrp_calculate_metrics (eigrp, &metric);
+  ne->reported_distance = 0;
+  ne->prefix = pe;
+  ne->adv_router = eigrp->neighbor_self;
+  ne->flags = EIGRP_NEIGHBOR_ENTRY_SUCCESSOR_FLAG;
+  eigrp_neighbor_entry_add (pe, ne);
 
   for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei2))
     {
       if (ei2->nbrs->count != 0)
         {
-          eigrp_update_send (ei2, tn);
+          eigrp_update_send (ei2);
         }
     }
+
+  pe->req_action &= ~EIGRP_FSM_NEED_UPDATE;
+  listnode_delete(eigrp->topology_changes_internalIPV4, pe);
 
   return 1;
 }

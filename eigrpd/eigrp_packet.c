@@ -80,6 +80,12 @@ static int eigrp_verify_header (struct stream *, struct eigrp_interface *, struc
 				struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 
+
+static int eigrp_retrans_count_exceeded(struct eigrp_packet *ep, struct eigrp_neighbor *nbr)
+{
+  return 1;
+}
+
 int
 eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_char flags)
 {
@@ -232,14 +238,32 @@ eigrp_check_md5_digest (struct stream *s, struct TLV_MD5_Authentication_Type *au
   return 1;
 }
 
+static int
+strnzcpyn(char *dst, const char *src, int size)
+{
+        char *dptr;
+        if (!size) return 0;
+
+        dptr = dst;
+
+        while (--size)
+                if (!(*dptr++ = *src++)) return (dptr-dst)-1;
+        *dptr = 0;
+
+        return (dptr-dst)-1;
+}
+
 int
 eigrp_make_sha256_digest (struct eigrp_interface *ei, struct stream *s, u_char flags)
 {
     struct key *key;
     struct keychain *keychain;
     char *source_ip;
+    int saved_len;
+    char saved_key[PLAINTEXT_LENGTH + 1];
 
-    unsigned char digest[EIGRP_AUTH_SHA256_TLV_SIZE];
+
+    unsigned char digest[EIGRP_AUTH_TYPE_SHA256_LEN];
     unsigned char buffer[1 + PLAINTEXT_LENGTH + 45 + 1] = { 0 };
     HMAC_SHA256_CTX ctx;
     void *ibuf;
@@ -260,11 +284,14 @@ eigrp_make_sha256_digest (struct eigrp_interface *ei, struct stream *s, u_char f
      if(keychain)
        key = key_lookup_for_send(keychain);
 
+//     saved_len[index] = strnzcpyn(saved_key[index], key,
+//                             PLAINTEXT_LENGTH + 1);
+
      source_ip = calloc(16, sizeof(char));
      inet_ntop(AF_INET, &ei->address->u.prefix4, source_ip, 16);
 
      memset(&ctx, 0, sizeof(ctx));
-     buffer[0] = '\n'; // WTF?
+     buffer[0] = '\n';
      memcpy(buffer + 1, key, strlen (key->string));
      memcpy(buffer + 1 + strlen(key->string), source_ip, strlen(source_ip));
      HMAC__SHA256_Init(&ctx, buffer, 1 + strlen (key->string) + strlen(source_ip));
@@ -848,8 +875,7 @@ eigrp_send_packet_reliably (struct eigrp_neighbor *nbr)
       struct eigrp_packet *duplicate;
       duplicate = eigrp_packet_duplicate(ep, nbr);
       /* Add packet to the top of the interface output queue*/
-      if (ep->dst.s_addr != htonl(EIGRP_MULTICAST_ADDRESS))
-	eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
+      eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
 
       /*Start retransmission timer*/
       THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
@@ -1050,6 +1076,10 @@ eigrp_unack_packet_retrans (struct thread *thread)
       /* Add packet to the top of the interface output queue*/
       eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
 
+      ep->retrans_counter++;
+      if(ep->retrans_counter == EIGRP_PACKET_RETRANS_MAX)
+        return eigrp_retrans_count_exceeded(ep, nbr);
+
       /*Start retransmission timer*/
       ep->t_retrans_timer =
           thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
@@ -1067,12 +1097,6 @@ eigrp_unack_packet_retrans (struct thread *thread)
 
   return 0;
 }
-
-static int eigrp_retrans_count_exceeded(struct eigrp_packet *ep, struct eigrp_neighbor *nbr)
-{
-  return 1;
-}
-
 
 int
 eigrp_unack_multicast_packet_retrans (struct thread *thread)

@@ -131,7 +131,6 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 
           tlv = eigrp_read_ipv4_tlv(s);
 
-          //TU TREBA MSG!!!!!!!!!!!!!
           struct prefix_ipv4 *dest_addr;
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
