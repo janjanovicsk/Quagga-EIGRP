@@ -61,123 +61,177 @@ unsigned long conf_debug_eigrp_nei = 0;
 unsigned long conf_debug_eigrp_packet[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long conf_debug_eigrp_zebra = 0;
 
+
 static int
 config_write_debug (struct vty *vty)
 {
-//  int write = 0;
-//  int i, r;
-//
-//  const char *type_str[] = {"hello", "dd", "ls-request", "ls-update", "ls-ack"};
-//  const char *detail_str[] = {"", " send", " recv", "", " detail",
-//			" send detail", " recv detail", " detail"};
-//
-//  /* debug ospf ism (status|events|timers). */
-//  if (IS_CONF_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
-//    vty_out (vty, "debug ospf ism%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_CONF_DEBUG_OSPF (ism, ISM_STATUS))
-//	vty_out (vty, "debug ospf ism status%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (ism, ISM_EVENTS))
-//	vty_out (vty, "debug ospf ism event%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (ism, ISM_TIMERS))
-//	vty_out (vty, "debug ospf ism timer%s", VTY_NEWLINE);
-//    }
-//
-//  /* debug ospf nsm (status|events|timers). */
-//  if (IS_CONF_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
-//    vty_out (vty, "debug ospf nsm%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_STATUS))
-//	vty_out (vty, "debug ospf nsm status%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_EVENTS))
-//	vty_out (vty, "debug ospf nsm event%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_TIMERS))
-//	vty_out (vty, "debug ospf nsm timer%s", VTY_NEWLINE);
-//    }
-//
-//  /* debug ospf lsa (generate|flooding|install|refresh). */
-//  if (IS_CONF_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
-//    vty_out (vty, "debug ospf lsa%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_GENERATE))
-//	vty_out (vty, "debug ospf lsa generate%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_FLOODING))
-//	vty_out (vty, "debug ospf lsa flooding%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_INSTALL))
-//	vty_out (vty, "debug ospf lsa install%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_REFRESH))
-//	vty_out (vty, "debug ospf lsa refresh%s", VTY_NEWLINE);
-//
+  int write = 0;
+  int i, r;
+
+  const char *type_str[] = {"SIA-Query", "SIA-Reply", "ack", "hello", "probe", "query", "reply", "request",
+		  	  	  	  	    "retransmission", "stub", "terse", "update", "all"};
+  const char *detail_str[] = {"", " send", " recv", "", " detail",
+							  " send detail", " recv detail", " detail"};
+
+
+  /* debug eigrp event. */
+//  if (IS_CONF_DEBUG_EIGRP (event, EVENT) == EIGRP_DEBUG_EVENT)
+//  {
+//      vty_out (vty, "debug eigrp event%s", VTY_NEWLINE);
 //      write = 1;
-//    }
-//
-//  /* debug ospf zebra (interface|redistribute). */
-//  if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
-//    vty_out (vty, "debug ospf zebra%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
-//	vty_out (vty, "debug ospf zebra interface%s", VTY_NEWLINE);
-//      if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
-//	vty_out (vty, "debug ospf zebra redistribute%s", VTY_NEWLINE);
-//
-//      write = 1;
-//    }
-//
-//  /* debug ospf event. */
-//  if (IS_CONF_DEBUG_OSPF (event, EVENT) == OSPF_DEBUG_EVENT)
-//    {
-//      vty_out (vty, "debug ospf event%s", VTY_NEWLINE);
-//      write = 1;
-//    }
-//
-//  /* debug ospf nssa. */
-//  if (IS_CONF_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
-//    {
-//      vty_out (vty, "debug ospf nssa%s", VTY_NEWLINE);
-//      write = 1;
-//    }
-//
-//  /* debug ospf packet all detail. */
-//  r = OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL;
-//  for (i = 0; i < 5; i++)
-//    r &= conf_debug_ospf_packet[i] & (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL);
-//  if (r == (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL))
-//    {
-//      vty_out (vty, "debug ospf packet all detail%s", VTY_NEWLINE);
-//      return 1;
-//    }
-//
-//  /* debug ospf packet all. */
-//  r = OSPF_DEBUG_SEND_RECV;
-//  for (i = 0; i < 5; i++)
-//    r &= conf_debug_ospf_packet[i] & OSPF_DEBUG_SEND_RECV;
-//  if (r == OSPF_DEBUG_SEND_RECV)
-//    {
-//      vty_out (vty, "debug ospf packet all%s", VTY_NEWLINE);
-//      for (i = 0; i < 5; i++)
-//	if (conf_debug_ospf_packet[i] & OSPF_DEBUG_DETAIL)
-//	  vty_out (vty, "debug ospf packet %s detail%s",
-//		   type_str[i],
-//		   VTY_NEWLINE);
-//      return 1;
-//    }
-//
-//  /* debug ospf packet (hello|dd|ls-request|ls-update|ls-ack)
-//     (send|recv) (detail). */
-//  for (i = 0; i < 5; i++)
-//    {
-//      if (conf_debug_ospf_packet[i] == 0)
-//	continue;
-//
-//      vty_out (vty, "debug ospf packet %s%s%s",
-//	       type_str[i], detail_str[conf_debug_ospf_packet[i]],
-//	       VTY_NEWLINE);
-//      write = 1;
-//    }
+//  }
+
+  /* debug eigrp packet all detail. */
+  r = EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL;
+  for (i = 0; i < 12; i++)
+      r &= conf_debug_eigrp_packet[i] & (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL);
+  if (r == (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL))
+  {
+      vty_out (vty, "debug eigrp packet all detail%s", VTY_NEWLINE);
+      return 1;
+  }
+
+  /* debug eigrp packet all. */
+  r = EIGRP_DEBUG_SEND_RECV;
+  for (i = 0; i < 12; i++)
+      r &= conf_debug_eigrp_packet[i] & EIGRP_DEBUG_SEND_RECV;
+  if (r == EIGRP_DEBUG_SEND_RECV)
+  {
+      vty_out (vty, "debug eigrp packet all%s", VTY_NEWLINE);
+      for (i = 0; i < 12; i++)
+    	  if (conf_debug_eigrp_packet[i] & EIGRP_DEBUG_DETAIL)
+    	  vty_out (vty, "debug eigrp packet %s detail%s",
+		  type_str[i],
+		  VTY_NEWLINE);
+      return 1;
+  }
+
+  /* debug eigrp packet */
+  for (i = 0; i < 12; i++)
+  {
+      if (conf_debug_eigrp_packet[i] == 0)
+    	  continue;
+
+      	  vty_out (vty, "debug eigrp packet %s%s%s",
+	      type_str[i], detail_str[conf_debug_eigrp_packet[i]],
+	      VTY_NEWLINE);
+      write = 1;
+  }
+
+	//  int write = 0;
+	//  int i, r;
+	//
+	//  const char *type_str[] = {"hello", "dd", "ls-request", "ls-update", "ls-ack"};
+	//  const char *detail_str[] = {"", " send", " recv", "", " detail",
+	//			" send detail", " recv detail", " detail"};
+	//
+	//  /* debug ospf ism (status|events|timers). */
+	//  if (IS_CONF_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
+	//    vty_out (vty, "debug ospf ism%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_CONF_DEBUG_OSPF (ism, ISM_STATUS))
+	//	vty_out (vty, "debug ospf ism status%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (ism, ISM_EVENTS))
+	//	vty_out (vty, "debug ospf ism event%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (ism, ISM_TIMERS))
+	//	vty_out (vty, "debug ospf ism timer%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* debug ospf nsm (status|events|timers). */
+	//  if (IS_CONF_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
+	//    vty_out (vty, "debug ospf nsm%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_STATUS))
+	//	vty_out (vty, "debug ospf nsm status%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_EVENTS))
+	//	vty_out (vty, "debug ospf nsm event%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (nsm, NSM_TIMERS))
+	//	vty_out (vty, "debug ospf nsm timer%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* debug ospf lsa (generate|flooding|install|refresh). */
+	//  if (IS_CONF_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
+	//    vty_out (vty, "debug ospf lsa%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_GENERATE))
+	//	vty_out (vty, "debug ospf lsa generate%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_FLOODING))
+	//	vty_out (vty, "debug ospf lsa flooding%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_INSTALL))
+	//	vty_out (vty, "debug ospf lsa install%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (lsa, LSA_REFRESH))
+	//	vty_out (vty, "debug ospf lsa refresh%s", VTY_NEWLINE);
+	//
+	//      write = 1;
+	//    }
+	//
+	//  /* debug ospf zebra (interface|redistribute). */
+	//  if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
+	//    vty_out (vty, "debug ospf zebra%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+	//	vty_out (vty, "debug ospf zebra interface%s", VTY_NEWLINE);
+	//      if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
+	//	vty_out (vty, "debug ospf zebra redistribute%s", VTY_NEWLINE);
+	//
+	//      write = 1;
+	//    }
+	//
+	//  /* debug ospf event. */
+	//  if (IS_CONF_DEBUG_OSPF (event, EVENT) == OSPF_DEBUG_EVENT)
+	//    {
+	//      vty_out (vty, "debug ospf event%s", VTY_NEWLINE);
+	//      write = 1;
+	//    }
+	//
+	//  /* debug ospf nssa. */
+	//  if (IS_CONF_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
+	//    {
+	//      vty_out (vty, "debug ospf nssa%s", VTY_NEWLINE);
+	//      write = 1;
+	//    }
+	//
+	//  /* debug ospf packet all detail. */
+	//  r = OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL;
+	//  for (i = 0; i < 5; i++)
+	//    r &= conf_debug_ospf_packet[i] & (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL);
+	//  if (r == (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL))
+	//    {
+	//      vty_out (vty, "debug ospf packet all detail%s", VTY_NEWLINE);
+	//      return 1;
+	//    }
+	//
+	//  /* debug ospf packet all. */
+	//  r = OSPF_DEBUG_SEND_RECV;
+	//  for (i = 0; i < 5; i++)
+	//    r &= conf_debug_ospf_packet[i] & OSPF_DEBUG_SEND_RECV;
+	//  if (r == OSPF_DEBUG_SEND_RECV)
+	//    {
+	//      vty_out (vty, "debug ospf packet all%s", VTY_NEWLINE);
+	//      for (i = 0; i < 5; i++)
+	//	if (conf_debug_ospf_packet[i] & OSPF_DEBUG_DETAIL)
+	//	  vty_out (vty, "debug ospf packet %s detail%s",
+	//		   type_str[i],
+	//		   VTY_NEWLINE);
+	//      return 1;
+	//    }
+	//
+	//  /* debug ospf packet (hello|dd|ls-request|ls-update|ls-ack)
+	//     (send|recv) (detail). */
+	//  for (i = 0; i < 5; i++)
+	//    {
+	//      if (conf_debug_ospf_packet[i] == 0)
+	//	continue;
+	//
+	//      vty_out (vty, "debug ospf packet %s%s%s",
+	//	       type_str[i], detail_str[conf_debug_ospf_packet[i]],
+	//	       VTY_NEWLINE);
+	//      write = 1;
+	//    }
 
   return write;
 }
@@ -415,92 +469,126 @@ DEFUN (show_debugging_eigrp,
        DEBUG_STR
        EIGRP_STR)
 {
-//  int i;
-//
-//  vty_out (vty, "EIGRP debugging status:%s", VTY_NEWLINE);
-//
-//  /* Show debug status for events. */
-//  if (IS_DEBUG_EIGRP(event,EVENT))
-//    vty_out (vty, "  OSPF event debugging is on%s", VTY_NEWLINE);
-//
-//  /* Show debug status for ISM. */
-//  if (IS_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
-//    vty_out (vty, "  OSPF ISM debugging is on%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_DEBUG_OSPF (ism, ISM_STATUS))
-//	vty_out (vty, "  OSPF ISM status debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (ism, ISM_EVENTS))
-//	vty_out (vty, "  OSPF ISM event debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (ism, ISM_TIMERS))
-//	vty_out (vty, "  OSPF ISM timer debugging is on%s", VTY_NEWLINE);
-//    }
-//
-//  /* Show debug status for NSM. */
-//  if (IS_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
-//    vty_out (vty, "  OSPF NSM debugging is on%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_DEBUG_OSPF (nsm, NSM_STATUS))
-//	vty_out (vty, "  OSPF NSM status debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (nsm, NSM_EVENTS))
-//	vty_out (vty, "  OSPF NSM event debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (nsm, NSM_TIMERS))
-//	vty_out (vty, "  OSPF NSM timer debugging is on%s", VTY_NEWLINE);
-//    }
-//
-//  /* Show debug status for OSPF Packets. */
-//  for (i = 0; i < 5; i++)
-//    if (IS_DEBUG_OSPF_PACKET (i, SEND) && IS_DEBUG_OSPF_PACKET (i, RECV))
-//      {
-//	vty_out (vty, "  OSPF packet %s%s debugging is on%s",
-//		 LOOKUP (ospf_packet_type_str, i + 1),
-//		 IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-//		 VTY_NEWLINE);
-//      }
-//    else
-//      {
-//	if (IS_DEBUG_OSPF_PACKET (i, SEND))
-//	  vty_out (vty, "  OSPF packet %s send%s debugging is on%s",
-//		   LOOKUP (ospf_packet_type_str, i + 1),
-//		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-//		   VTY_NEWLINE);
-//	if (IS_DEBUG_OSPF_PACKET (i, RECV))
-//	  vty_out (vty, "  OSPF packet %s receive%s debugging is on%s",
-//		   LOOKUP (ospf_packet_type_str, i + 1),
-//		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-//		   VTY_NEWLINE);
-//      }
-//
-//  /* Show debug status for OSPF LSAs. */
-//  if (IS_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
-//    vty_out (vty, "  OSPF LSA debugging is on%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_DEBUG_OSPF (lsa, LSA_GENERATE))
-//	vty_out (vty, "  OSPF LSA generation debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (lsa, LSA_FLOODING))
-//	vty_out (vty, "  OSPF LSA flooding debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (lsa, LSA_INSTALL))
-//	vty_out (vty, "  OSPF LSA install debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (lsa, LSA_REFRESH))
-//	vty_out (vty, "  OSPF LSA refresh debugging is on%s", VTY_NEWLINE);
-//    }
-//
-//  /* Show debug status for Zebra. */
-//  if (IS_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
-//    vty_out (vty, "  OSPF Zebra debugging is on%s", VTY_NEWLINE);
-//  else
-//    {
-//      if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
-//	vty_out (vty, "  OSPF Zebra interface debugging is on%s", VTY_NEWLINE);
-//      if (IS_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
-//	vty_out (vty, "  OSPF Zebra redistribute debugging is on%s", VTY_NEWLINE);
-//    }
-//
-//  /* Show debug status for NSSA. */
-//  if (IS_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
-//    vty_out (vty, "  OSPF NSSA debugging is on%s", VTY_NEWLINE);
+  int i;
+
+  vty_out (vty, "EIGRP debugging status:%s", VTY_NEWLINE);
+
+  /* Show debug status for events. */
+  if (IS_DEBUG_EIGRP(event,EVENT))
+    vty_out (vty, "  EIGRP event debugging is on%s", VTY_NEWLINE);
+
+
+  /* Show debug status for EIGRP Packets. */
+  for (i = 0; i < 12; i++)
+  {
+	if (IS_DEBUG_EIGRP_PACKET (i, SEND) && IS_DEBUG_EIGRP_PACKET (i, RECV))
+	{
+		vty_out (vty, "  EIGRP packet %s%s debugging is on%s",
+		LOOKUP (eigrp_packet_type_str, i + 1),
+		IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+		VTY_NEWLINE);
+	}
+	else
+	{
+		if (IS_DEBUG_EIGRP_PACKET (i, SEND))
+			vty_out (vty, "  EIGRP packet %s send%s debugging is on%s",
+			LOOKUP (eigrp_packet_type_str, i + 1),
+			IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+			VTY_NEWLINE);
+		if (IS_DEBUG_EIGRP_PACKET (i, RECV))
+			vty_out (vty, "  EIGRP packet %s receive%s debugging is on%s",
+			LOOKUP (eigrp_packet_type_str, i + 1),
+			IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+			VTY_NEWLINE);
+	}
+  }
+
+	//  int i;
+	//
+	//  vty_out (vty, "EIGRP debugging status:%s", VTY_NEWLINE);
+	//
+	//  /* Show debug status for events. */
+	//  if (IS_DEBUG_EIGRP(event,EVENT))
+	//    vty_out (vty, "  OSPF event debugging is on%s", VTY_NEWLINE);
+	//
+	//  /* Show debug status for ISM. */
+	//  if (IS_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
+	//    vty_out (vty, "  OSPF ISM debugging is on%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_DEBUG_OSPF (ism, ISM_STATUS))
+	//	vty_out (vty, "  OSPF ISM status debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (ism, ISM_EVENTS))
+	//	vty_out (vty, "  OSPF ISM event debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (ism, ISM_TIMERS))
+	//	vty_out (vty, "  OSPF ISM timer debugging is on%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* Show debug status for NSM. */
+	//  if (IS_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
+	//    vty_out (vty, "  OSPF NSM debugging is on%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_DEBUG_OSPF (nsm, NSM_STATUS))
+	//	vty_out (vty, "  OSPF NSM status debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (nsm, NSM_EVENTS))
+	//	vty_out (vty, "  OSPF NSM event debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (nsm, NSM_TIMERS))
+	//	vty_out (vty, "  OSPF NSM timer debugging is on%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* Show debug status for OSPF Packets. */
+	//  for (i = 0; i < 5; i++)
+	//    if (IS_DEBUG_OSPF_PACKET (i, SEND) && IS_DEBUG_OSPF_PACKET (i, RECV))
+	//      {
+	//	vty_out (vty, "  OSPF packet %s%s debugging is on%s",
+	//		 LOOKUP (ospf_packet_type_str, i + 1),
+	//		 IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
+	//		 VTY_NEWLINE);
+	//      }
+	//    else
+	//      {
+	//	if (IS_DEBUG_OSPF_PACKET (i, SEND))
+	//	  vty_out (vty, "  OSPF packet %s send%s debugging is on%s",
+	//		   LOOKUP (ospf_packet_type_str, i + 1),
+	//		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
+	//		   VTY_NEWLINE);
+	//	if (IS_DEBUG_OSPF_PACKET (i, RECV))
+	//	  vty_out (vty, "  OSPF packet %s receive%s debugging is on%s",
+	//		   LOOKUP (ospf_packet_type_str, i + 1),
+	//		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
+	//		   VTY_NEWLINE);
+	//      }
+	//
+	//  /* Show debug status for OSPF LSAs. */
+	//  if (IS_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
+	//    vty_out (vty, "  OSPF LSA debugging is on%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_DEBUG_OSPF (lsa, LSA_GENERATE))
+	//	vty_out (vty, "  OSPF LSA generation debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (lsa, LSA_FLOODING))
+	//	vty_out (vty, "  OSPF LSA flooding debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (lsa, LSA_INSTALL))
+	//	vty_out (vty, "  OSPF LSA install debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (lsa, LSA_REFRESH))
+	//	vty_out (vty, "  OSPF LSA refresh debugging is on%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* Show debug status for Zebra. */
+	//  if (IS_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
+	//    vty_out (vty, "  OSPF Zebra debugging is on%s", VTY_NEWLINE);
+	//  else
+	//    {
+	//      if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
+	//	vty_out (vty, "  OSPF Zebra interface debugging is on%s", VTY_NEWLINE);
+	//      if (IS_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
+	//	vty_out (vty, "  OSPF Zebra redistribute debugging is on%s", VTY_NEWLINE);
+	//    }
+	//
+	//  /* Show debug status for NSSA. */
+	//  if (IS_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
+	//    vty_out (vty, "  OSPF NSSA debugging is on%s", VTY_NEWLINE);
 
   return CMD_SUCCESS;
 }
@@ -538,16 +626,25 @@ DEFUN (debug_eigrp_packet,
   /* Check packet type. */
   if (strncmp (argv[0], "h", 1) == 0)
     type = EIGRP_DEBUG_HELLO;
-//  else if (strncmp (argv[0], "d", 1) == 0)
-//    type = OSPF_DEBUG_DB_DESC;
-//  else if (strncmp (argv[0], "ls-r", 4) == 0)
-//    type = OSPF_DEBUG_LS_REQ;
-//  else if (strncmp (argv[0], "ls-u", 4) == 0)
-//    type = OSPF_DEBUG_LS_UPD;
-//  else if (strncmp (argv[0], "ls-a", 4) == 0)
-//    type = OSPF_DEBUG_LS_ACK;
-//  else if (strncmp (argv[0], "a", 1) == 0)
-//    type = OSPF_DEBUG_ALL;
+  if (strncmp (argv[0], "u", 1) == 0)
+    type = EIGRP_DEBUG_UPDATE;
+  if (strncmp (argv[0], "q", 1) == 0)
+    type = EIGRP_DEBUG_QUERY;
+  if (strncmp (argv[0], "a", 1) == 0)
+    type = EIGRP_DEBUG_ACK;
+  if (strncmp (argv[0], "p", 1) == 0)
+    type = EIGRP_DEBUG_PROBE;
+  if (strncmp (argv[0], "st", 2) == 0)
+    type = EIGRP_DEBUG_STUB;
+  if (strncmp (argv[0], "rep", 3) == 0)
+    type = EIGRP_DEBUG_REPLY;
+  if (strncmp (argv[0], "req", 3) == 0)
+    type = EIGRP_DEBUG_REQUEST;
+  if (strncmp (argv[0], "siaq", 4) == 0)
+    type = EIGRP_DEBUG_SIAQUERY;
+  if (strncmp (argv[0], "siar", 4) == 0)
+    type = EIGRP_DEBUG_SIAREPLY;
+
 
   /* Default, both send and recv. */
   if (argc == 1)
@@ -555,14 +652,14 @@ DEFUN (debug_eigrp_packet,
 
   /* send or recv. */
   if (argc >= 2)
-    {
-      if (strncmp (argv[1], "s", 1) == 0)
-	flag = EIGRP_DEBUG_SEND;
-      else if (strncmp (argv[1], "r", 1) == 0)
-	flag = EIGRP_DEBUG_RECV;
-      else if (strncmp (argv[1], "d", 1) == 0)
-	flag = EIGRP_DEBUG_SEND_RECV | EIGRP_DEBUG_PACKET_DETAIL;
-    }
+  {
+    if (strncmp (argv[1], "s", 1) == 0)
+	  flag = EIGRP_DEBUG_SEND;
+    else if (strncmp (argv[1], "r", 1) == 0)
+	  flag = EIGRP_DEBUG_RECV;
+    else if (strncmp (argv[1], "d", 1) == 0)
+	  flag = EIGRP_DEBUG_SEND_RECV | EIGRP_DEBUG_PACKET_DETAIL;
+  }
 
   /* detail. */
   if (argc == 3)
@@ -571,12 +668,12 @@ DEFUN (debug_eigrp_packet,
 
   for (i = 0; i < 10; i++)
     if (type & (0x01 << i))
-      {
-		if (vty->node == CONFIG_NODE)
+    {
+    	if (vty->node == CONFIG_NODE)
 		  DEBUG_PACKET_ON (i, flag);
 		else
 		  TERM_DEBUG_PACKET_ON (i, flag);
-      }
+    }
 
   return CMD_SUCCESS;
 }
@@ -626,113 +723,129 @@ ALIAS (debug_eigrp_packet,
        "Detail Information\n")
 
 
-//DEFUN (no_debug_ospf_packet,
-//       no_debug_ospf_packet_all_cmd,
-//       "no debug ospf packet (hello|dd|ls-request|ls-update|ls-ack|all)",
-//       NO_STR
-//       DEBUG_STR
-//       OSPF_STR
-//       "OSPF packets\n"
-//       "OSPF Hello\n"
-//       "OSPF Database Description\n"
-//       "OSPF Link State Request\n"
-//       "OSPF Link State Update\n"
-//       "OSPF Link State Acknowledgment\n"
-//       "OSPF all packets\n")
-//{
-//  int type = 0;
-//  int flag = 0;
-//  int i;
-//
-//  assert (argc > 0);
-//
-//  /* Check packet type. */
-//  if (strncmp (argv[0], "h", 1) == 0)
-//    type = OSPF_DEBUG_HELLO;
-//  else if (strncmp (argv[0], "d", 1) == 0)
-//    type = OSPF_DEBUG_DB_DESC;
-//  else if (strncmp (argv[0], "ls-r", 4) == 0)
-//    type = OSPF_DEBUG_LS_REQ;
-//  else if (strncmp (argv[0], "ls-u", 4) == 0)
-//    type = OSPF_DEBUG_LS_UPD;
-//  else if (strncmp (argv[0], "ls-a", 4) == 0)
-//    type = OSPF_DEBUG_LS_ACK;
-//  else if (strncmp (argv[0], "a", 1) == 0)
-//    type = OSPF_DEBUG_ALL;
-//
-//  /* Default, both send and recv. */
-//  if (argc == 1)
-//    flag = OSPF_DEBUG_SEND | OSPF_DEBUG_RECV | OSPF_DEBUG_DETAIL ;
-//
-//  /* send or recv. */
-//  if (argc == 2)
-//    {
-//      if (strncmp (argv[1], "s", 1) == 0)
-//	flag = OSPF_DEBUG_SEND | OSPF_DEBUG_DETAIL;
-//      else if (strncmp (argv[1], "r", 1) == 0)
-//	flag = OSPF_DEBUG_RECV | OSPF_DEBUG_DETAIL;
-//      else if (strncmp (argv[1], "d", 1) == 0)
-//	flag = OSPF_DEBUG_DETAIL;
-//    }
-//
-//  /* detail. */
-//  if (argc == 3)
-//    if (strncmp (argv[2], "d", 1) == 0)
-//      flag = OSPF_DEBUG_DETAIL;
-//
-//  for (i = 0; i < 5; i++)
-//    if (type & (0x01 << i))
-//      {
-//	if (vty->node == CONFIG_NODE)
-//	  DEBUG_PACKET_OFF (i, flag);
-//	else
-//	  TERM_DEBUG_PACKET_OFF (i, flag);
-//      }
-//
-//#ifdef DEBUG
-//  /*
-//  for (i = 0; i < 5; i++)
-//    zlog_debug ("flag[%d] = %d", i, ospf_debug_packet[i]);
-//  */
-//#endif /* DEBUG */
-//
-//  return CMD_SUCCESS;
-//}
-//
-//ALIAS (no_debug_ospf_packet,
-//       no_debug_ospf_packet_send_recv_cmd,
-//       "no debug ospf packet (hello|dd|ls-request|ls-update|ls-ack|all) (send|recv|detail)",
-//       NO_STR
-//       "Debugging functions\n"
-//       "OSPF information\n"
-//       "OSPF packets\n"
-//       "OSPF Hello\n"
-//       "OSPF Database Description\n"
-//       "OSPF Link State Request\n"
-//       "OSPF Link State Update\n"
-//       "OSPF Link State Acknowledgment\n"
-//       "OSPF all packets\n"
-//       "Packet sent\n"
-//       "Packet received\n"
-//       "Detail Information\n")
-//
-//ALIAS (no_debug_ospf_packet,
-//       no_debug_ospf_packet_send_recv_detail_cmd,
-//       "no debug ospf packet (hello|dd|ls-request|ls-update|ls-ack|all) (send|recv) (detail|)",
-//       NO_STR
-//       "Debugging functions\n"
-//       "OSPF information\n"
-//       "OSPF packets\n"
-//       "OSPF Hello\n"
-//       "OSPF Database Description\n"
-//       "OSPF Link State Request\n"
-//       "OSPF Link State Update\n"
-//       "OSPF Link State Acknowledgment\n"
-//       "OSPF all packets\n"
-//       "Packet sent\n"
-//       "Packet received\n"
-//       "Detail Information\n")
-//
+DEFUN (no_debug_eigrp_packet,
+	  no_debug_eigrp_packet_all_cmd,
+	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all)",
+	  DEBUG_STR
+	  EIGRP_STR
+	  "EIGRP SIA-Query packets\n"
+	  "EIGRP SIA-Reply packets\n"
+	  "EIGRP ack packets\n"
+	  "EIGRP hello packets\n"
+	  "EIGRP probe packets\n"
+	  "EIGRP query packets\n"
+	  "EIGRP reply packets\n"
+	  "EIGRP request packets\n"
+	  "EIGRP retransmissions\n"
+	  "EIGRP stub packets\n"
+	  "Display all EIGRP packets except Hellos\n"
+	  "EIGRP update packets\n"
+	  "Display all EIGRP packets\n")
+{
+ int type = 0;
+ int flag = 0;
+ int i;
+
+ assert (argc > 0);
+
+ /* Check packet type. */
+ if (strncmp (argv[0], "h", 1) == 0)
+   type = EIGRP_DEBUG_HELLO;
+ if (strncmp (argv[0], "u", 1) == 0)
+   type = EIGRP_DEBUG_UPDATE;
+ if (strncmp (argv[0], "q", 1) == 0)
+   type = EIGRP_DEBUG_QUERY;
+ if (strncmp (argv[0], "a", 1) == 0)
+   type = EIGRP_DEBUG_ACK;
+ if (strncmp (argv[0], "p", 1) == 0)
+   type = EIGRP_DEBUG_PROBE;
+ if (strncmp (argv[0], "st", 2) == 0)
+   type = EIGRP_DEBUG_STUB;
+ if (strncmp (argv[0], "rep", 3) == 0)
+   type = EIGRP_DEBUG_REPLY;
+ if (strncmp (argv[0], "req", 3) == 0)
+   type = EIGRP_DEBUG_REQUEST;
+ if (strncmp (argv[0], "siaq", 4) == 0)
+   type = EIGRP_DEBUG_SIAQUERY;
+ if (strncmp (argv[0], "siar", 4) == 0)
+   type = EIGRP_DEBUG_SIAREPLY;
+
+
+ /* Default, both send and recv. */
+ if (argc == 1)
+   flag = EIGRP_DEBUG_SEND_RECV;
+
+ /* send or recv. */
+ if (argc >= 2)
+ {
+   if (strncmp (argv[1], "s", 1) == 0)
+  flag = EIGRP_DEBUG_SEND;
+   else if (strncmp (argv[1], "r", 1) == 0)
+  flag = EIGRP_DEBUG_RECV;
+   else if (strncmp (argv[1], "d", 1) == 0)
+  flag = EIGRP_DEBUG_SEND_RECV | EIGRP_DEBUG_PACKET_DETAIL;
+ }
+
+ /* detail. */
+ if (argc == 3)
+   if (strncmp (argv[2], "d", 1) == 0)
+	 flag |= EIGRP_DEBUG_PACKET_DETAIL;
+
+ for (i = 0; i < 10; i++)
+   if (type & (0x01 << i))
+   {
+	if (vty->node == CONFIG_NODE)
+	  DEBUG_PACKET_OFF (i, flag);
+	else
+	  TERM_DEBUG_PACKET_OFF (i, flag);
+   }
+
+ return CMD_SUCCESS;
+}
+
+ALIAS (no_debug_eigrp_packet,
+	  no_debug_ospf_packet_send_recv_cmd,
+	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv|detail)",
+	  DEBUG_STR
+	  EIGRP_STR
+	  "EIGRP SIA-Query packets\n"
+	  "EIGRP SIA-Reply packets\n"
+	  "EIGRP ack packets\n"
+	  "EIGRP hello packets\n"
+	  "EIGRP probe packets\n"
+	  "EIGRP query packets\n"
+	  "EIGRP reply packets\n"
+	  "EIGRP request packets\n"
+	  "EIGRP retransmissions\n"
+	  "EIGRP stub packets\n"
+	  "Display all EIGRP packets except Hellos\n"
+	  "EIGRP update packets\n"
+	  "Display all EIGRP packets\n"
+	  "Packet sent\n"
+	  "Packet received\n"
+	  "Detail information\n")
+
+ALIAS (no_debug_eigrp_packet,
+	  no_debug_eigrp_packet_send_recv_detail_cmd,
+	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv) (detail|)",
+	  DEBUG_STR
+	  EIGRP_STR
+	  "EIGRP SIA-Query packets\n"
+	  "EIGRP SIA-Reply packets\n"
+	  "EIGRP ack packets\n"
+	  "EIGRP hello packets\n"
+	  "EIGRP probe packets\n"
+	  "EIGRP query packets\n"
+	  "EIGRP reply packets\n"
+	  "EIGRP request packets\n"
+	  "EIGRP retransmissions\n"
+	  "EIGRP stub packets\n"
+	  "Display all EIGRP packets except Hellos\n"
+	  "EIGRP update packets\n"
+	  "Display all EIGRP packets\n"
+	  "Packet sent\n"
+	  "Packet received\n"
+	  "Detail Information\n")
 
 
 
@@ -752,13 +865,19 @@ eigrp_debug_init ()
 
   install_element (ENABLE_NODE, &show_debugging_eigrp_cmd);
   install_element (ENABLE_NODE, &debug_eigrp_packet_all_cmd);
+  install_element (ENABLE_NODE, &no_debug_eigrp_packet_all_cmd);
   install_element (ENABLE_NODE, &debug_ospf_packet_send_recv_cmd);
+  install_element (ENABLE_NODE, &no_debug_ospf_packet_send_recv_cmd);
   install_element (ENABLE_NODE, &debug_eigrp_packet_send_recv_detail_cmd);
+  install_element (ENABLE_NODE, &no_debug_eigrp_packet_send_recv_detail_cmd);
 
   install_element (CONFIG_NODE, &show_debugging_eigrp_cmd);
   install_element (CONFIG_NODE, &debug_eigrp_packet_all_cmd);
+  install_element (CONFIG_NODE, &no_debug_eigrp_packet_all_cmd);
   install_element (CONFIG_NODE, &debug_ospf_packet_send_recv_cmd);
+  install_element (CONFIG_NODE, &no_debug_ospf_packet_send_recv_cmd);
   install_element (CONFIG_NODE, &debug_eigrp_packet_send_recv_detail_cmd);
+  install_element (CONFIG_NODE, &no_debug_eigrp_packet_send_recv_detail_cmd);
 }
 
 

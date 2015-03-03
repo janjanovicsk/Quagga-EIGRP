@@ -115,4 +115,7 @@ extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 
 extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new (void);
 
+extern const struct message eigrp_packet_type_str[];
+extern const size_t eigrp_packet_type_str_max;
+
 #endif /* _ZEBRA_EIGRP_PACKET_H */

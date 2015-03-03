@@ -55,7 +55,7 @@
 #include "eigrpd/eigrp_fsm.h"
 
 /* Packet Type String. */
-static const struct message eigrp_packet_type_str[] =
+const struct message eigrp_packet_type_str[] =
 {
   { EIGRP_OPC_UPDATE,	"Update"		},
   { EIGRP_OPC_UPDATE,	"Request"		},
@@ -64,11 +64,11 @@ static const struct message eigrp_packet_type_str[] =
   { EIGRP_OPC_HELLO,	"Hello"			},
   { EIGRP_OPC_IPXSAP,	"IPX-SAP"		},
   { EIGRP_OPC_PROBE,	"Probe"			},
-  { EIGRP_OPC_ACK,	"Ack"			},
+  { EIGRP_OPC_ACK,		"Ack"			},
   { EIGRP_OPC_SIAQUERY,	"SIAQuery"		},
   { EIGRP_OPC_SIAREPLY,	"SIAReply"		},
 };
-static const size_t eigrp_packet_type_str_max = sizeof(eigrp_packet_type_str) /
+const size_t eigrp_packet_type_str_max = sizeof(eigrp_packet_type_str) /
   sizeof(eigrp_packet_type_str[0]);
 
 static unsigned char zeropad[16] = {0};
