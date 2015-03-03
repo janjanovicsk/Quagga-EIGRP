@@ -54,6 +54,7 @@ unsigned long term_debug_eigrp = 0;
 unsigned long term_debug_eigrp_nei = 0;
 unsigned long term_debug_eigrp_packet[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long term_debug_eigrp_zebra = 0;
+unsigned long term_debug_eigrp_transmit = 0;
 
 /* Configuration debug option variables. */
 unsigned long conf_debug_eigrp = 0;
@@ -82,35 +83,35 @@ config_write_debug (struct vty *vty)
 //  }
 
   /* debug eigrp packet all detail. */
-  r = EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL;
-  for (i = 0; i < 12; i++)
-      r &= conf_debug_eigrp_packet[i] & (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL);
-  if (r == (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL))
-  {
-      vty_out (vty, "debug eigrp packet all detail%s", VTY_NEWLINE);
-      return 1;
-  }
-
-  /* debug eigrp packet all. */
-  r = EIGRP_DEBUG_SEND_RECV;
-  for (i = 0; i < 12; i++)
-      r &= conf_debug_eigrp_packet[i] & EIGRP_DEBUG_SEND_RECV;
-  if (r == EIGRP_DEBUG_SEND_RECV)
-  {
-      vty_out (vty, "debug eigrp packet all%s", VTY_NEWLINE);
-      for (i = 0; i < 12; i++)
-    	  if (conf_debug_eigrp_packet[i] & EIGRP_DEBUG_DETAIL)
-    	  vty_out (vty, "debug eigrp packet %s detail%s",
-		  type_str[i],
-		  VTY_NEWLINE);
-      return 1;
-  }
+//  r = EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL;
+//  for (i = 0; i < 12; i++)
+//      r &= conf_debug_eigrp_packet[i] & (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL);
+//  if (r == (EIGRP_DEBUG_SEND_RECV|EIGRP_DEBUG_DETAIL))
+//  {
+//      vty_out (vty, "debug eigrp packet all detail%s", VTY_NEWLINE);
+////      return 1;
+//  }
+//
+//  /* debug eigrp packet all. */
+//  r = EIGRP_DEBUG_SEND_RECV;
+//  for (i = 0; i < 12; i++)
+//      r &= conf_debug_eigrp_packet[i] & EIGRP_DEBUG_SEND_RECV;
+//  if (r == EIGRP_DEBUG_SEND_RECV)
+//  {
+//      vty_out (vty, "debug eigrp packet all%s", VTY_NEWLINE);
+//      for (i = 0; i < 12; i++)
+//    	  if (conf_debug_eigrp_packet[i] & EIGRP_DEBUG_DETAIL)
+//    	  vty_out (vty, "debug eigrp packet %s detail%s",
+//		  type_str[i],
+//		  VTY_NEWLINE);
+////      return 1;
+//  }
 
   /* debug eigrp packet */
-  for (i = 0; i < 12; i++)
+  for (i = 0; i < 10; i++)
   {
-      if (conf_debug_eigrp_packet[i] == 0)
-    	  continue;
+//      if (conf_debug_eigrp_packet[i] == 0)
+//    	  continue;
 
       	  vty_out (vty, "debug eigrp packet %s%s%s",
 	      type_str[i], detail_str[conf_debug_eigrp_packet[i]],
@@ -477,15 +478,17 @@ DEFUN (show_debugging_eigrp,
   if (IS_DEBUG_EIGRP(event,EVENT))
     vty_out (vty, "  EIGRP event debugging is on%s", VTY_NEWLINE);
 
-
   /* Show debug status for EIGRP Packets. */
   for (i = 0; i < 12; i++)
   {
+      if (i == 8)
+        continue;
+
 	if (IS_DEBUG_EIGRP_PACKET (i, SEND) && IS_DEBUG_EIGRP_PACKET (i, RECV))
 	{
 		vty_out (vty, "  EIGRP packet %s%s debugging is on%s",
 		LOOKUP (eigrp_packet_type_str, i + 1),
-		IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+		IS_DEBUG_EIGRP_PACKET (i, PACKET_DETAIL) ? " detail" : "",
 		VTY_NEWLINE);
 	}
 	else
@@ -493,12 +496,12 @@ DEFUN (show_debugging_eigrp,
 		if (IS_DEBUG_EIGRP_PACKET (i, SEND))
 			vty_out (vty, "  EIGRP packet %s send%s debugging is on%s",
 			LOOKUP (eigrp_packet_type_str, i + 1),
-			IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+			IS_DEBUG_EIGRP_PACKET (i, PACKET_DETAIL) ? " detail" : "",
 			VTY_NEWLINE);
 		if (IS_DEBUG_EIGRP_PACKET (i, RECV))
 			vty_out (vty, "  EIGRP packet %s receive%s debugging is on%s",
 			LOOKUP (eigrp_packet_type_str, i + 1),
-			IS_DEBUG_EIGRP_PACKET (i, DETAIL) ? " detail" : "",
+			IS_DEBUG_EIGRP_PACKET (i, PACKET_DETAIL) ? " detail" : "",
 			VTY_NEWLINE);
 	}
   }
@@ -598,11 +601,12 @@ DEFUN (show_debugging_eigrp,
    [no] debug eigrp packet (hello|dd|ls-request|ls-update|ls-ack|all)
                           [send|recv [detail]]
 */
-DEFUN (debug_eigrp_packet,
-       debug_eigrp_packet_all_cmd,
-       "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all)",
+DEFUN (debug_eigrp_packets,
+       debug_eigrp_packets_all_cmd,
+       "debug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all)",
        DEBUG_STR
        EIGRP_STR
+       "EIGRP packets\n"
        "EIGRP SIA-Query packets\n"
        "EIGRP SIA-Reply packets\n"
        "EIGRP ack packets\n"
@@ -620,8 +624,7 @@ DEFUN (debug_eigrp_packet,
   int type = 0;
   int flag = 0;
   int i;
-
-  assert (argc > 0);
+ assert (argc > 0);
 
   /* Check packet type. */
   if (strncmp (argv[0], "h", 1) == 0)
@@ -644,9 +647,11 @@ DEFUN (debug_eigrp_packet,
     type = EIGRP_DEBUG_SIAQUERY;
   if (strncmp (argv[0], "siar", 4) == 0)
     type = EIGRP_DEBUG_SIAREPLY;
+  if (strncmp (argv[0], "al", 2) == 0)
+     type = EIGRP_DEBUG_PACKETS_ALL;
 
 
-  /* Default, both send and recv. */
+  /* All packet types, both send and recv. */
   if (argc == 1)
     flag = EIGRP_DEBUG_SEND_RECV;
 
@@ -666,7 +671,7 @@ DEFUN (debug_eigrp_packet,
     if (strncmp (argv[2], "d", 1) == 0)
       flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < 11; i++)
     if (type & (0x01 << i))
     {
     	if (vty->node == CONFIG_NODE)
@@ -678,11 +683,12 @@ DEFUN (debug_eigrp_packet,
   return CMD_SUCCESS;
 }
 
-ALIAS (debug_eigrp_packet,
-       debug_ospf_packet_send_recv_cmd,
-       "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv|detail)",
+ALIAS (debug_eigrp_packets,
+       debug_eigrp_packets_send_recv_cmd,
+       "debug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv|detail)",
        DEBUG_STR
        EIGRP_STR
+       "EIGRP packets\n"
        "EIGRP SIA-Query packets\n"
        "EIGRP SIA-Reply packets\n"
        "EIGRP ack packets\n"
@@ -700,11 +706,12 @@ ALIAS (debug_eigrp_packet,
        "Packet received\n"
        "Detail information\n")
 
-ALIAS (debug_eigrp_packet,
-       debug_eigrp_packet_send_recv_detail_cmd,
-       "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv) (detail|)",
+ALIAS (debug_eigrp_packets,
+       debug_eigrp_packets_send_recv_detail_cmd,
+       "debug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv) (detail|)",
        DEBUG_STR
        EIGRP_STR
+       "EIGRP packets\n"
        "EIGRP SIA-Query packets\n"
        "EIGRP SIA-Reply packets\n"
        "EIGRP ack packets\n"
@@ -723,11 +730,12 @@ ALIAS (debug_eigrp_packet,
        "Detail Information\n")
 
 
-DEFUN (no_debug_eigrp_packet,
-	  no_debug_eigrp_packet_all_cmd,
-	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all)",
-	  DEBUG_STR
+DEFUN (no_debug_eigrp_packets,
+	  no_debug_eigrp_packets_all_cmd,
+	  "undebug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all)",
+	  UNDEBUG_STR
 	  EIGRP_STR
+	  "EIGRP packets\n"
 	  "EIGRP SIA-Query packets\n"
 	  "EIGRP SIA-Reply packets\n"
 	  "EIGRP ack packets\n"
@@ -791,7 +799,7 @@ DEFUN (no_debug_eigrp_packet,
    if (strncmp (argv[2], "d", 1) == 0)
 	 flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
- for (i = 0; i < 10; i++)
+ for (i = 0; i < 11; i++)
    if (type & (0x01 << i))
    {
 	if (vty->node == CONFIG_NODE)
@@ -803,11 +811,12 @@ DEFUN (no_debug_eigrp_packet,
  return CMD_SUCCESS;
 }
 
-ALIAS (no_debug_eigrp_packet,
-	  no_debug_ospf_packet_send_recv_cmd,
-	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv|detail)",
-	  DEBUG_STR
+ALIAS (no_debug_eigrp_packets,
+	  no_debug_eigrp_packets_send_recv_cmd,
+	  "undebug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv|detail)",
+	  UNDEBUG_STR
 	  EIGRP_STR
+	  "EIGRP packets\n"
 	  "EIGRP SIA-Query packets\n"
 	  "EIGRP SIA-Reply packets\n"
 	  "EIGRP ack packets\n"
@@ -825,11 +834,12 @@ ALIAS (no_debug_eigrp_packet,
 	  "Packet received\n"
 	  "Detail information\n")
 
-ALIAS (no_debug_eigrp_packet,
-	  no_debug_eigrp_packet_send_recv_detail_cmd,
-	  "debug eigrp packet (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv) (detail|)",
-	  DEBUG_STR
+ALIAS (no_debug_eigrp_packets,
+	  no_debug_eigrp_packets_send_recv_detail_cmd,
+	  "undebug eigrp packets (SIAquery|SIAreply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all) (send|recv) (detail|)",
+	  UNDEBUG_STR
 	  EIGRP_STR
+	  "EIGRP packets\n"
 	  "EIGRP SIA-Query packets\n"
 	  "EIGRP SIA-Reply packets\n"
 	  "EIGRP ack packets\n"
@@ -846,6 +856,13 @@ ALIAS (no_debug_eigrp_packet,
 	  "Packet sent\n"
 	  "Packet received\n"
 	  "Detail Information\n")
+
+ALIAS (no_debug_eigrp_packets,
+       no_debug_eigrp_packets_cmd,
+       "undebug eigrp packets",
+       UNDEBUG_STR
+       EIGRP_STR
+       "EIGRP packets\n")
 
 
 
@@ -864,20 +881,20 @@ eigrp_debug_init ()
   install_node (&eigrp_debug_node, config_write_debug);
 
   install_element (ENABLE_NODE, &show_debugging_eigrp_cmd);
-  install_element (ENABLE_NODE, &debug_eigrp_packet_all_cmd);
-  install_element (ENABLE_NODE, &no_debug_eigrp_packet_all_cmd);
-  install_element (ENABLE_NODE, &debug_ospf_packet_send_recv_cmd);
-  install_element (ENABLE_NODE, &no_debug_ospf_packet_send_recv_cmd);
-  install_element (ENABLE_NODE, &debug_eigrp_packet_send_recv_detail_cmd);
-  install_element (ENABLE_NODE, &no_debug_eigrp_packet_send_recv_detail_cmd);
+  install_element (ENABLE_NODE, &debug_eigrp_packets_all_cmd);
+  install_element (ENABLE_NODE, &no_debug_eigrp_packets_all_cmd);
+  install_element (ENABLE_NODE, &debug_eigrp_packets_send_recv_cmd);
+  install_element (ENABLE_NODE, &no_debug_eigrp_packets_send_recv_cmd);
+  install_element (ENABLE_NODE, &debug_eigrp_packets_send_recv_detail_cmd);
+  install_element (ENABLE_NODE, &no_debug_eigrp_packets_send_recv_detail_cmd);
 
   install_element (CONFIG_NODE, &show_debugging_eigrp_cmd);
-  install_element (CONFIG_NODE, &debug_eigrp_packet_all_cmd);
-  install_element (CONFIG_NODE, &no_debug_eigrp_packet_all_cmd);
-  install_element (CONFIG_NODE, &debug_ospf_packet_send_recv_cmd);
-  install_element (CONFIG_NODE, &no_debug_ospf_packet_send_recv_cmd);
-  install_element (CONFIG_NODE, &debug_eigrp_packet_send_recv_detail_cmd);
-  install_element (CONFIG_NODE, &no_debug_eigrp_packet_send_recv_detail_cmd);
+  install_element (CONFIG_NODE, &debug_eigrp_packets_all_cmd);
+  install_element (CONFIG_NODE, &no_debug_eigrp_packets_all_cmd);
+  install_element (CONFIG_NODE, &debug_eigrp_packets_send_recv_cmd);
+  install_element (CONFIG_NODE, &no_debug_eigrp_packets_send_recv_cmd);
+  install_element (CONFIG_NODE, &debug_eigrp_packets_send_recv_detail_cmd);
+  install_element (CONFIG_NODE, &no_debug_eigrp_packets_send_recv_detail_cmd);
 }
 
 

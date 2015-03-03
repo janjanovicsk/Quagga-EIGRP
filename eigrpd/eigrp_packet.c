@@ -59,13 +59,13 @@
 const struct message eigrp_packet_type_str[] =
 {
   { EIGRP_OPC_UPDATE,	"Update"		},
-  { EIGRP_OPC_UPDATE,	"Request"		},
+  { EIGRP_OPC_REQUEST,	"Request"		},
   { EIGRP_OPC_QUERY,	"Query"			},
   { EIGRP_OPC_REPLY,	"Reply"			},
   { EIGRP_OPC_HELLO,	"Hello"			},
   { EIGRP_OPC_IPXSAP,	"IPX-SAP"		},
   { EIGRP_OPC_PROBE,	"Probe"			},
-  { EIGRP_OPC_ACK,		"Ack"			},
+  { EIGRP_OPC_ACK,	"Ack"			},
   { EIGRP_OPC_SIAQUERY,	"SIAQuery"		},
   { EIGRP_OPC_SIAREPLY,	"SIAReply"		},
 };
@@ -447,7 +447,7 @@ eigrp_write (struct thread *thread)
   ret = sendmsg(eigrp->fd, &msg, flags);
   sockopt_iphdrincl_swab_systoh(&iph);
 
-  if (IS_DEBUG_EIGRP_PACKET(0, SEND))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, SEND))
     {
       eigrph = (struct eigrp_header *) STREAM_DATA(ep->s);
       opcode = eigrph->opcode;
@@ -463,7 +463,7 @@ eigrp_write (struct thread *thread)
 	      ei->ifp->mtu, safe_strerror(errno));
 
   /* Show debug sending packet. */
-  if (IS_DEBUG_EIGRP_PACKET(0, SEND) && (IS_DEBUG_EIGRP_PACKET(0, DETAIL)))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, SEND) && (IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL)))
     {
       zlog_debug("-----------------------------------------------------");
       eigrp_ip_header_dump(&iph);
@@ -527,7 +527,7 @@ eigrp_read (struct thread *thread)
 
 
   /* IP Header dump. */
-  if (IS_DEBUG_EIGRP_PACKET(0, RECV) && IS_DEBUG_EIGRP_PACKET(0, DETAIL))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV) && IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL))
       eigrp_ip_header_dump(iph);
 
   /* Note that sockopt_iphdrincl_swab_systoh was called in eigrp_recv_packet. */
@@ -557,7 +557,7 @@ eigrp_read (struct thread *thread)
   if (eigrp_if_lookup_by_local_addr(eigrp, NULL, iph->ip_src) ||
       (IPV4_ADDR_SAME(&iph->ip_src.s_addr, &ei->address->u.prefix4)))
     {
-      if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+      if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 	zlog_debug("eigrp_read[%s]: Dropping self-originated packet",
 		   inet_ntoa(iph->ip_src));
       return 0;
@@ -569,7 +569,7 @@ eigrp_read (struct thread *thread)
   stream_forward_getp(ibuf, (iph->ip_hl * 4));
   eigrph = (struct eigrp_header *) STREAM_PNT(ibuf);
 
-  if (IS_DEBUG_EIGRP_PACKET(0, RECV) && IS_DEBUG_EIGRP_PACKET(0, DETAIL))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV) && IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL))
     eigrp_header_dump(eigrph);
 
 //  if (MSG_OK != eigrp_packet_examin(eigrph, stream_get_endp(ibuf) - stream_get_getp(ibuf)))
@@ -592,7 +592,7 @@ eigrp_read (struct thread *thread)
     {
       char buf[3][INET_ADDRSTRLEN];
 
-      if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+      if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 	zlog_debug("ignoring packet from router %s sent to %s, "
 		   "received on a passive interface, %s",
 		   inet_ntop(AF_INET, &eigrph->vrid, buf[0], sizeof(buf[0])),
@@ -617,7 +617,7 @@ eigrp_read (struct thread *thread)
    */
   else if (ei->ifp != ifp)
     {
-      if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+      if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
         zlog_warn("Packet from [%s] received on wrong link %s",
 		   inet_ntoa(iph->ip_src), ifp->name);
       return 0;
@@ -627,7 +627,7 @@ eigrp_read (struct thread *thread)
   ret = eigrp_verify_header(ibuf, ei, iph, eigrph);
   if (ret < 0)
     {
-      if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+      if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
         zlog_debug("eigrp_read[%s]: Header check failed, dropping.",
                    inet_ntoa(iph->ip_src));
       return ret;
@@ -637,7 +637,7 @@ eigrp_read (struct thread *thread)
      start of the eigrp TLVs */
   opcode = eigrph->opcode;
 
-  if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
     zlog_debug("Received [%s] length [%u] via [%s] src [%s] dst [%s]",
 	       LOOKUP(eigrp_packet_type_str, opcode), length,
 	       IF_NAME(ei), inet_ntoa(iph->ip_src), inet_ntoa(iph->ip_dst));
@@ -930,7 +930,7 @@ eigrp_packet_header_init (int type, struct eigrp_interface *ei, struct stream *s
 //    eigrph->sequence = htonl(3);
   eigrph->flags = htonl(flags);
 
-  if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+  if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
     zlog_debug("Packet Header Init Seq [%u] Ack [%u]",
 	       htonl(eigrph->sequence), htonl(eigrph->ack));
 
