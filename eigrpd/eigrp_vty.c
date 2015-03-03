@@ -311,6 +311,33 @@ DEFUN (no_eigrp_network,
   return CMD_SUCCESS;
 }
 
+DEFUN (eigrp_neighbor,
+       eigrp_neighbor_cmd,
+       "neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_eigrp_neighbor,
+       no_eigrp_neighbor_cmd,
+       "no neighbor A.B.C.D (" INT_TYPES_CMD_STR ")",
+       NO_STR
+       "Specify a neighbor router\n"
+       "Neighbor address\n"
+       INT_TYPES_DESC)
+{
+  struct eigrp *eigrp = vty->index;
+  struct prefix_ipv4 p;
+
+  return CMD_SUCCESS;
+}
+
 DEFUN (show_ip_eigrp_topology,
        show_ip_eigrp_topology_cmd,
        "show ip eigrp topology",
@@ -530,19 +557,6 @@ DEFUN (eigrp_if_delay,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = delay;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -570,20 +584,6 @@ DEFUN (no_eigrp_if_delay,
 
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = EIGRP_DELAY_DEFAULT;
-
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -621,19 +621,6 @@ DEFUN (eigrp_if_bandwidth,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -1365,6 +1352,9 @@ eigrp_vty_init (void)
   install_element (EIGRP_NODE, &no_eigrp_metric_weights_cmd);
   install_element (EIGRP_NODE, &eigrp_maximum_paths_cmd);
   install_element (EIGRP_NODE, &no_eigrp_maximum_paths_cmd);
+  install_element (EIGRP_NODE, &eigrp_neighbor_cmd);
+  install_element (EIGRP_NODE, &no_eigrp_neighbor_cmd);
+
 
 
   eigrp_vty_zebra_init ();

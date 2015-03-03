@@ -31,7 +31,7 @@
 
 
 extern int eigrp_get_fsm_event (struct eigrp_fsm_action_message *);
-extern int eigrp_fsm_event (struct thread *);
+extern int eigrp_fsm_event (struct eigrp_fsm_action_message *, int);
 
 
 #endif /* _ZEBRA_EIGRP_DUAL_H */

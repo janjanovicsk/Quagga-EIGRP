@@ -38,6 +38,8 @@
 
 /*Packet requiring ack will be retransmitted again after this time*/
 #define EIGRP_PACKET_RETRANS_TIME        2 /* in seconds */
+#define EIGRP_PACKET_RETRANS_MAX         16 /* number of retrans attempts */
+#define PLAINTEXT_LENGTH                 81
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1
@@ -135,6 +137,10 @@
 #define EIGRP_FSM_STATE_ACTIVE_1             2
 #define EIGRP_FSM_STATE_ACTIVE_2             3
 #define EIGRP_FSM_STATE_ACTIVE_3             4
+
+/*EIGRP FSM events return values*/
+#define EIGRP_FSM_NEED_UPDATE				1
+#define EIGRP_FSM_NEED_QUERY				2
 
 /*EIGRP FSM events*/
 #define EIGRP_FSM_EVENT_NQ_FCN                  0 /*input event other than query from succ, FC not satisfied*/

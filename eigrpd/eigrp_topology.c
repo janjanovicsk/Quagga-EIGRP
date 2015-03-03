@@ -499,7 +499,7 @@ eigrp_topology_neighbor_down(struct eigrp *eigrp, struct eigrp_neighbor * nbr)
               msg->entry = entry;
               msg->prefix = prefix;
               int event = eigrp_get_fsm_event(msg);
-              EIGRP_FSM_EVENT_SCHEDULE(msg, event);
+              eigrp_fsm_event(msg, event);
             }
         }
     }

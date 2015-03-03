@@ -41,6 +41,7 @@
 #include "sockopt.h"
 #include "checksum.h"
 #include "md5.h"
+#include "sha256.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -79,6 +80,12 @@ static int eigrp_verify_header (struct stream *, struct eigrp_interface *, struc
 				struct eigrp_header *);
 static int eigrp_check_network_mask (struct eigrp_interface *, struct in_addr);
 
+
+static int eigrp_retrans_count_exceeded(struct eigrp_packet *ep, struct eigrp_neighbor *nbr)
+{
+  return 1;
+}
+
 int
 eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_char flags)
 {
@@ -105,24 +112,6 @@ eigrp_make_md5_digest (struct eigrp_interface *ei, struct stream *s, u_char flag
   keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
    if(keychain)
      key = key_lookup_for_send(keychain);
-
-//   int i;
-//      for(i=0;i<backup_end;i++)
-//       {
-//           memset(&ctx, 0, sizeof(ctx));
-//           MD5Init(&ctx);
-//           MD5Update(&ctx, ibuf, backup_end - i);
-//           if((flags & EIGRP_AUTH_UPDATE_INIT_FLAG)==0)
-//             {
-//               MD5Update(&ctx, key->string, strlen(key->string));
-//               if(strlen(key->string) < 16)
-//                  MD5Update(&ctx, zeropad, 16 - strlen(key->string));
-//             }
-//           MD5Final(digest, &ctx);
-//           zlog_debug("*********** Try  -%d *************", i);
-//           zlog_debug( "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
-//       }
-
 
    memset(&ctx, 0, sizeof(ctx));
    MD5Init(&ctx);
@@ -249,18 +238,76 @@ eigrp_check_md5_digest (struct stream *s, struct TLV_MD5_Authentication_Type *au
   return 1;
 }
 
+static int
+strnzcpyn(char *dst, const char *src, int size)
+{
+        char *dptr;
+        if (!size) return 0;
+
+        dptr = dst;
+
+        while (--size)
+                if (!(*dptr++ = *src++)) return (dptr-dst)-1;
+        *dptr = 0;
+
+        return (dptr-dst)-1;
+}
+
 int
 eigrp_make_sha256_digest (struct eigrp_interface *ei, struct stream *s, u_char flags)
 {
     struct key *key;
     struct keychain *keychain;
+    char *source_ip;
+    int saved_len;
+    char saved_key[PLAINTEXT_LENGTH + 1];
 
-    unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
-    MD5_CTX ctx;
+
+    unsigned char digest[EIGRP_AUTH_TYPE_SHA256_LEN];
+    unsigned char buffer[1 + PLAINTEXT_LENGTH + 45 + 1] = { 0 };
+    HMAC_SHA256_CTX ctx;
     void *ibuf;
     size_t backup_get, backup_end;
-    struct TLV_MD5_Authentication_Type *auth_TLV;
+    struct TLV_SHA256_Authentication_Type *auth_TLV;
 
+    ibuf = s->data;
+    backup_end = s->endp;
+    backup_get = s->getp;
+
+    auth_TLV = eigrp_authTLV_SHA256_new ();
+
+    stream_set_getp(s,EIGRP_HEADER_LEN);
+    stream_get(auth_TLV,s,EIGRP_AUTH_SHA256_TLV_SIZE);
+    stream_set_getp(s, backup_get);
+
+    keychain = keychain_lookup(IF_DEF_PARAMS (ei->ifp)->auth_keychain);
+     if(keychain)
+       key = key_lookup_for_send(keychain);
+
+//     saved_len[index] = strnzcpyn(saved_key[index], key,
+//                             PLAINTEXT_LENGTH + 1);
+
+     source_ip = calloc(16, sizeof(char));
+     inet_ntop(AF_INET, &ei->address->u.prefix4, source_ip, 16);
+
+     memset(&ctx, 0, sizeof(ctx));
+     buffer[0] = '\n';
+     memcpy(buffer + 1, key, strlen (key->string));
+     memcpy(buffer + 1 + strlen(key->string), source_ip, strlen(source_ip));
+     HMAC__SHA256_Init(&ctx, buffer, 1 + strlen (key->string) + strlen(source_ip));
+     HMAC__SHA256_Update(&ctx, ibuf, strlen(ibuf));
+     HMAC__SHA256_Final(digest, &ctx);
+
+
+     /* Put hmac-sha256 digest to it's place */
+     memcpy(auth_TLV->digest,digest,EIGRP_AUTH_TYPE_SHA256_LEN);
+
+     stream_set_endp(s,EIGRP_HEADER_LEN);
+     stream_put(s,auth_TLV,EIGRP_AUTH_SHA256_TLV_SIZE);
+     stream_set_endp(s, backup_end);
+
+     eigrp_authTLV_SHA256_free(auth_TLV);
+     free(source_ip);
 
     return EIGRP_AUTH_TYPE_SHA256_LEN;
 }
@@ -664,10 +711,10 @@ eigrp_read (struct thread *thread)
       //      eigrp_request_receive(eigrp, iph, eigrph, ibuf, ei, length);
       break;
     case EIGRP_OPC_SIAQUERY:
-      //      eigrp_query_receive(eigrp, iph, eigrph, ibuf, ei, length);
+      eigrp_query_receive(eigrp, iph, eigrph, ibuf, ei, length);
       break;
     case EIGRP_OPC_SIAREPLY:
-      //      eigrp_reply_receive(eigrp, iph, eigrph, ibuf, ei, length);
+      eigrp_reply_receive(eigrp, iph, eigrph, ibuf, ei, length);
       break;
     case EIGRP_OPC_UPDATE:
       eigrp_update_receive(eigrp, iph, eigrph, ibuf, ei, length);
@@ -828,8 +875,7 @@ eigrp_send_packet_reliably (struct eigrp_neighbor *nbr)
       struct eigrp_packet *duplicate;
       duplicate = eigrp_packet_duplicate(ep, nbr);
       /* Add packet to the top of the interface output queue*/
-      if (ep->dst.s_addr != htonl(EIGRP_MULTICAST_ADDRESS))
-	eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
+      eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
 
       /*Start retransmission timer*/
       THREAD_TIMER_ON(master, ep->t_retrans_timer, eigrp_unack_packet_retrans,
@@ -1030,6 +1076,10 @@ eigrp_unack_packet_retrans (struct thread *thread)
       /* Add packet to the top of the interface output queue*/
       eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
 
+      ep->retrans_counter++;
+      if(ep->retrans_counter == EIGRP_PACKET_RETRANS_MAX)
+        return eigrp_retrans_count_exceeded(ep, nbr);
+
       /*Start retransmission timer*/
       ep->t_retrans_timer =
           thread_add_timer(master, eigrp_unack_packet_retrans, nbr,EIGRP_PACKET_RETRANS_TIME);
@@ -1063,6 +1113,10 @@ eigrp_unack_multicast_packet_retrans (struct thread *thread)
       duplicate = eigrp_packet_duplicate(ep, nbr);
       /* Add packet to the top of the interface output queue*/
       eigrp_fifo_push_head(nbr->ei->obuf, duplicate);
+
+      ep->retrans_counter++;
+      if(ep->retrans_counter == EIGRP_PACKET_RETRANS_MAX)
+        return eigrp_retrans_count_exceeded(ep, nbr);
 
       /*Start retransmission timer*/
       ep->t_retrans_timer =
@@ -1325,7 +1379,7 @@ eigrp_add_authTLV_SHA256_to_stream (struct stream *s,
 
   if(key)
     {
-      authTLV->key_id = htonl(key->index);
+      authTLV->key_id = 0;
       memset(authTLV->digest,0,EIGRP_AUTH_TYPE_SHA256_LEN);
       stream_put(s,authTLV, sizeof(struct TLV_SHA256_Authentication_Type));
       eigrp_authTLV_SHA256_free(authTLV);

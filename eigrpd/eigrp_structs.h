@@ -94,8 +94,12 @@ struct eigrp
 
   struct route_table *networks; /* EIGRP config networks. */
 
-
   struct list *topology_table;
+
+  u_int64_t serno; /* Global serial number counter for topology entry changes*/
+  u_int64_t serno_last_update; /* Highest serial number of information send by last update*/
+  struct list *topology_changes_internalIPV4;
+  struct list *topology_changes_externalIPV4;
 
   /*Neighbor self*/
   struct eigrp_neighbor *neighbor_self;
@@ -152,6 +156,8 @@ struct eigrp_interface
   u_int32_t reply_out; /* Reply message output count. */
   u_int32_t siaQuery_in;
   u_int32_t siaQuery_out;
+  u_int32_t siaReply_in;
+  u_int32_t siaReply_out;
   u_int32_t ack_out;
   u_int32_t ack_in;
 
@@ -408,12 +414,15 @@ struct eigrp_prefix_entry
   u_char nt;                                //network type
   u_char state; 							//route fsm state
   u_char af;								// address family
+  u_char req_action;						// required action
 
   struct prefix_ipv4 *destination_ipv4;		// pointer to struct with ipv4 address
   struct prefix_ipv6 *destination_ipv6;		// pointer to struct with ipv6 address
 
   //If network type is REMOTE_EXTERNAL, pointer will have reference to its external TLV
   struct TLV_IPv4_External_type *extTLV;
+
+  u_int64_t serno; /*Serial number for this entry. Increased with each change of entry*/
 };
 
 /* EIGRP Topology table record structure */
