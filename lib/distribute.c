@@ -778,5 +778,14 @@ distribute_list_init (int node)
     install_element (node, &no_ipv6_distribute_list_prefix_all_cmd);
     install_element (node, &ipv6_distribute_list_prefix_cmd);
     install_element (node, &no_ipv6_distribute_list_prefix_cmd);
+  } else if(node==EIGRP_NODE) {
+	install_element (node, &distribute_list_all_cmd);
+	install_element (node, &no_distribute_list_all_cmd);
+	install_element (node, &distribute_list_cmd);
+	install_element (node, &no_distribute_list_cmd);
+	install_element (node, &distribute_list_prefix_all_cmd);
+	install_element (node, &no_distribute_list_prefix_all_cmd);
+	install_element (node, &distribute_list_prefix_cmd);
+	install_element (node, &no_distribute_list_prefix_cmd);
   }
 }

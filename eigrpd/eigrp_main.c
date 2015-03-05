@@ -310,9 +310,9 @@ main (int argc, char **argv)
   prefix_list_delete_hook (eigrp_distribute_update_all);
 
   /* Distribute list install. */
-  //distribute_list_init (EIGRP_NODE);
-  //distribute_list_add_hook (eigrp_distribute_update);
-  //distribute_list_delete_hook (eigrp_distribute_update);
+  distribute_list_init (EIGRP_NODE);
+  distribute_list_add_hook (eigrp_distribute_update);
+  distribute_list_delete_hook (eigrp_distribute_update);
 
   vty_read_config (config_file, config_default);
 
