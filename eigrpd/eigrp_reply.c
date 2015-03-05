@@ -66,7 +66,18 @@ eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
   eigrp_packet_header_init(EIGRP_OPC_REPLY, nbr->ei, ep->s, 0,
                            nbr->ei->eigrp->sequence_number, 0);
 
+  // encode Authentication TLV, if needed
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
+    }
+
   length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+
+  if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+    {
+      eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_UPDATE_FLAG);
+    }
 
   /* EIGRP Checksum */
   eigrp_packet_checksum(nbr->ei, ep->s, length);
@@ -109,21 +120,6 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 
   while (s->endp > s->getp)
     {
-      struct eigrp_packet *ep;
-      ep = eigrp_fifo_tail(nbr->retrans_queue);
-      if (ep != NULL)
-        {
-          if (ntohl(eigrph->ack) == ep->sequence_number)
-            {
-              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-              eigrp_packet_free(ep);
-              if (nbr->retrans_queue->count > 0)
-                {
-                  eigrp_send_packet_reliably(nbr);
-                }
-            }
-        }
-
       type = stream_getw(s);
       if (type == EIGRP_TLV_IPv4_INT)
         {
@@ -131,7 +127,6 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 
           tlv = eigrp_read_ipv4_tlv(s);
 
-          //TU TREBA MSG!!!!!!!!!!!!!
           struct prefix_ipv4 *dest_addr;
           dest_addr = prefix_ipv4_new();
           dest_addr->prefix = tlv->destination;
@@ -159,7 +154,7 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           msg->entry = entry;
           msg->prefix = dest;
           int event = eigrp_get_fsm_event(msg);
-          EIGRP_FSM_EVENT_SCHEDULE(msg, event);
+          eigrp_fsm_event(msg, event);
 
           eigrp_IPv4_InternalTLV_free (tlv);
         }

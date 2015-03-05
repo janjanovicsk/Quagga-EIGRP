@@ -54,8 +54,8 @@ extern void eigrp_send_packet_reliably (struct eigrp_neighbor *);
 
 extern struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv (struct stream *);
 extern u_int16_t eigrp_add_internalTLV_to_stream (struct stream *, struct eigrp_prefix_entry *);
-
 extern u_int16_t eigrp_add_authTLV_MD5_to_stream (struct stream *, struct eigrp_interface *);
+extern u_int16_t eigrp_add_authTLV_SHA256_to_stream (struct stream *, struct eigrp_interface *);
 
 extern int eigrp_unack_packet_retrans (struct thread *);
 extern int eigrp_unack_multicast_packet_retrans (struct thread *);
@@ -73,10 +73,10 @@ extern int  eigrp_hello_timer (struct thread *);
 /*
  * These externs are found in eigrp_update.c
  */
-extern void eigrp_update_send (struct eigrp_interface *, struct eigrp_prefix_entry *);
+extern void eigrp_update_send (struct eigrp_interface *);
 extern void eigrp_update_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                 struct stream *, struct eigrp_interface *, int);
-extern void eigrp_update_send_all (struct eigrp *, struct eigrp_prefix_entry *, struct eigrp_interface *);
+extern void eigrp_update_send_all (struct eigrp *, struct eigrp_interface *);
 extern void eigrp_update_send_init (struct eigrp_neighbor *);
 extern void eigrp_update_send_EOT (struct eigrp_neighbor *);
 
@@ -84,10 +84,10 @@ extern void eigrp_update_send_EOT (struct eigrp_neighbor *);
  * These externs are found in eigrp_query.c
  */
 
-extern void eigrp_send_query (struct eigrp_neighbor *, struct eigrp_neighbor_entry *);
+extern void eigrp_send_query (struct eigrp_interface *);
 extern void eigrp_query_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
-extern u_int32_t eigrp_query_send_all (struct eigrp *, struct eigrp_neighbor_entry *);
+extern u_int32_t eigrp_query_send_all (struct eigrp *);
 
 /*
  * These externs are found in eigrp_reply.c
@@ -95,6 +95,20 @@ extern u_int32_t eigrp_query_send_all (struct eigrp *, struct eigrp_neighbor_ent
 extern void eigrp_send_reply (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
 extern void eigrp_reply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
                                  struct stream *, struct eigrp_interface *, int);
+
+/*
+ * These externs are found in eigrp_siaquery.c
+ */
+extern void eigrp_send_siaquery (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
+extern void eigrp_siaquery_receive (struct eigrp *, struct ip *, struct eigrp_header *,
+                     struct stream *, struct eigrp_interface *, int);
+
+/*
+ * These externs are found in eigrp_siareply.c
+ */
+extern void eigrp_send_siareply (struct eigrp_neighbor *, struct eigrp_prefix_entry *);
+extern void eigrp_siareply_receive (struct eigrp *, struct ip *, struct eigrp_header *,
+                     struct stream *, struct eigrp_interface *, int);
 
 extern struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new (void);
 extern void eigrp_authTLV_MD5_free (struct TLV_MD5_Authentication_Type *);
@@ -114,5 +128,8 @@ extern struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new (void);
 extern void eigrp_IPv4_InternalTLV_free (struct TLV_IPv4_Internal_type *);
 
 extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new (void);
+
+extern const struct message eigrp_packet_type_str[];
+extern const size_t eigrp_packet_type_str_max;
 
 #endif /* _ZEBRA_EIGRP_PACKET_H */

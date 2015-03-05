@@ -12,7 +12,8 @@ sbin_PROGRAMS = eigrpd
 libeigrp_la_SOURCES = \
 	eigrpd.c eigrp_zebra.c eigrp_interface.c eigrp_neighbor.c eigrp_dump.c eigrp_vty.c \
 	eigrp_network.c eigrp_packet.c eigrp_topology.c eigrp_fsm.c eigrp_hello.c eigrp_update.c \
-	eigrp_query.c eigrp_reply.c eigrp_snmp.c eigrp_filter.c
+	eigrp_query.c eigrp_reply.c eigrp_snmp.c eigrp_siaquery.c eigrp_siareply.c eigrp_filter.c
+
 
 eigrpdheaderdir = $(pkgincludedir)/eigrpd
 

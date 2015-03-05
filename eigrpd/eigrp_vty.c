@@ -557,19 +557,6 @@ DEFUN (eigrp_if_delay,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = delay;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -597,20 +584,6 @@ DEFUN (no_eigrp_if_delay,
 
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->delay = EIGRP_DELAY_DEFAULT;
-
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
@@ -648,19 +621,6 @@ DEFUN (eigrp_if_bandwidth,
   ifp = vty->index;
   IF_DEF_PARAMS (ifp)->bandwidth = bandwidth;
 
-  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
-    {
-      if (ei->ifp == ifp)
-        break;
-    }
-
-  for (ALL_LIST_ELEMENTS (eigrp->topology_table, node, nnode, pe))
-    {
-      for (ALL_LIST_ELEMENTS (pe->entries, node2, nnode2, ne))
-        {
-          /*TODO: */
-        }
-    }
 
   return CMD_SUCCESS;
 }
