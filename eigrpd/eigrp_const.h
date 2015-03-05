@@ -1,12 +1,16 @@
 /*
  * EIGRP Definition of Constants.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -406,5 +410,12 @@
 #define EIGRP_EXTCOMM_RPM               0x8805 /* EIGRP Remote: Protocol + Metric    */
 #define EIGRP_EXTCOMM_VRR               0x8806 /* EIGRP Vecmet: Rsvd + (internal) Routerid */
 
+
+/*
+ * EIGRP Filter constants
+ */
+#define EIGRP_FILTER_IN  0
+#define EIGRP_FILTER_OUT 1
+#define EIGRP_FILTER_MAX 2
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

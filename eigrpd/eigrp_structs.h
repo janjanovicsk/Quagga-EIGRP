@@ -1,12 +1,16 @@
 /*
  * EIGRP Definition of Data Structures.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -28,6 +32,8 @@
 
 #ifndef _ZEBRA_EIGRP_STRUCTS_H_
 #define _ZEBRA_EIGRP_STRUCTS_H_
+
+#include "filter.h"
 
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_macros.h"
@@ -140,6 +146,15 @@ struct eigrp_interface
   struct thread *t_hello; /* timer */
 
   int on_write_q;
+
+  /* Access-list. */
+  struct access_list *list[EIGRP_FILTER_MAX];
+
+  /* Prefix-list. */
+  struct prefix_list *prefix[EIGRP_FILTER_MAX];
+
+  /* Route-map. */
+  struct route_map *routemap[EIGRP_FILTER_MAX];
 
   /* Statistics fields. */
   u_int32_t hello_in; /* Hello message input count. */

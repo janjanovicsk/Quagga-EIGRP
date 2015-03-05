@@ -1,12 +1,16 @@
 /*
  * EIGRP Main Routine.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -56,6 +60,7 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_snmp.h"
+#include "eigrpd/eigrp_filter.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p [] = 
@@ -294,6 +299,20 @@ main (int argc, char **argv)
   eigrp_snmp_init ();
 #endif /* HAVE_SNMP */
 
+  /* Access list install. */
+  access_list_init ();
+  access_list_add_hook (eigrp_distribute_update_all_wrapper);
+  access_list_delete_hook (eigrp_distribute_update_all_wrapper);
+
+  /* Prefix list initialize.*/
+  prefix_list_init ();
+  prefix_list_add_hook (eigrp_distribute_update_all);
+  prefix_list_delete_hook (eigrp_distribute_update_all);
+
+  /* Distribute list install. */
+  //distribute_list_init (EIGRP_NODE);
+  //distribute_list_add_hook (eigrp_distribute_update);
+  //distribute_list_delete_hook (eigrp_distribute_update);
 
   vty_read_config (config_file, config_default);
 
