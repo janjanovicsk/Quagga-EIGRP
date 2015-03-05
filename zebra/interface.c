@@ -997,6 +997,76 @@ DEFUN (show_interface_desc,
   return CMD_SUCCESS;
 }
 
+DEFUN (show_ip_interface_brief,
+       show_ip_interface_brief_cmd,
+       "show ip interface brief",
+       SHOW_STR
+	   IP_STR
+       "IP interface status and configuration\n"
+	   "Brief summary of IP status and configuration\n")
+{
+  struct listnode *node;
+  struct interface *ifp;
+  struct connected *connected;
+  struct listnode *nodeAdd;
+  struct prefix *p;
+
+  vty_out (vty, "Interface	IP-Address  		Status  Protocol  Description%s", VTY_NEWLINE);
+  for (ALL_LIST_ELEMENTS_RO (iflist, node, ifp))
+  {
+      int len;
+      int is_ip = 0;
+
+      len = vty_out (vty, "%s", ifp->name);
+      vty_out (vty, "%*s", (16 - len), " ");
+
+      /* Print IP address and netmask */
+      for (ALL_LIST_ELEMENTS_RO (ifp->connected, nodeAdd, connected))
+	  {
+		if (CHECK_FLAG (connected->conf, ZEBRA_IFC_REAL) &&
+      	  (connected->address->family == AF_INET))
+		{
+			p = connected->address;
+			len = prefix_vty_out (vty, p);
+			len += vty_out (vty, "/%d", p->prefixlen);
+		    vty_out (vty, "%*s", (24 - len), " ");
+			is_ip = 1;
+		}
+	  }
+      /* Print unassigned if there isn't any IP address */
+      if(is_ip == 0)
+      {
+    	  len = vty_out (vty, "unassigned      ");
+    	  vty_out (vty, "%*s", (24 - len), " ");
+      }
+
+      if (if_is_up(ifp))
+	{
+	  vty_out (vty, "up      ");
+	  if (CHECK_FLAG(ifp->status, ZEBRA_INTERFACE_LINKDETECTION))
+	    {
+	      if (if_is_running(ifp))
+		vty_out (vty, "up        ");
+	      else
+		vty_out (vty, "down      ");
+	    }
+	  else
+	    {
+	      vty_out (vty, "unknown   ");
+	    }
+	}
+      else
+	{
+	  vty_out (vty, "down    down      ");
+	}
+
+      if (ifp->desc)
+	vty_out (vty, "%s", ifp->desc);
+      vty_out (vty, "%s", VTY_NEWLINE);
+  }
+  return CMD_SUCCESS;
+}
+
 DEFUN (multicast,
        multicast_cmd,
        "multicast",
@@ -1634,6 +1704,7 @@ zebra_if_init (void)
   install_element (VIEW_NODE, &show_interface_cmd);
   install_element (ENABLE_NODE, &show_interface_cmd);
   install_element (ENABLE_NODE, &show_interface_desc_cmd);
+  install_element (ENABLE_NODE, &show_ip_interface_brief_cmd);
   install_element (CONFIG_NODE, &zebra_interface_cmd);
   install_element (CONFIG_NODE, &no_interface_cmd);
   install_default (INTERFACE_NODE);
