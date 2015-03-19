@@ -56,6 +56,7 @@
 #include "keychain.h"
 #include "privs.h"
 
+#include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_filter.h"
@@ -141,7 +142,7 @@ eigrp_distribute_update_all (struct prefix_list *notused)
   struct interface *ifp;
   struct listnode *node, *nnode;
 
-  for (ALL_LIST_ELEMENTS (iflist, node, nnode, ifp))
+  for (ALL_LIST_ELEMENTS (eigrp_om->iflist, node, nnode, ifp))
     eigrp_distribute_update_interface (ifp);
 }
 

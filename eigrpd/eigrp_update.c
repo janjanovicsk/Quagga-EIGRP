@@ -69,6 +69,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   u_int16_t type;
   uint16_t  length;
   u_char same;
+  struct access_list *alist;
 
   /* increment statistics. */
   ei->update_in++;
@@ -172,7 +173,31 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               ne->reported_distance = eigrp_calculate_metrics(eigrp,
                   &tlv->metric);
 
-              ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
+
+              /*
+			   * Check if there is any access-list on interface (IN direction)
+			   *  and set distance to max
+			   */
+			  alist = ei->list[EIGRP_FILTER_IN];
+
+			  if (alist) {
+				  zlog_info("ALIST:");
+				  zlog_info(alist->name);
+			  } else {
+				  zlog_info("ALIST je prazdny");
+			  }
+
+			  if (alist && access_list_apply (alist,
+						 (struct prefix *) dest_addr) == FILTER_DENY)
+			  {
+				  zlog_info("Nastavujem metriku na MAX");
+				  ne->distance = EIGRP_MAX_METRIC;
+			  } else {
+				  zlog_info("NENastavujem metriku ");
+				  //ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
+				  ne->distance = EIGRP_MAX_METRIC;
+			  }
+
 
               pe->fdistance = pe->distance = pe->rdistance =
                   ne->distance;
@@ -344,6 +369,8 @@ eigrp_update_send (struct eigrp_interface *ei)
     {
       if(pe->req_action & EIGRP_FSM_NEED_UPDATE)
         {
+    	  // TODO : ditribute-list <ACL> out should be checked here
+
           length += eigrp_add_internalTLV_to_stream(ep->s, pe);
           has_tlv = 1;
         }

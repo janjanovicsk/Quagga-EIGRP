@@ -670,7 +670,7 @@ eigrp_read (struct thread *thread)
                  eigrp_update_send_EOT(nbr);
                }
              ep = eigrp_fifo_pop_tail(nbr->retrans_queue);
-             eigrp_packet_free(ep);
+             /*eigrp_packet_free(ep);*/
              if (nbr->retrans_queue->count > 0)
                {
                  eigrp_send_packet_reliably(nbr);
