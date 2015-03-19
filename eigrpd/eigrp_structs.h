@@ -79,6 +79,9 @@ struct eigrp
   u_char variance;              /*Metric variance multiplier*/
   u_char max_paths;             /*Maximum allowed paths for 1 prefix*/
 
+  /*Name of this EIGRP instance*/
+  char *name;
+
   /* EIGRP Router ID. */
   u_int32_t router_id; /* Configured automatically. */
   u_int32_t router_id_static; /* Configured manually. */

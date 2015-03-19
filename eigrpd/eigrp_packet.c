@@ -65,7 +65,7 @@ const struct message eigrp_packet_type_str[] =
   { EIGRP_OPC_HELLO,	"Hello"			},
   { EIGRP_OPC_IPXSAP,	"IPX-SAP"		},
   { EIGRP_OPC_PROBE,	"Probe"			},
-  { EIGRP_OPC_ACK,	"Ack"			},
+  { EIGRP_OPC_ACK,		"Ack"			},
   { EIGRP_OPC_SIAQUERY,	"SIAQuery"		},
   { EIGRP_OPC_SIAREPLY,	"SIAReply"		},
 };
