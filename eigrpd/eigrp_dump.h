@@ -39,25 +39,25 @@ extern unsigned long term_debug_eigrp;
 
 /* neighbor debug flags */
 extern unsigned long term_debug_eigrp_nei;
-#define EIGRP_DEBUG_NEI			0x01
+#define EIGRP_DEBUG_NEI				0x01
 
 /* packet debug flags */
 extern unsigned long term_debug_eigrp_packet[];
-#define EIGRP_DEBUG_UPDATE		0x01
-#define EIGRP_DEBUG_REQUEST		0x02
-#define EIGRP_DEBUG_QUERY		0x04
-#define EIGRP_DEBUG_REPLY		0x08
-#define EIGRP_DEBUG_HELLO		0x10
-#define EIGRP_DEBUG_PROBE		0x40
-#define EIGRP_DEBUG_ACK 		0x80
-#define EIGRP_DEBUG_SIAQUERY	        0x200
-#define EIGRP_DEBUG_SIAREPLY	        0x400
-#define EIGRP_DEBUG_STUB 		0x800
-#define EIGRP_DEBUG_PACKETS_ALL         0xfff
+#define EIGRP_DEBUG_UPDATE			0x01
+#define EIGRP_DEBUG_REQUEST			0x02
+#define EIGRP_DEBUG_QUERY			0x04
+#define EIGRP_DEBUG_REPLY			0x08
+#define EIGRP_DEBUG_HELLO			0x10
+#define EIGRP_DEBUG_PROBE			0x40
+#define EIGRP_DEBUG_ACK 			0x80
+#define EIGRP_DEBUG_SIAQUERY	    0x200
+#define EIGRP_DEBUG_SIAREPLY	    0x400
+#define EIGRP_DEBUG_STUB 			0x800
+#define EIGRP_DEBUG_PACKETS_ALL     0xfff
 
 extern unsigned long term_debug_eigrp_transmit;
-#define EIGRP_DEBUG_SEND		0x01
-#define EIGRP_DEBUG_RECV		0x02
+#define EIGRP_DEBUG_SEND			0x01
+#define EIGRP_DEBUG_RECV			0x02
 #define EIGRP_DEBUG_SEND_RECV		0x03
 #define EIGRP_DEBUG_PACKET_DETAIL	0x04
 
@@ -96,6 +96,21 @@ extern unsigned long term_debug_eigrp_zebra;
     do { \
       CONF_DEBUG_PACKET_OFF(a, b); \
       TERM_DEBUG_PACKET_OFF(a, b); \
+    } while (0)
+
+#define CONF_DEBUG_TRANSMIT_ON(a, b)	conf_debug_eigrp_transmit |= (b)
+#define CONF_DEBUG_TRANSMIT_OFF(a, b)	conf_debug_eigrp_transmit &= ~(b)
+#define TERM_DEBUG_TRANSMIT_ON(a, b)	term_debug_eigrp_transmit |= (b)
+#define TERM_DEBUG_TRANSMIT_OFF(a, b)	term_debug_eigrp_transmit &= ~(b)
+#define DEBUG_TRANSMIT_ON(a, b) \
+    do { \
+      CONF_DEBUG_TRANSMIT_ON(a, b); \
+      TERM_DEBUG_TRANSMIT_ON(a, b); \
+    } while (0)
+#define DEBUG_TRANSMIT_OFF(a, b) \
+    do { \
+      CONF_DEBUG_TRANSMIT_OFF(a, b); \
+      TERM_DEBUG_TRANSMIT_OFF(a, b); \
     } while (0)
 
 #define CONF_DEBUG_ON(a, b)		conf_debug_eigrp_ ## a |= (EIGRP_DEBUG_ ## b)

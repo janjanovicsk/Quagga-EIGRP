@@ -66,7 +66,7 @@ struct list *eigrp_snmp_iflist;
 /* Declare static local variables for convenience. */
 SNMP_LOCAL_VARIABLES
 
-/* EIGRP-MIB. */
+/* EIGRP-MIB - 1.3.6.1.4.1.9.9.449.1*/
 #define EIGRPMIB 1,3,6,1,4,1,9,9,449,1
 
 /* EIGRP-MIB instances. */
@@ -344,6 +344,123 @@ struct variable eigrp_variables[] =
   {EIGRPAUTHKEYCHAIN,       	STRING, RONLY, eigrpInterfaceEntry,
    4, {5, 1, 1, 23}}
 };
+
+static struct eigrp_neighbor *
+eigrp_snmp_nbr_lookup (struct eigrp *eigrp, struct in_addr *nbr_addr,
+		      unsigned int *ifindex)
+{
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_interface *ei;
+  struct eigrp_neighbor *nbr;
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+	  {
+	    if (IPV4_ADDR_SAME (&nbr->src, nbr_addr))
+	      {
+			return nbr;
+	      }
+	  }
+    }
+  return NULL;
+}
+
+static struct eigrp_neighbor *
+eigrp_snmp_nbr_lookup_next (struct in_addr *nbr_addr, unsigned int *ifindex,
+			   int first)
+{
+  struct listnode *node, *nnode, *node2, *nnode2;
+  struct eigrp_interface *ei;
+  struct eigrp_neighbor *nbr;
+  struct route_node *rn;
+  struct eigrp_neighbor *min = NULL;
+  struct eigrp *eigrp = eigrp;
+
+  eigrp = eigrp_lookup ();
+
+  for (ALL_LIST_ELEMENTS (eigrp->eiflist, node, nnode, ei))
+    {
+      for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+	    {
+			if (first)
+			  {
+				if (! min)
+				  min = nbr;
+				else if (ntohl (nbr->src.s_addr) < ntohl (min->src.s_addr))
+					min = nbr;
+			  }
+			else if (ntohl (nbr->src.s_addr) > ntohl (nbr_addr->s_addr))
+			  {
+				if (! min)
+				  min = nbr;
+				else if (ntohl (nbr->src.s_addr) < ntohl (min->src.s_addr))
+				  min = nbr;
+			  }
+	    }
+    }
+  if (min)
+    {
+      *nbr_addr = min->src;
+      *ifindex = 0;
+      return min;
+    }
+  return NULL;
+}
+
+static struct eigrp_neighbor *
+eigrpNbrLookup (struct variable *v, oid *name, size_t *length,
+	       struct in_addr *nbr_addr, unsigned int *ifindex, int exact)
+{
+  unsigned int len;
+  int first;
+  struct eigrp_neighbor *nbr;
+  struct eigrp *eigrp;
+
+  eigrp = eigrp_lookup ();
+
+  if (! eigrp)
+    return NULL;
+
+  if (exact)
+    {
+      if (*length != v->namelen + IN_ADDR_SIZE + 1)
+	return NULL;
+
+      oid2in_addr (name + v->namelen, IN_ADDR_SIZE, nbr_addr);
+      *ifindex = name[v->namelen + IN_ADDR_SIZE];
+
+      return eigrp_snmp_nbr_lookup (eigrp, nbr_addr, ifindex);
+    }
+  else
+    {
+      first = 0;
+      len = *length - v->namelen;
+
+      if (len <= 0)
+	first = 1;
+
+      if (len > IN_ADDR_SIZE)
+	len = IN_ADDR_SIZE;
+
+      oid2in_addr (name + v->namelen, len, nbr_addr);
+
+      len = *length - v->namelen - IN_ADDR_SIZE;
+      if (len >= 1)
+	*ifindex = name[v->namelen + IN_ADDR_SIZE];
+
+      nbr = eigrp_snmp_nbr_lookup_next (nbr_addr, ifindex, first);
+
+      if (nbr)
+	{
+	  *length = v->namelen + IN_ADDR_SIZE + 1;
+	  oid_copy_addr (name + v->namelen, nbr_addr, IN_ADDR_SIZE);
+	  name[v->namelen + IN_ADDR_SIZE] = *ifindex;
+	  return nbr;
+	}
+    }
+  return NULL;
+}
 
 
   static u_char *
@@ -874,6 +991,7 @@ struct variable eigrp_variables[] =
 	}
 	return NULL;
   }
+
   static u_char *
   eigrpPeerEntry (struct variable *v, oid *name, size_t *length,
 			 	 int exact, size_t *var_len, WriteMethod **write_method)
@@ -881,7 +999,9 @@ struct variable eigrp_variables[] =
 	  struct eigrp *eigrp;
 	  struct eigrp_interface *ei;
 	  struct listnode *node, *nnode;
-
+	  struct eigrp_neighbor *nbr;
+	  struct in_addr nbr_addr;
+	  unsigned int ifindex;
 
 	  eigrp = eigrp_lookup ();
 
@@ -889,6 +1009,16 @@ struct variable eigrp_variables[] =
 	  if (smux_header_generic (v, name, length, exact, var_len, write_method)
 	  	 == MATCH_FAILED)
 	  return NULL;
+
+	  memset (&nbr_addr, 0, sizeof (struct in_addr));
+	  ifindex = 0;
+
+	  nbr = eigrpNbrLookup (v, name, length, &nbr_addr, &ifindex, exact);
+	    if (! nbr)
+	      return NULL;
+	    ei = nbr->ei;
+	    if (! ei)
+	      return NULL;
 
 	  /* Return the current value of the variable */
 	  switch (v->magic)
