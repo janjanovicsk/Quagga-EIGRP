@@ -544,8 +544,8 @@ DEFUN (debug_eigrp_transmit,
 	if (strncmp (argv[1], "d", 1) == 0)
 	  flag = EIGRP_DEBUG_PACKET_DETAIL;
 	if (strncmp (argv[1], "s", 1) == 0)
-	  zlog_debug("this is very, very strange .... ");
 	  flag = 0;
+
   }
 
   if (vty->node == CONFIG_NODE)
