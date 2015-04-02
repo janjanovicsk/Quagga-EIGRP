@@ -444,7 +444,7 @@ eigrp_topology_update_node_flags(struct eigrp_prefix_entry *dest)
         }
       else
         {
-          entry->flags &= 0xfc; // 1111 1100 set successor and fd flag to zero
+          entry->flags &= 0xfc; // 1111 1100 set successor and fs flag to zero
         }
     }
 }
@@ -503,6 +503,10 @@ eigrp_topology_neighbor_down(struct eigrp *eigrp, struct eigrp_neighbor * nbr)
             }
         }
     }
+
+  eigrp_query_send_all(eigrp);
+  eigrp_update_send_all(eigrp,nbr->ei);
+
 }
 
 void

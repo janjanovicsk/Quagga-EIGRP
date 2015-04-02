@@ -181,8 +181,8 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 			  alist = ei->list[EIGRP_FILTER_IN];
 
 			  if (alist) {
-				  zlog_info("ALIST:");
-				  zlog_info(alist->name);
+				  zlog_info ("ALIST:");
+				  zlog_info (alist->name);
 			  } else {
 				  zlog_info("ALIST je prazdny");
 			  }
@@ -191,13 +191,12 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 						 (struct prefix *) dest_addr) == FILTER_DENY)
 			  {
 				  zlog_info("Nastavujem metriku na MAX");
-				  ne->distance = EIGRP_MAX_METRIC;
+				  ne->distance = 1600000;
 			  } else {
 				  zlog_info("NENastavujem metriku ");
-				  //ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
-				  ne->distance = EIGRP_MAX_METRIC;
+				  ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
 			  }
-
+			  zlog_info("Distance: %d", ne->distance);
 
               pe->fdistance = pe->distance = pe->rdistance =
                   ne->distance;

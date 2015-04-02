@@ -82,7 +82,6 @@ eigrp_query_send_all (struct eigrp *eigrp)
         {
           pe->req_action &= ~EIGRP_FSM_NEED_QUERY;
           listnode_delete(eigrp->topology_changes_internalIPV4, pe);
-          zlog_debug("QUERY COUNT: %d", eigrp->topology_changes_internalIPV4->count);
         }
     }
 
@@ -182,10 +181,13 @@ eigrp_send_query (struct eigrp_interface *ei)
       if(pe->req_action & EIGRP_FSM_NEED_QUERY)
         {
           length += eigrp_add_internalTLV_to_stream(ep->s, pe);
-          has_tlv = 1;
           for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr))
             {
-              listnode_add(pe->rij, nbr);
+        	  if(nbr->state == EIGRP_NEIGHBOR_UP)
+        	  {
+        		  listnode_add(pe->rij, nbr);
+                  has_tlv = 1;
+        	  }
             }
         }
     }
