@@ -1,12 +1,16 @@
 /*
  * EIGRP Interface Functions.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -73,6 +77,7 @@ struct eigrp_interface *
 eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 {
   struct eigrp_interface *ei;
+  int i;
 
   if ((ei = eigrp_if_table_lookup (ifp, p)) == NULL)
     {
@@ -95,6 +100,14 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
   ei->nbrs = list_new ();
 
   ei->crypt_seqnum = time (NULL);
+
+  /* Initialize lists */
+  for (i = 0; i < EIGRP_FILTER_MAX; i++)
+    {
+	  ei->list[i] = NULL;
+	  ei->prefix[i] = NULL;
+	  ei->routemap[i] = NULL;
+    }
 
   return ei;
 }

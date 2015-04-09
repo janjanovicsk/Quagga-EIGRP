@@ -70,37 +70,57 @@ eigrp_distribute_update (struct distribute *dist)
   struct access_list *alist;
   struct prefix_list *plist;
 
+  zlog_info("<DEBUG ACL start");
+
   if (! dist->ifname)
-    return;
+    {
+	  return;
+    }
+  zlog_info("<DEBUG ACL 1");
 
   ifp = if_lookup_by_name (dist->ifname);
   if (ifp == NULL)
     return;
 
+  zlog_info("<DEBUG ACL 2");
+
   ei = ifp->info;
 
   if (dist->list[DISTRIBUTE_IN])
     {
+	  zlog_info("<DEBUG ACL in");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_IN]);
       if (alist)
 	ei->list[EIGRP_FILTER_IN] = alist;
       else
 	ei->list[EIGRP_FILTER_IN] = NULL;
+
+
+	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_IN] == NULL);
     }
   else
+  {
     ei->list[EIGRP_FILTER_IN] = NULL;
+	  zlog_info("<DEBUG ACL in else");
+  }
 
   if (dist->list[DISTRIBUTE_OUT])
     {
+	  zlog_info("<DEBUG ACL out");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_OUT]);
       if (alist)
 	ei->list[EIGRP_FILTER_OUT] = alist;
       else
 	ei->list[EIGRP_FILTER_OUT] = NULL;
+
+	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_OUT] == NULL);
     }
   else
+  {
     ei->list[EIGRP_FILTER_OUT] = NULL;
-
+	  zlog_info("<DEBUG ACL out else");
+  }
+/*
   if (dist->prefix[DISTRIBUTE_IN])
     {
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
@@ -122,6 +142,9 @@ eigrp_distribute_update (struct distribute *dist)
     }
   else
     ei->prefix[EIGRP_FILTER_OUT] = NULL;
+*/
+
+  zlog_info("<DEBUG ACL end");
 }
 
 void

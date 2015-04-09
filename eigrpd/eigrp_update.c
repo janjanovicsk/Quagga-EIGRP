@@ -173,7 +173,6 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               ne->reported_distance = eigrp_calculate_metrics(eigrp,
                   &tlv->metric);
 
-
               /*
 			   * Check if there is any access-list on interface (IN direction)
 			   *  and set distance to max
@@ -191,12 +190,15 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 						 (struct prefix *) dest_addr) == FILTER_DENY)
 			  {
 				  zlog_info("Nastavujem metriku na MAX");
-				  ne->distance = 1600000;
+				  ne->total_metric.delay = EIGRP_MAX_METRIC;
 			  } else {
 				  zlog_info("NENastavujem metriku ");
-				  ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
 			  }
-			  zlog_info("Distance: %d", ne->distance);
+
+			  ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
+
+			  zlog_info("<DEBUG Distance: %x", ne->distance);
+			  zlog_info("<DEBUG Delay: %x", ne->total_metric.delay);
 
               pe->fdistance = pe->distance = pe->rdistance =
                   ne->distance;
@@ -205,8 +207,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 
               eigrp_prefix_entry_add(eigrp->topology_table, pe);
               eigrp_neighbor_entry_add(pe, ne);
-              pe->distance = pe->fdistance = pe->rdistance =
-                  ne->distance;
+              pe->distance = pe->fdistance = pe->rdistance = ne->distance;
               pe->reported_metric = ne->total_metric;
               eigrp_topology_update_node_flags(pe);
 
