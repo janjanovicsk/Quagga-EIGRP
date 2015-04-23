@@ -70,6 +70,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   uint16_t  length;
   u_char same;
   struct access_list *alist;
+  struct eigrp *e;
 
   /* increment statistics. */
   ei->update_in++;
@@ -176,8 +177,12 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
               /*
 			   * Check if there is any access-list on interface (IN direction)
 			   *  and set distance to max
-			   */
 			  alist = ei->list[EIGRP_FILTER_IN];
+			   */
+
+              /* get list from eigrp process 1 */
+        	  e = eigrp_get("1");
+			  alist = e->list[EIGRP_FILTER_IN];
 
 			  if (alist) {
 				  zlog_info ("ALIST:");
@@ -190,7 +195,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 						 (struct prefix *) dest_addr) == FILTER_DENY)
 			  {
 				  zlog_info("Nastavujem metriku na MAX");
-				  ne->total_metric.delay = EIGRP_MAX_METRIC;
+				  ne->reported_metric.delay = EIGRP_MAX_METRIC;
 			  } else {
 				  zlog_info("NENastavujem metriku ");
 			  }
