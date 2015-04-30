@@ -75,6 +75,8 @@ eigrp_distribute_update (struct distribute *dist)
 	  /* FIXME: set to all processes */
 	  e = eigrp_get("1");
 	  zlog_info("<DEBUG GOT IT - AS: %d", (e->AS));
+
+	  /* distribute list IN for whole process */
 	  if (dist->list[DISTRIBUTE_IN])
 	    {
 	  	  zlog_info("<DEBUG ACL ALL in");
@@ -89,6 +91,22 @@ eigrp_distribute_update (struct distribute *dist)
 	      e->list[EIGRP_FILTER_IN] = NULL;
 	  	  zlog_info("<DEBUG ACL ALL in else");
 	    }
+
+	  /* distribute list OUT for whole process */
+	  if (dist->list[DISTRIBUTE_OUT])
+		{
+		  zlog_info("<DEBUG ACL ALL out");
+		  alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_OUT]);
+		  if (alist)
+			e->list[EIGRP_FILTER_OUT] = alist;
+		  else
+			e->list[EIGRP_FILTER_OUT] = NULL;
+		}
+	  else
+		{
+		  e->list[EIGRP_FILTER_OUT] = NULL;
+		  zlog_info("<DEBUG ACL ALL out else");
+		}
 	  return;
     }
 

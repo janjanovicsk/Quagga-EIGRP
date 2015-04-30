@@ -185,25 +185,25 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 			  alist = e->list[EIGRP_FILTER_IN];
 
 			  if (alist) {
-				  zlog_info ("ALIST:");
+				  zlog_info ("ALIST PROC IN:");
 				  zlog_info (alist->name);
 			  } else {
-				  zlog_info("ALIST je prazdny");
+				  zlog_info("ALIST PROC IN je prazdny");
 			  }
 
 			  if (alist && access_list_apply (alist,
 						 (struct prefix *) dest_addr) == FILTER_DENY)
 			  {
-				  zlog_info("Nastavujem metriku na MAX");
+				  zlog_info("PROC IN: Nastavujem metriku na MAX");
 				  ne->reported_metric.delay = EIGRP_MAX_METRIC;
 			  } else {
-				  zlog_info("NENastavujem metriku ");
+				  zlog_info("PROC IN: NENastavujem metriku ");
 			  }
 
 			  ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
 
-			  zlog_info("<DEBUG Distance: %x", ne->distance);
-			  zlog_info("<DEBUG Delay: %x", ne->total_metric.delay);
+			  zlog_info("<DEBUG PROC IN Distance: %x", ne->distance);
+			  zlog_info("<DEBUG PROC IN Delay: %x", ne->total_metric.delay);
 
               pe->fdistance = pe->distance = pe->rdistance =
                   ne->distance;
@@ -354,6 +354,9 @@ eigrp_update_send (struct eigrp_interface *ei)
   struct eigrp_neighbor *nbr;
   struct eigrp_prefix_entry *pe;
   u_char has_tlv;
+  struct access_list *alist;
+  struct eigrp *e;
+  struct prefix_ipv4 *dest_addr;
 
   u_int16_t length = EIGRP_HEADER_LEN;
 
@@ -375,6 +378,38 @@ eigrp_update_send (struct eigrp_interface *ei)
       if(pe->req_action & EIGRP_FSM_NEED_UPDATE)
         {
     	  // TODO : ditribute-list <ACL> out should be checked here
+
+    	  /* Get destination address from prefix */
+    	  dest_addr = pe->destination_ipv4;
+
+    	  /*
+		   * Check if there is any access-list in process (OUT direction)
+		   *  and set delay to max
+		   */
+
+		  /* get list from eigrp process 1 */
+		  e = eigrp_get("1");
+		  alist = e->list[EIGRP_FILTER_OUT];
+
+		  /* DEBUG */
+		  if (alist) {
+			  zlog_info ("ALIST PROC OUT:");
+			  zlog_info (alist->name);
+		  } else {
+			  zlog_info("ALIST PROC OUT je prazdny");
+		  }
+
+		  if (alist && access_list_apply (alist,
+					 (struct prefix *) dest_addr) == FILTER_DENY)
+		  {
+			  zlog_info("PROC OUT: Nastavujem metriku na MAX");
+			  pe->reported_metric.delay = EIGRP_MAX_METRIC;
+		  } else {
+			  zlog_info("PROC OUT: NENastavujem metriku ");
+		  }
+
+		  /* NULL the pointer */
+		  dest_addr = NULL;
 
           length += eigrp_add_internalTLV_to_stream(ep->s, pe);
           has_tlv = 1;
