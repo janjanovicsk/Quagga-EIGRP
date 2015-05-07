@@ -1,12 +1,16 @@
 /*
  * EIGRP Sending and Receiving EIGRP Update Packets.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -185,8 +189,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 			  alist = e->list[EIGRP_FILTER_IN];
 
 			  if (alist) {
-				  zlog_info ("ALIST PROC IN:");
-				  zlog_info (alist->name);
+				  zlog_info ("ALIST PROC IN: %s", alist->name);
 			  } else {
 				  zlog_info("ALIST PROC IN je prazdny");
 			  }
@@ -196,6 +199,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 			  {
 				  zlog_info("PROC IN: Nastavujem metriku na MAX");
 				  ne->reported_metric.delay = EIGRP_MAX_METRIC;
+				  zlog_info("PROC IN Prefix: %s", inet_ntoa(dest_addr->prefix));
 			  } else {
 				  zlog_info("PROC IN: NENastavujem metriku ");
 			  }
@@ -292,6 +296,9 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
   struct eigrp_neighbor_entry *te;
   struct eigrp_prefix_entry *pe;
   struct listnode *node, *node2, *nnode, *nnode2;
+  struct access_list *alist;
+  struct eigrp *e;
+  struct prefix_ipv4 *dest_addr;
 
   ep = eigrp_packet_new(nbr->ei->ifp->mtu);
 
@@ -313,6 +320,39 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
           if ((te->ei == nbr->ei)
               && (te->prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE))
             continue;
+
+
+          /* Get destination address from prefix */
+		  dest_addr = pe->destination_ipv4;
+
+		  /*
+		   * Check if there is any access-list in process (OUT direction)
+		   *  and set delay to max
+		   */
+
+		  /* get list from eigrp process 1 */
+		  e = eigrp_get("1");
+		  alist = e->list[EIGRP_FILTER_OUT];
+
+		  /* DEBUG */
+		  if (alist) {
+			  zlog_info ("ALIST PROC OUT EOT: %s", alist->name);
+		  } else {
+			  zlog_info("ALIST PROC OUT EOT je prazdny");
+		  }
+
+		  if (alist && access_list_apply (alist,
+					 (struct prefix *) dest_addr) == FILTER_DENY)
+		  {
+			  zlog_info("PROC OUT EOT: Nastavujem metriku na MAX");
+			  pe->reported_metric.delay = EIGRP_MAX_METRIC;
+			  zlog_info("PROC OUT EOT Prefix: %s", inet_ntoa(dest_addr->prefix));
+		  } else {
+			  zlog_info("PROC OUT EOT: NENastavujem metriku ");
+		  }
+
+		  /* NULL the pointer */
+		  dest_addr = NULL;
 
           length += eigrp_add_internalTLV_to_stream(ep->s, pe);
         }
@@ -393,8 +433,7 @@ eigrp_update_send (struct eigrp_interface *ei)
 
 		  /* DEBUG */
 		  if (alist) {
-			  zlog_info ("ALIST PROC OUT:");
-			  zlog_info (alist->name);
+			  zlog_info ("ALIST PROC OUT: %s", alist->name);
 		  } else {
 			  zlog_info("ALIST PROC OUT je prazdny");
 		  }
@@ -404,6 +443,7 @@ eigrp_update_send (struct eigrp_interface *ei)
 		  {
 			  zlog_info("PROC OUT: Nastavujem metriku na MAX");
 			  pe->reported_metric.delay = EIGRP_MAX_METRIC;
+			  zlog_info("PROC OUT Prefix: %s", inet_ntoa(dest_addr->prefix));
 		  } else {
 			  zlog_info("PROC OUT: NENastavujem metriku ");
 		  }
