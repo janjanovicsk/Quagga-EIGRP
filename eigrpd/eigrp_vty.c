@@ -1,12 +1,16 @@
 /*
  * EIGRP VTY Interface.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -65,8 +69,6 @@ config_write_network (struct vty *vty, struct eigrp *eigrp)
         vty_out (vty, " network %s/%d %s",
                  inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen, VTY_NEWLINE);
       }
-  /*Separate EIGRP configuration from the rest of the config*/
-  vty_out (vty, "!%s", VTY_NEWLINE);
 
   return 0;
 }
@@ -117,6 +119,57 @@ static int
 eigrp_write_interface (struct vty *vty)
 {
   int write=0;
+
+  return write;
+}
+
+/**
+ * Writes distribute lists to config
+ */
+static int
+config_write_eigrp_distribute (struct vty *vty, struct eigrp *eigrp)
+{
+  int write=0;
+
+  /* Distribute configuration. */
+  write += config_write_distribute (vty);
+
+  return write;
+}
+
+/**
+ * Writes 'router eigrp' section to config
+ */
+static int
+config_write_eigrp_router (struct vty *vty, struct eigrp *eigrp)
+{
+  int write=0;
+
+  /* `router eigrp' print. */
+  vty_out (vty, "router eigrp %d%s", eigrp->AS, VTY_NEWLINE);
+
+  write++;
+
+  if (!eigrp->networks)
+    return write;
+
+  /* Router ID print. */
+  if (eigrp->router_id_static != 0)
+    {
+      struct in_addr router_id_static;
+      router_id_static.s_addr = htonl(eigrp->router_id_static);
+	  vty_out (vty, " eigrp router-id %s%s",
+			 inet_ntoa (router_id_static), VTY_NEWLINE);
+    }
+
+  /* Network area print. */
+  config_write_network (vty, eigrp);
+
+  /* Distribute-list and default-information print. */
+  config_write_eigrp_distribute (vty, eigrp);
+
+  /*Separate EIGRP configuration from the rest of the config*/
+  vty_out (vty, "!%s", VTY_NEWLINE);
 
   return write;
 }
@@ -1211,25 +1264,8 @@ eigrp_config_write (struct vty *vty)
   eigrp = eigrp_lookup ();
   if (eigrp != NULL)
     {
-      /* `router eigrp' print. */
-      vty_out (vty, "router eigrp %d%s", eigrp->AS, VTY_NEWLINE);
-
-      write++;
-
-      if (!eigrp->networks)
-        return write;
-
-      /* Router ID print. */
-      if (eigrp->router_id_static != 0)
-      {
-	struct in_addr router_id_static;
-	router_id_static.s_addr = htonl(eigrp->router_id_static);
-        vty_out (vty, " eigrp router-id %s%s",
-                 inet_ntoa (router_id_static), VTY_NEWLINE);
-      }
-
-      /* Network area print. */
-      config_write_network (vty, eigrp);
+	  /* Writes 'router eigrp' section to config */
+	  config_write_eigrp_router (vty, eigrp);
 
       /* Interface config print */
       config_write_interfaces (vty, eigrp);
@@ -1243,11 +1279,10 @@ eigrp_config_write (struct vty *vty)
 //      /* Default metric configuration.  */
 //      config_write_eigrp_default_metric (vty, eigrp);
 //
-//      /* Distribute-list and default-information print. */
-//      config_write_eigrp_distribute (vty, eigrp);
 //
 //      /* Distance configuration. */
 //      config_write_eigrp_distance (vty, eigrp)
+
     }
 
   return write;
