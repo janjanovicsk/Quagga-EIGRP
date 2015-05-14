@@ -345,16 +345,17 @@ eigrp_update_send_EOT (struct eigrp_neighbor *nbr)
 					 (struct prefix *) dest_addr) == FILTER_DENY)
 		  {
 			  zlog_info("PROC OUT EOT: Nastavujem metriku na MAX");
-			  pe->reported_metric.delay = EIGRP_MAX_METRIC;
+			  //pe->reported_metric.delay = EIGRP_MAX_METRIC;
 			  zlog_info("PROC OUT EOT Prefix: %s", inet_ntoa(dest_addr->prefix));
 		  } else {
 			  zlog_info("PROC OUT EOT: NENastavujem metriku ");
+			  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
 		  }
 
 		  /* NULL the pointer */
 		  dest_addr = NULL;
 
-          length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+
         }
     }
 
@@ -442,17 +443,17 @@ eigrp_update_send (struct eigrp_interface *ei)
 					 (struct prefix *) dest_addr) == FILTER_DENY)
 		  {
 			  zlog_info("PROC OUT: Nastavujem metriku na MAX");
-			  pe->reported_metric.delay = EIGRP_MAX_METRIC;
+			  //pe->reported_metric.delay = EIGRP_MAX_METRIC;
 			  zlog_info("PROC OUT Prefix: %s", inet_ntoa(dest_addr->prefix));
 		  } else {
 			  zlog_info("PROC OUT: NENastavujem metriku ");
+			  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+			  has_tlv = 1;
 		  }
 
 		  /* NULL the pointer */
 		  dest_addr = NULL;
 
-          length += eigrp_add_internalTLV_to_stream(ep->s, pe);
-          has_tlv = 1;
         }
     }
 
