@@ -97,7 +97,6 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
       same = 1;
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
-
   if (IS_DEBUG_EIGRP_PACKET(0, RECV))
     zlog_debug("Processing Update size[%u] int(%s) nbr(%s) seq [%u] flags [%0x]",
                size, ifindex2ifname(nbr->ei->ifp->ifindex),
@@ -185,6 +184,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 			   */
 
               /* get list from eigrp process 1 */
+
         	  e = eigrp_get("1");
 			  alist = e->list[EIGRP_FILTER_IN];
 
@@ -202,6 +202,24 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 				  zlog_info("PROC IN Prefix: %s", inet_ntoa(dest_addr->prefix));
 			  } else {
 				  zlog_info("PROC IN: NENastavujem metriku ");
+			  }
+
+			  /*Get list from current interface */
+			  zlog_info("Checking access_list on interface: %s",ei->ifp->name);
+			  alist = ei->list[EIGRP_FILTER_IN];
+			  if (alist) {
+			  	  zlog_info ("ALIST INT IN: %s", alist->name);
+			  } else {
+			  	  zlog_info("ALIST INT IN je prazdny");
+			  	}
+
+			  if (alist && access_list_apply (alist, (struct prefix *) dest_addr) == FILTER_DENY)
+			  {
+			  		zlog_info("INT IN: Nastavujem metriku na MAX");
+			  		ne->reported_metric.delay = EIGRP_MAX_METRIC;
+			  		zlog_info("INT IN Prefix: %s", inet_ntoa(dest_addr->prefix));
+			  	} else {
+			  		zlog_info("INT IN: NENastavujem metriku ");
 			  }
 
 			  ne->distance = eigrp_calculate_total_metrics(eigrp, ne);

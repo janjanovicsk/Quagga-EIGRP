@@ -68,12 +68,14 @@ eigrp_distribute_update (struct distribute *dist)
   struct eigrp *e;
 
   zlog_info("<DEBUG ACL start");
+  zlog_info("Supposed to set on interface: %s",dist->ifname);
+  e = eigrp_lookup();
 
   /* if no interface address is present, set list to eigrp process struct */
   if (! dist->ifname)
     {
 	  /* FIXME: set to all processes */
-	  e = eigrp_get("1");
+	  //e = eigrp_get("1");
 	  zlog_info("<DEBUG GOT IT - AS: %d", (e->AS));
 
 	  /* distribute list IN for whole process */
@@ -118,14 +120,35 @@ eigrp_distribute_update (struct distribute *dist)
 
   zlog_info("<DEBUG ACL 2");
 
-  ei = ifp->info;
+  /*struct eigrp_if_info * info = ifp->info;
+  ei = info->eigrp_interface;*/
+  struct listnode *node, *nnode;
+  struct eigrp_interface *ei2;
+  //e = eigrp_get("1");
+  zlog_info("Looking for eigrp interface %s",ifp->name);
+  for (ALL_LIST_ELEMENTS (e->eiflist, node, nnode, ei2))
+  {
+	  zlog_info("Checking eigrp interface %s",ei2->ifp->name);
+	  if(strcmp(ei2->ifp->name,ifp->name) == 0){
+		  zlog_info("Found eigrp interface %s",ifp->name);
+		  ei = ei2;
+		  break;
+	  }
+  }
+
+  if(ei == NULL)
+  {
+	  zlog_info("Not Found eigrp interface %s",ifp->name);
+  }
 
   if (dist->list[DISTRIBUTE_IN])
     {
 	  zlog_info("<DEBUG ACL in");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_IN]);
-      if (alist)
+      if (alist){
         ei->list[EIGRP_FILTER_IN] = alist;
+        zlog_info("Setting interface acl");
+      }
       else
 	    ei->list[EIGRP_FILTER_IN] = NULL;
 
