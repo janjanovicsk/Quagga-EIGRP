@@ -119,6 +119,8 @@ struct eigrp
 
   /* Access-list. */
   struct access_list *list[EIGRP_FILTER_MAX];
+  /* Prefix-list. */
+  struct prefix_list *prefix[EIGRP_FILTER_MAX];
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
