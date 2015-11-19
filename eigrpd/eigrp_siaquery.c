@@ -72,8 +72,8 @@ eigrp_siaquery_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header
   /* get neighbor struct */
   nbr = eigrp_nbr_get(ei, eigrph, iph);
 
-  /* neighbor must be valid, eigrp_nbr_get creates if none existed */
-  assert(nbr);
+  /* neighbor must be valid */
+  if (nbr == NULL) return;
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 

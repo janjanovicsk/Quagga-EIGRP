@@ -651,8 +651,8 @@ eigrp_read (struct thread *thread)
     {
       nbr = eigrp_nbr_get(ei, eigrph, iph);
 
-      /* neighbor must be valid, eigrp_nbr_get creates if none existed */
-      assert(nbr);
+      /* neighbor must be valid */
+      if (nbr == NULL) return 0;
 
      struct eigrp_packet *ep;
 

@@ -180,6 +180,10 @@ struct eigrp_interface
   struct prefix_list *prefix[EIGRP_FILTER_MAX];
   /* Route-map. */
   struct route_map *routemap[EIGRP_FILTER_MAX];
+
+  /* Type of Hub-and-Spoke role */
+  int hs_role;
+
 };
 
 struct eigrp_if_params

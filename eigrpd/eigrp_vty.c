@@ -43,6 +43,7 @@
 #include "zclient.h"
 #include "keychain.h"
 #include "linklist.h"
+#include "zebra/interface.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -1244,6 +1245,69 @@ DEFUN (no_eigrp_maximum_paths,
     return CMD_SUCCESS;
 }
 
+DEFUN (ip_eigrp_network,
+	   ip_eigrp_network_cmd,
+	   "ip eigrp network (point-to-multipoint)",
+	   IP_STR
+	   EIGRP_STR
+	   "Network type\n"
+       "Specify EIGRP point-to-multipoint network\n")
+{
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+
+  ifp = (struct interface *) vty->index;
+  assert (ifp);
+
+  ei = (struct eigrp_interface *) ifp->info;
+  if (ei == NULL) {
+	  vty_out (vty, "No interface found !\n");
+	  return CMD_SUCCESS;
+  }
+  assert (ei);
+
+  ei->type = EIGRP_IFTYPE_POINTOMULTIPOINT;
+
+  /* Reset the interface *
+  thread_add_event (master, if_down, ei, 0);
+  thread_add_event (master, if_up, ei, 0);*/
+
+  vty_out (vty, "Point-to-Multipoint set %d\n", ei->type);
+  return CMD_SUCCESS;
+}
+
+DEFUN (no_ip_eigrp_network,
+	   no_ip_eigrp_network_cmd,
+	   "no ip eigrp network (point-to-multipoint)",
+	   NO_STR
+	   IP_STR
+	   EIGRP_STR
+	   "Network type\n"
+       "Specify EIGRP point-to-multipoint network\n")
+{
+  struct eigrp_interface *ei;
+  struct interface *ifp;
+
+  ifp = (struct interface *) vty->index;
+  assert (ifp);
+
+  ei = (struct eigrp_interface *) ifp->info;
+  if (ei == NULL) {
+	  vty_out (vty, "No interface found !\n");
+	  return CMD_SUCCESS;
+  }
+  assert (ei);
+
+  ei->type = eigrp_default_iftype(ifp);
+
+  /* Reset the interface *
+  thread_add_event (master, if_down, ei, 0);
+  thread_add_event (master, if_up, ei, 0);*/
+
+  vty_out (vty, "No Point-to-Multipoint %d\n", ei->type);
+  return CMD_SUCCESS;
+}
+
 
 
 static struct cmd_node eigrp_node =
@@ -1350,10 +1414,13 @@ eigrp_vty_if_init (void)
   install_element (INTERFACE_NODE, &eigrp_authentication_keychain_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_authentication_keychain_cmd);
 
-  /*EIGRP Summarization commands*/
+  /* EIGRP Summarization commands */
   install_element (INTERFACE_NODE, &eigrp_ip_summary_address_cmd);
   install_element (INTERFACE_NODE, &no_eigrp_ip_summary_address_cmd);
 
+  /* EIGRP Hub-and-Spoke network commands */
+  install_element (INTERFACE_NODE, &ip_eigrp_network_cmd);
+  install_element (INTERFACE_NODE, &no_ip_eigrp_network_cmd);
 
 }
 

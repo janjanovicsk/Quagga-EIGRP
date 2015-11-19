@@ -109,6 +109,9 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 	  ei->routemap[i] = NULL;
     }
 
+  /* Initialize Buh-and-Spoke role */
+  ei->hs_role = EIGRP_HSROLE_NONE;
+
   return ei;
 }
 

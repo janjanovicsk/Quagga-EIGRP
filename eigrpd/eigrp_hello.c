@@ -62,6 +62,7 @@ static const struct message eigrp_general_tlv_type_str[] =
   { EIGRP_TLV_PEER_TERMINATION,	"PEER_TERMINATION"	},
   { EIGRP_TLV_PEER_MTRLIST,	"PEER_MTRLIST"		},
   { EIGRP_TLV_PEER_TIDLIST,	"PEER_TIDLIST"		},
+  { EIGRP_TLV_HUB_AND_SPOKE, "HUB_AND_SPOKE" },
 };
 
 static const size_t eigrp_general_tlv_type_str_max = sizeof(eigrp_general_tlv_type_str) /
@@ -274,9 +275,9 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
   uint16_t	length;
 
   /* get neighbor struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph);
+  nbr = eigrp_nbr_get_or_create(ei, eigrph, iph);
 
-  /* neighbor must be valid, eigrp_nbr_get creates if none existed */
+  /* neighbor must be valid */
   assert(nbr);
   
   if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV))
@@ -546,6 +547,30 @@ eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s, u_ch
 }
 
 /**
+ * @fn eigrp_hub_and_spoke_TLV_encode
+ *
+ * @param[in]		ei	pointer to interface hello packet came in on
+ * @param[in,out]	s	packet stream TLV is stored to
+ *
+ * @return u_int16_t	number of bytes added to packet stream
+ *
+ * @par
+ * Encode Parameter TLV, used to determine Hub-and-Spoke role.
+ */
+static u_int16_t
+eigrp_hub_and_spoke_TLV_encode (struct eigrp_interface *ei, struct stream *s)
+{
+  u_int16_t length = EIGRP_TLV_HUB_AND_SPOKE_LEN;
+
+  // add TLV
+  stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE);
+  stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE_LEN);
+  stream_putc(s, ei->hs_role);
+
+  return length;
+}
+
+/**
  * @fn eigrp_hello_encode
  *
  * @param[in]		ei	pointer to interface hello packet came in on
@@ -599,6 +624,9 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
 
       // add in the TID list if doing multi-topology
       length += eigrp_tidlist_encode(ep->s);
+
+      // add Hub-and-Spoke role TLV
+      length += eigrp_hub_and_spoke_TLV_encode(ei, ep->s);
 
       // Set packet length
       ep->length = length;
