@@ -428,8 +428,8 @@
 /*
  * EIGRP Filter constants
  */
-#define EIGRP_HSROLE_NONE  	0x00
-#define EIGRP_HSROLE_HUB 	0x01
-#define EIGRP_HSROLE_SPOKE 	0x02
+#define EIGRP_HSROLE_DEFAULT  	EIGRP_HSROLE_SPOKE
+#define EIGRP_HSROLE_HUB 		0x01
+#define EIGRP_HSROLE_SPOKE 		0x02
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

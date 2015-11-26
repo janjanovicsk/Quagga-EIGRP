@@ -110,7 +110,7 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
     }
 
   /* Initialize Hub-and-Spoke role */
-  IF_DEF_PARAMS(ifp)->hs_role = EIGRP_HSROLE_NONE;
+  IF_DEF_PARAMS(ifp)->hs_role = EIGRP_HSROLE_DEFAULT;
 
   return ei;
 }

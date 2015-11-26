@@ -1261,13 +1261,8 @@ DEFUN (ip_eigrp_network,
   assert (ifp);
   ei = eigrp_if_lookup(ifp, eigrp_lookup());
   assert (ei);
-
   /* set selected network type */
   ei->type = EIGRP_IFTYPE_POINTOMULTIPOINT;
-
-  /* Reset the interface *
-  thread_add_event (master, if_down, ei, 0);
-  thread_add_event (master, if_up, ei, 0);*/
 
   return CMD_SUCCESS;
 }
@@ -1289,13 +1284,8 @@ DEFUN (no_ip_eigrp_network,
   assert (ifp);
   ei = eigrp_if_lookup(ifp, eigrp_lookup());
   assert (ei);
-
   /* reset default type */
   ei->type = eigrp_default_iftype(ifp);
-
-  /* Reset the interface *
-  thread_add_event (master, if_down, ei, 0);
-  thread_add_event (master, if_up, ei, 0);*/
 
   return CMD_SUCCESS;
 }
@@ -1308,22 +1298,17 @@ DEFUN (ip_eigrp_hub_and_spoke_role,
 	   "Hub and Spoke\n"
 	   "Role in Hub and Spoke topology\n")
 {
-  struct eigrp_interface *ei;
   struct interface *ifp;
 
   /* get configured interface */
   ifp = (struct interface *) vty->index;
   assert (ifp);
-
-  vty_out (vty, "Hub-and-Spoke role set from %d", IF_DEF_PARAMS (ifp)->hs_role);
-
   /* set selected Hub-and-Spoke role */
   if (strncmp (argv[0], "h", 1) == 0)
 	IF_DEF_PARAMS (ifp)->hs_role = EIGRP_HSROLE_HUB;
   else if (strncmp (argv[0], "s", 1) == 0)
 	IF_DEF_PARAMS (ifp)->hs_role = EIGRP_HSROLE_SPOKE;
 
-  vty_out (vty, " to %d\n\r", IF_DEF_PARAMS (ifp)->hs_role);
   return CMD_SUCCESS;
 }
 
@@ -1336,19 +1321,14 @@ DEFUN (no_ip_eigrp_hub_and_spoke_role,
 	   "Hub and Spoke\n"
 	   "Role in Hub and Spoke topology\n")
 {
-  struct eigrp_interface *ei;
   struct interface *ifp;
 
   /* get configured interface */
   ifp = (struct interface *) vty->index;
   assert (ifp);
-
-  vty_out (vty, "Hub-and-Spoke role set from %d", IF_DEF_PARAMS (ifp)->hs_role);
-
   /* reset Hub-and-Spoke role */
-  IF_DEF_PARAMS (ifp)->hs_role = EIGRP_HSROLE_NONE;
+  IF_DEF_PARAMS (ifp)->hs_role = EIGRP_HSROLE_DEFAULT;
 
-  vty_out (vty, " to %d\n\r", IF_DEF_PARAMS (ifp)->hs_role);
   return CMD_SUCCESS;
 }
 
