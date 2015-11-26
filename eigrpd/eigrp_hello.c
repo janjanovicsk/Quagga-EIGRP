@@ -560,9 +560,13 @@ eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s, u_ch
 static u_int16_t
 eigrp_hub_and_spoke_TLV_encode (struct eigrp_interface *ei, struct stream *s)
 {
+  /* Don't add TLV if not point-to-multipoint network type */
+  if (ei->type != EIGRP_IFTYPE_POINTOMULTIPOINT)
+	return 0;
+
+  /* add TLV */
   u_int16_t length = EIGRP_TLV_HUB_AND_SPOKE_LEN;
 
-  // add TLV
   stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE);
   stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE_LEN);
   stream_putc(s, IF_DEF_PARAMS(ei->ifp)->hs_role);
