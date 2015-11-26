@@ -565,7 +565,9 @@ eigrp_hub_and_spoke_TLV_encode (struct eigrp_interface *ei, struct stream *s)
   // add TLV
   stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE);
   stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE_LEN);
-  stream_putc(s, ei->hs_role);
+  stream_putc(s, IF_DEF_PARAMS(ei->ifp)->hs_role);
+
+  zlog_info("H&S TLVs --> Net: %d, Role: %d", ei->type, IF_DEF_PARAMS(ei->ifp)->hs_role);
 
   return length;
 }

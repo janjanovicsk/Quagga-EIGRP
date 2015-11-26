@@ -181,9 +181,6 @@ struct eigrp_interface
   /* Route-map. */
   struct route_map *routemap[EIGRP_FILTER_MAX];
 
-  /* Type of Hub-and-Spoke role */
-  int hs_role;
-
 };
 
 struct eigrp_if_params
@@ -199,6 +196,8 @@ struct eigrp_if_params
 
   DECLARE_IF_PARAM (char *, auth_keychain );    /* Associated keychain with interface*/
   DECLARE_IF_PARAM (int, auth_type);         /* EIGRP authentication type */
+
+  DECLARE_IF_PARAM (u_char, hs_role); /* Type of Hub-and-Spoke role */
 };
 
 enum

@@ -109,10 +109,24 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 	  ei->routemap[i] = NULL;
     }
 
-  /* Initialize Buh-and-Spoke role */
-  ei->hs_role = EIGRP_HSROLE_NONE;
+  /* Initialize Hub-and-Spoke role */
+  IF_DEF_PARAMS(ifp)->hs_role = EIGRP_HSROLE_NONE;
 
   return ei;
+}
+
+/* lookup ei for specified prefix/ifp */
+struct eigrp_interface *
+eigrp_if_lookup (struct interface *ifp, struct eigrp *e)
+{
+  struct listnode *node, *nnode;
+  struct eigrp_interface *ei;
+
+  for (ALL_LIST_ELEMENTS (e->eiflist, node, nnode, ei))
+    if(strcmp(ei->ifp->name,ifp->name) == 0)
+      return ei;
+
+  return NULL;
 }
 
 /* lookup ei for specified prefix/ifp */
