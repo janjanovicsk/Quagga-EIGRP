@@ -62,7 +62,6 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_snmp.h"
 #include "eigrpd/eigrp_filter.h"
-#include "eigrpd/eigrp_routemap.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p [] = 
@@ -316,7 +315,7 @@ main (int argc, char **argv)
   distribute_list_add_hook (eigrp_distribute_update);
   distribute_list_delete_hook (eigrp_distribute_update);
 
-  eigrp_route_map_init();
+  //eigrp_route_map_init();
 
   vty_read_config (config_file, config_default);
 
