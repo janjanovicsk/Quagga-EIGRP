@@ -1,12 +1,16 @@
 /*
  * EIGRP Sending and Receiving EIGRP Hello Packets.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -164,7 +168,7 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
 	{
 	  if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5) == 255)
 	    {
-              zlog_info ("Neighbor %s (%s) going down: Peer Termination",
+              zlog_info ("Neighbor %s (%s) going down: Interface PEER-TERMINATION received",
                          inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
               eigrp_nbr_delete (nbr);
 	    }
