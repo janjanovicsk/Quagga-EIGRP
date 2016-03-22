@@ -306,11 +306,17 @@ int eigrp_nbr_count_get(void){
  *
  * @par
  * Function used for executing hard restart for neighbor:
- * Send Goodbye Hello packet to specified neighbor,
- * set it's state to DOWN and delete the neighbor
+ * Send Hello packet with Peer Termination TLV with
+ * neighbor's address, set it's state to DOWN and delete the neighbor
  */
 void eigrp_nbr_hard_restart(struct eigrp_neighbor *nbr, struct vty *vty)
 {
+	if(nbr == NULL)
+	{
+		zlog_err("Nbr Hard restart: Neighbor not specified.");
+		return;
+	}
+
 	zlog_debug ("Neighbor %s (%s) is down: manually cleared",
 			inet_ntoa (nbr->src),
 			ifindex2ifname (nbr->ei->ifp->ifindex));
@@ -323,8 +329,8 @@ void eigrp_nbr_hard_restart(struct eigrp_neighbor *nbr, struct vty *vty)
 				VTY_NEWLINE);
 	}
 
-	/* send Goodbye Hello */
-	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN);
+	/* send Hello with Peer Termination TLV */
+	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR, &(nbr->src));
 	/* set neighbor to DOWN */
 	nbr->state = EIGRP_NEIGHBOR_DOWN;
 	/* delete neighbor */

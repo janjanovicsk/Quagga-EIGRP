@@ -1260,8 +1260,6 @@ DEFUN (clear_ip_eigrp_neighbors,
 	struct listnode *node, *node2, *nnode2;
 	struct eigrp_neighbor *nbr;
 
-	zlog_debug ("Hard reset all neighbors.");
-
 	/* Check if eigrp process is enabled */
 	eigrp = eigrp_lookup ();
 	if (eigrp == NULL)
@@ -1273,13 +1271,27 @@ DEFUN (clear_ip_eigrp_neighbors,
 	/* iterate over all eigrp interfaces */
 	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
 	{
+		/* send Goodbye Hello */
+		eigrp_hello_send(ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN, NULL);
+
 		/* iterate over all neighbors on eigrp interface */
 		for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
 		{
 			if (nbr->state != EIGRP_NEIGHBOR_DOWN)
 			{
-				/* execute hard reset on neighbor */
-				eigrp_nbr_hard_restart(nbr, vty);
+				zlog_debug ("Neighbor %s (%s) is down: manually cleared",
+							inet_ntoa (nbr->src),
+							ifindex2ifname (nbr->ei->ifp->ifindex));
+				vty_time_print (vty, 0);
+				vty_out (vty, "Neighbor %s (%s) is down: manually cleared%s",
+						inet_ntoa (nbr->src),
+						ifindex2ifname (nbr->ei->ifp->ifindex),
+						VTY_NEWLINE);
+
+				/* set neighbor to DOWN */
+				nbr->state = EIGRP_NEIGHBOR_DOWN;
+				/* delete neighbor */
+				eigrp_nbr_delete (nbr);
 			}
 		}
 	}
@@ -1339,7 +1351,7 @@ DEFUN (clear_ip_eigrp_neighbors_IP,
   	}
 
   	/* execute hard reset on neighbor */
-  	eigrp_nbr_hard_restart(nbr, vty);
+  	eigrp_nbr_hard_restart(nbr_found, vty);
 
   	return CMD_SUCCESS;
 }
