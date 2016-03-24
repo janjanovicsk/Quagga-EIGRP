@@ -67,6 +67,7 @@ eigrp_distribute_update (struct distribute *dist)
   struct eigrp_interface *ei;
   struct access_list *alist;
   struct prefix_list *plist;
+  struct route_map *routemap;
   struct eigrp *e;
 
   zlog_info("<DEBUG ACL start");
@@ -76,7 +77,7 @@ eigrp_distribute_update (struct distribute *dist)
   /* Check if distribute-list was set for process or interface */
   if (! dist->ifname)
     {
-	  /* distribute list IN for whole process */
+	  /* access list IN for whole process */
 	  if (dist->list[DISTRIBUTE_IN])
 	    {
 	  	  zlog_info("<DEBUG ACL ALL in");
@@ -91,7 +92,7 @@ eigrp_distribute_update (struct distribute *dist)
 	      e->list[EIGRP_FILTER_IN] = NULL;
 	    }
 
-	  /* distribute list OUT for whole process */
+	  /* access list OUT for whole process */
 	  if (dist->list[DISTRIBUTE_OUT])
 		{
 		  zlog_info("<DEBUG ACL ALL out");
@@ -133,6 +134,36 @@ eigrp_distribute_update (struct distribute *dist)
 		  }
 		else
 		  e->prefix[EIGRP_FILTER_OUT] = NULL;
+
+	   /* route-map IN for whole process */
+	   if (dist->route[DISTRIBUTE_IN])
+		 {
+		  zlog_info("<DEBUG ACL ALL in");
+		  routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_IN]);
+		  if (routemap)
+			e->routemap[EIGRP_FILTER_IN] = routemap;
+		  else
+			e->routemap[EIGRP_FILTER_IN] = NULL;
+		 }
+	   else
+		{
+		  e->list[EIGRP_FILTER_IN] = NULL;
+		}
+
+	   /* route-map OUT for whole process */
+	   if (dist->route[DISTRIBUTE_OUT])
+		{
+		  zlog_info("<DEBUG ACL ALL out");
+		  routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_OUT]);
+		  if (routemap)
+			e->routemap[EIGRP_FILTER_OUT] = routemap;
+		  else
+			e->routemap[EIGRP_FILTER_OUT] = NULL;
+		}
+	   else
+		{
+		  e->list[EIGRP_FILTER_OUT] = NULL;
+		}
 
 	  return;
     }
@@ -227,6 +258,35 @@ eigrp_distribute_update (struct distribute *dist)
   else
     ei->prefix[EIGRP_FILTER_OUT] = NULL;
 
+  /* route-map IN for whole process */
+  if (dist->route[DISTRIBUTE_IN])
+	{
+	  zlog_info("<DEBUG ACL ALL in");
+	  routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_IN]);
+	  if (routemap)
+		ei->routemap[EIGRP_FILTER_IN] = routemap;
+	  else
+		ei->routemap[EIGRP_FILTER_IN] = NULL;
+	 }
+  else
+	{
+	  ei->list[EIGRP_FILTER_IN] = NULL;
+	}
+
+  /* route-map OUT for whole process */
+  if (dist->route[DISTRIBUTE_OUT])
+	{
+	  zlog_info("<DEBUG ACL ALL out");
+	  routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_OUT]);
+	  if (routemap)
+		ei->routemap[EIGRP_FILTER_OUT] = routemap;
+	  else
+		ei->routemap[EIGRP_FILTER_OUT] = NULL;
+	}
+  else
+	{
+	  ei->list[EIGRP_FILTER_OUT] = NULL;
+	}
 
   zlog_info("<DEBUG ACL end");
 }

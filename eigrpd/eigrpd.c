@@ -196,6 +196,12 @@ eigrp_new (const char *AS)
   new->list[EIGRP_FILTER_IN] = NULL;
   new->list[EIGRP_FILTER_OUT] = NULL;
 
+  new->prefix[EIGRP_FILTER_IN] = NULL;
+  new->prefix[EIGRP_FILTER_OUT] = NULL;
+
+  new->routemap[EIGRP_FILTER_IN] = NULL;
+  new->routemap[EIGRP_FILTER_OUT] = NULL;
+
   return new;
 }
 
