@@ -1356,6 +1356,119 @@ DEFUN (clear_ip_eigrp_neighbors_IP,
   	return CMD_SUCCESS;
 }
 
+/*
+ * Execute graceful restart for all neighbors
+ */
+DEFUN (clear_ip_eigrp_neighbors_soft,
+	  clear_ip_eigrp_neighbors_soft_cmd,
+	  "clear ip eigrp neighbors soft",
+	  CLEAR_STR
+	  IP_STR
+	  "Clear IP-EIGRP\n"
+	  "Clear IP-EIGRP neighbors\n"
+	  "Resync with peers without adjacency reset\n")
+{
+	struct eigrp *eigrp;
+	struct eigrp_interface *ei;
+	struct listnode *node, *node2, *nnode2;
+	struct eigrp_neighbor *nbr;
+
+	/* Check if eigrp process is enabled */
+	eigrp = eigrp_lookup ();
+	if (eigrp == NULL)
+	{
+		vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+		return CMD_SUCCESS;
+	}
+
+	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* iterate over all neighbors on eigrp interface */
+		for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+		{
+			if (nbr->state != EIGRP_NEIGHBOR_DOWN)
+			{
+
+				vty_time_print (vty, 0);
+				vty_out (vty, "Neighbor %s (%s) is resync: manually cleared%s",
+						inet_ntoa (nbr->src),
+						ifindex2ifname (nbr->ei->ifp->ifindex),
+						VTY_NEWLINE);
+
+				/* execute graceful restart on neighbor */
+				eigrp_update_send_GR(nbr, 1);
+			}
+		}
+	}
+
+	return CMD_SUCCESS;
+}
+
+/*
+ * Execute graceful restart for neighbor specified by IP
+ */
+DEFUN (clear_ip_eigrp_neighbors_IP_soft,
+	   clear_ip_eigrp_neighbors_IP_soft_cmd,
+       "clear ip eigrp neighbors A.B.C.D soft",
+	   CLEAR_STR
+	   IP_STR
+	   "Clear IP-EIGRP\n"
+	   "Clear IP-EIGRP neighbors\n"
+       "IP-EIGRP neighbor address\n"
+	   "Resync with peer without adjacency reset\n")
+{
+	struct eigrp *eigrp;
+	struct eigrp_interface *ei;
+	struct listnode *node, *node2, *nnode2;
+	struct eigrp_neighbor *nbr, *nbr_found;
+	struct in_addr nbr_addr;
+
+	nbr_found = NULL;
+	VTY_GET_IPV4_ADDRESS ("neighbor address", nbr_addr, argv[0]);
+
+	/* Check if eigrp process is enabled */
+	eigrp = eigrp_lookup ();
+	if (eigrp == NULL)
+	{
+		vty_out (vty, " EIGRP Routing Process not enabled%s", VTY_NEWLINE);
+		return CMD_SUCCESS;
+	}
+
+	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* iterate over all neighbors on eigrp interface */
+		for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+		{
+			/* compare if neighbor address is same as arg address */
+			if (nbr->src.s_addr == nbr_addr.s_addr)
+			{
+				nbr_found = nbr;
+				break;
+			}
+		}
+	}
+
+	/* if neighbor doesn't exists, notify user and exit */
+	if(nbr_found == NULL)
+	{
+		vty_out (vty, "Neighbor with entered address doesn't exists.%s", VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	vty_time_print (vty, 0);
+	vty_out (vty, "Neighbor %s (%s) is resync: manually cleared%s",
+			inet_ntoa (nbr_found->src),
+			ifindex2ifname (nbr_found->ei->ifp->ifindex),
+			VTY_NEWLINE);
+
+	/* execute graceful restart on neighbor */
+	eigrp_update_send_GR(nbr_found, 1);
+
+	return CMD_SUCCESS;
+}
+
 
 static struct cmd_node eigrp_node =
 {
@@ -1503,8 +1616,12 @@ eigrp_vty_init (void)
   install_element (EIGRP_NODE, &eigrp_neighbor_cmd);
   install_element (EIGRP_NODE, &no_eigrp_neighbor_cmd);
 
+  /* commands for manual hard restart */
   install_element (ENABLE_NODE, &clear_ip_eigrp_neighbors_cmd);
   install_element (ENABLE_NODE, &clear_ip_eigrp_neighbors_IP_cmd);
+  /* commands for manual graceful restart */
+  install_element (ENABLE_NODE, &clear_ip_eigrp_neighbors_soft_cmd);
+  install_element (ENABLE_NODE, &clear_ip_eigrp_neighbors_IP_soft_cmd);
 
   eigrp_vty_zebra_init ();
 }

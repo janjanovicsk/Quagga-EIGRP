@@ -83,6 +83,7 @@ extern void eigrp_update_receive (struct eigrp *, struct ip *, struct eigrp_head
 extern void eigrp_update_send_all (struct eigrp *, struct eigrp_interface *);
 extern void eigrp_update_send_init (struct eigrp_neighbor *);
 extern void eigrp_update_send_EOT (struct eigrp_neighbor *);
+extern void eigrp_update_send_GR (struct eigrp_neighbor *, u_char);
 
 /*
  * These externs are found in eigrp_query.c

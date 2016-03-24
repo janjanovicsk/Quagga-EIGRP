@@ -59,6 +59,22 @@
 #include "eigrpd/eigrp_fsm.h"
 
 
+static void
+remove_received_prefix_gr (struct list *nbr_prefixes, struct eigrp_prefix_entry *recv_prefix)
+{
+	//TODO: Needs implementation
+	struct listnode *node1, *node11;
+	struct eigrp_prefix_entry *prefix;
+
+	for (ALL_LIST_ELEMENTS(nbr_prefixes, node1, node11, prefix))
+	{
+		if (prefix == recv_prefix)
+		{
+			listnode_delete(nbr_prefixes, prefix);
+		}
+	}
+}
+
 /*
  * EIGRP UPDATE read function
  */
@@ -77,6 +93,8 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   struct access_list *alist;
   struct prefix_list *plist;
   struct eigrp *e;
+  u_char graceful_restart;
+  struct list *nbr_prefixes;
 
   /* increment statistics. */
   ei->update_in++;
@@ -95,6 +113,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
     }
 
   same = 0;
+  graceful_restart = 0;
   if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence)))
       same = 1;
 
@@ -105,7 +124,17 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
                inet_ntoa(nbr->src),
                nbr->recv_sequence_number, flags);
 
-    if((flags & EIGRP_INIT_FLAG) && (!same))
+  	/* Graceful restart Update received */
+    if((flags == (EIGRP_INIT_FLAG+EIGRP_RS_FLAG+EIGRP_EOT_FLAG)) && (!same))
+    {
+    	//TODO: Needs implementation
+		zlog_info("Neighbor %s (%s) is resync: peer graceful-restart",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+		/* get all prefixes from neighbor from topology table */
+    	nbr_prefixes = eigrp_neighbor_prefixes_lookup(eigrp, nbr);
+    	graceful_restart = 1;
+    }
+    else if((flags & EIGRP_INIT_FLAG) && (!same))
     {   /* When in pending state, send INIT update only if it wasn't
         already sent before (only if init_sequence is 0) */
         if((nbr->state == EIGRP_NEIGHBOR_PENDING) && (nbr->init_sequence_number == 0))
@@ -146,6 +175,10 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
           /*if exists it comes to DUAL*/
           if (dest != NULL)
             {
+        	  /* remove received prefix from neighbor prefix list if in GR */
+        	  if(graceful_restart)
+        		  remove_received_prefix_gr(nbr_prefixes, dest);
+
               struct eigrp_fsm_action_message *msg;
               msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
                   sizeof(struct eigrp_fsm_action_message));
@@ -291,10 +324,44 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
         }
     }
 
+    /* ask about prefixes not present in GR update */
+    if(graceful_restart)
+    {
+    	//TODO: Needs implementation
+    	struct listnode *node1;
+		struct eigrp_prefix_entry *prefix;
+
+		for (ALL_LIST_ELEMENTS_RO(nbr_prefixes, node1, prefix))
+		{
+			zlog_debug("***GR: Neighbor not advertised %s/%d",
+					inet_ntoa(prefix->destination_ipv4->prefix),
+					prefix->destination_ipv4->prefixlen);
+
+			struct eigrp_fsm_action_message *fsm_msg;
+			fsm_msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
+			  sizeof(struct eigrp_fsm_action_message));
+			struct eigrp_neighbor_entry *entry =
+			  eigrp_prefix_entry_lookup(prefix->entries, nbr);
+
+			/* set reported delay to MAX */
+			entry->reported_metric.delay = EIGRP_MAX_METRIC;
+
+			fsm_msg->packet_type = EIGRP_OPC_UPDATE;
+			fsm_msg->eigrp = eigrp;
+			fsm_msg->data_type = EIGRP_TLV_IPv4_INT;
+			fsm_msg->adv_router = nbr;
+			fsm_msg->data.ipv4_int_type = tlv;
+			fsm_msg->entry = entry;
+			fsm_msg->prefix = prefix;
+			int event = eigrp_get_fsm_event(fsm_msg);
+			eigrp_fsm_event(fsm_msg, event);
+		}
+    }
+
   /*
    * We don't need to send separate Ack for INIT Update. INIT will be acked in EOT Update.
    */
-  if ((nbr->state == EIGRP_NEIGHBOR_UP) && !(flags & EIGRP_INIT_FLAG))
+  if ((nbr->state == EIGRP_NEIGHBOR_UP) && !(flags == EIGRP_INIT_FLAG))
     {
       eigrp_hello_send_ack(nbr);
     }
@@ -601,4 +668,134 @@ eigrp_update_send_all (struct eigrp *eigrp, struct eigrp_interface *exception)
           zlog_debug("UPDATE COUNT: %d", eigrp->topology_changes_internalIPV4->count);
         }
     }
+}
+
+/**
+ * @fn eigrp_update_send_GR
+ *
+ * @param[in]		nbr			Neighbor who would receive Graceful restart
+ * @param[in]		is_manual 	True, if executed by manual command
+ *
+ * @return void
+ *
+ * @par
+ * Function used for sending Graceful restart Update packet:
+ * Creates Update packet with INIT, RS, EOT flags and include
+ * all route except those filtered
+ */
+void
+eigrp_update_send_GR (struct eigrp_neighbor *nbr, u_char is_manual)
+{
+	struct eigrp_packet *ep;
+	u_int16_t length = EIGRP_HEADER_LEN;
+	struct eigrp_neighbor_entry *te;
+	struct eigrp_prefix_entry *pe;
+	struct listnode *node, *node2, *nnode, *nnode2;
+	struct access_list *alist;
+	struct prefix_list *plist;
+	struct access_list *alist_i;
+	struct prefix_list *plist_i;
+	struct eigrp *e;
+	struct prefix_ipv4 *dest_addr;
+
+	if(!is_manual)
+	{
+		/* function was called after applying filtration */
+		zlog_info("Neighbor %s (%s) is resync: route configuration changed",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+	} else {
+		/* Graceful restart was called manually */
+		zlog_info("Neighbor %s (%s) is resync: manually cleared",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+	}
+
+	ep = eigrp_packet_new(nbr->ei->ifp->mtu);
+
+	/* Prepare EIGRP Graceful restart UPDATE header */
+	eigrp_packet_header_init(EIGRP_OPC_UPDATE, nbr->ei, ep->s,
+			EIGRP_INIT_FLAG + EIGRP_RS_FLAG + EIGRP_EOT_FLAG,
+			nbr->ei->eigrp->sequence_number,
+			nbr->recv_sequence_number);
+
+	// encode Authentication TLV, if needed
+	if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+	{
+		length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
+	}
+
+	for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node, nnode, pe))
+	{
+		for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, te))
+		{
+			if ((te->ei == nbr->ei)
+			  && (te->prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE))
+				continue;
+
+			/* Get destination address from prefix */
+			dest_addr = pe->destination_ipv4;
+
+			/*
+			* Filtering
+			*/
+
+			/* get list from eigrp process */
+			e = eigrp_lookup();
+			/* Get access-lists and prefix-lists from process and interface */
+			alist = e->list[EIGRP_FILTER_OUT];
+			plist = e->prefix[EIGRP_FILTER_OUT];
+			alist_i = nbr->ei->list[EIGRP_FILTER_OUT];
+			plist_i = nbr->ei->prefix[EIGRP_FILTER_OUT];
+
+			/* Check if any list fits */
+			if ((alist && access_list_apply (alist,
+					 (struct prefix *) dest_addr) == FILTER_DENY)||
+				  (plist && prefix_list_apply (plist,
+							(struct prefix *) dest_addr) == FILTER_DENY)||
+				  (alist_i && access_list_apply (alist,
+							(struct prefix *) dest_addr) == FILTER_DENY)||
+				  (plist_i && prefix_list_apply (plist,
+							(struct prefix *) dest_addr) == FILTER_DENY))
+			{
+			  zlog_info("PROC OUT EOT: Nastavujem metriku na MAX");
+			  //pe->reported_metric.delay = EIGRP_MAX_METRIC;
+			  zlog_info("PROC OUT EOT Prefix: %s", inet_ntoa(dest_addr->prefix));
+			} else {
+			  zlog_info("PROC OUT EOT: NENastavujem metriku ");
+			  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+			}
+			/*
+			* End of filtering
+			*/
+
+			/* NULL the pointer */
+			dest_addr = NULL;
+
+		}
+	}
+
+	if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
+	{
+		eigrp_make_md5_digest(nbr->ei,ep->s, EIGRP_AUTH_UPDATE_FLAG);
+	}
+
+	/* EIGRP Checksum */
+	eigrp_packet_checksum(nbr->ei, ep->s, length);
+
+	ep->length = length;
+	ep->dst.s_addr = nbr->src.s_addr;
+
+	/*This ack number we await from neighbor*/
+	ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+	if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+		zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
+			   ep->length, ep->sequence_number, inet_ntoa(ep->dst));
+
+	/*Put packet to retransmission queue*/
+	eigrp_fifo_push_head(nbr->retrans_queue, ep);
+
+	if (nbr->retrans_queue->count == 1)
+	{
+		eigrp_send_packet_reliably(nbr);
+	}
 }
