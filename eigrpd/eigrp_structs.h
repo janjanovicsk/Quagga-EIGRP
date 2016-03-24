@@ -1,6 +1,6 @@
 /*
  * EIGRP Definition of Data Structures.
- * Copyright (C) 2013-2015
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
@@ -430,6 +430,15 @@ struct TLV_IPv4_External_type
   unsigned char destination_part[4];
   struct in_addr destination;
 }__attribute__((packed));
+
+/* EIGRP Peer Termination TLV - used for hard restart */
+struct TLV_Peer_Termination_type
+{
+	u_int16_t 	type;
+	u_int16_t 	length;
+	u_char  	unknown;
+	u_int32_t   neighbor_ip;
+} __attribute__((packed));
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 

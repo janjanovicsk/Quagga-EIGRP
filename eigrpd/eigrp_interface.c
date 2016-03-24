@@ -1,6 +1,6 @@
 /*
  * EIGRP Interface Functions.
- * Copyright (C) 2013-2015
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
@@ -439,7 +439,7 @@ eigrp_if_free (struct eigrp_interface *ei, int source)
   if (source == INTERFACE_DOWN_BY_VTY)
     {
       THREAD_OFF (ei->t_hello);
-      eigrp_hello_send(ei,EIGRP_HELLO_GRACEFUL_SHUTDOWN);
+      eigrp_hello_send(ei,EIGRP_HELLO_GRACEFUL_SHUTDOWN, NULL);
     }
 
   eigrp_if_down (ei);

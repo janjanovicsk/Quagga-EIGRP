@@ -325,6 +325,7 @@ main (int argc, char **argv)
   distribute_list_add_hook (eigrp_distribute_update);
   distribute_list_delete_hook (eigrp_distribute_update);
 
+
   vty_read_config (config_file, config_default);
 
 

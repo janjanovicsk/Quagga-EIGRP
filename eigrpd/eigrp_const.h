@@ -1,6 +1,6 @@
 /*
  * EIGRP Definition of Constants.
- * Copyright (C) 2013-2015
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
@@ -107,6 +107,7 @@
 #define EIGRP_HELLO_NORMAL                    0x00
 #define EIGRP_HELLO_GRACEFUL_SHUTDOWN         0x01
 #define EIGRP_HELLO_ADD_SEQUENCE              0x02
+#define EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR     0x04
 
     /* EIGRP Network Type. */
  #define EIGRP_IFTYPE_NONE                0
@@ -258,6 +259,7 @@
 #define EIGRP_TLV_SW_VERSION_LEN        (8U)
 #define EIGRP_TLV_NEXT_MCAST_SEQ        (EIGRP_TLV_GENERAL | 0x0005)    /*!< sequence number */
 #define EIGRP_TLV_PEER_TERMINATION      (EIGRP_TLV_GENERAL | 0x0007)    /*!< peer termination */
+#define EIGRP_TLV_PEER_TERMINATION_LEN 	(9U)
 #define EIGRP_TLV_PEER_TIDLIST          (EIGRP_TLV_GENERAL | 0x0008)    /*!< peer sub-topology list */
 
 /* Older cisco routers send TIDLIST value wrong, adding for backwards compatabily */

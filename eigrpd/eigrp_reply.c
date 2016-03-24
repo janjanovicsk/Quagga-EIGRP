@@ -1,12 +1,16 @@
 /*
  * EIGRP Sending and Receiving EIGRP Reply Packets.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -144,17 +148,19 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
               dest->entries, nbr);
 
-          assert(entry); //testing
-
-          msg->packet_type = EIGRP_OPC_REPLY;
-          msg->eigrp = eigrp;
-          msg->data_type = EIGRP_TLV_IPv4_INT;
-          msg->adv_router = nbr;
-          msg->data.ipv4_int_type = tlv;
-          msg->entry = entry;
-          msg->prefix = dest;
-          int event = eigrp_get_fsm_event(msg);
-          eigrp_fsm_event(msg, event);
+          //assert(entry); //testing
+          if(entry == NULL)
+          {
+			  msg->packet_type = EIGRP_OPC_REPLY;
+			  msg->eigrp = eigrp;
+			  msg->data_type = EIGRP_TLV_IPv4_INT;
+			  msg->adv_router = nbr;
+			  msg->data.ipv4_int_type = tlv;
+			  msg->entry = entry;
+			  msg->prefix = dest;
+			  int event = eigrp_get_fsm_event(msg);
+			  eigrp_fsm_event(msg, event);
+          }
 
           eigrp_IPv4_InternalTLV_free (tlv);
         }
