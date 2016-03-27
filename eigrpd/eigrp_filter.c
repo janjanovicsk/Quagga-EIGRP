@@ -1,6 +1,6 @@
 /*
  * EIGRP Filter Functions.
- * Copyright (C) 2013-2015
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
@@ -56,6 +56,7 @@
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_filter.h"
+#include "eigrpd/eigrp_packet.h"
 
 /*
  * Distribute-list update functions.
@@ -165,6 +166,8 @@ eigrp_distribute_update (struct distribute *dist)
 		  e->list[EIGRP_FILTER_OUT] = NULL;
 		}
 
+	   //TODO: call Graceful restart after 10sec
+	   eigrp_update_send_process_GR(e, EIGRP_GR_FILTER, NULL);
 	  return;
     }
 
@@ -287,6 +290,9 @@ eigrp_distribute_update (struct distribute *dist)
 	{
 	  ei->list[EIGRP_FILTER_OUT] = NULL;
 	}
+
+  //TODO: call Graceful restart after 10sec
+  eigrp_update_send_interface_GR(ei, EIGRP_GR_FILTER, NULL);
 
   zlog_info("<DEBUG ACL end");
 }

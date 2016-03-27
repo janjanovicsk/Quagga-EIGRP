@@ -440,6 +440,13 @@ struct TLV_Peer_Termination_type
 	u_int32_t   neighbor_ip;
 } __attribute__((packed));
 
+/* Who executed Graceful restart */
+enum GR_type
+{
+	EIGRP_GR_MANUAL,
+	EIGRP_GR_FILTER
+};
+
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
 /* EIGRP Topology table node structure */

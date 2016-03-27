@@ -509,6 +509,36 @@ eigrp_if_lookup_by_local_addr (struct eigrp *eigrp, struct interface *ifp,
   return NULL;
 }
 
+/**
+ * @fn eigrp_if_lookup_by_name
+ *
+ * @param[in]		eigrp		EIGRP process
+ * @param[in]		if_name 	Name of the interface
+ *
+ * @return struct eigrp_interface *
+ *
+ * @par
+ * Function is used for lookup interface by name.
+ */
+struct eigrp_interface *
+eigrp_if_lookup_by_name (struct eigrp *eigrp, const char *if_name)
+{
+	struct eigrp_interface *ei;
+	struct listnode *node;
+
+	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* compare int name with eigrp interface's name */
+		if(strcmp(ei->ifp->name, if_name) == 0)
+		{
+			return ei;
+		}
+	}
+
+	return NULL;
+}
+
 /* determine receiving interface by ifp and source address */
 struct eigrp_interface *
 eigrp_if_lookup_recv_if (struct eigrp *eigrp, struct in_addr src,
