@@ -100,6 +100,7 @@ struct eigrp
   /*Threads*/
   struct thread *t_write;
   struct thread *t_read;
+  struct thread *t_distribute; /* timer for distribute list */
 
   struct route_table *networks; /* EIGRP config networks. */
 
@@ -166,6 +167,7 @@ struct eigrp_interface
 
   /* Threads. */
   struct thread *t_hello; /* timer */
+  struct thread *t_distribute; /* timer for distribute list */
 
   int on_write_q;
 

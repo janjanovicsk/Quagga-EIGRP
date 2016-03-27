@@ -166,8 +166,17 @@ eigrp_distribute_update (struct distribute *dist)
 		  e->list[EIGRP_FILTER_OUT] = NULL;
 		}
 
-	   //TODO: call Graceful restart after 10sec
-	   eigrp_update_send_process_GR(e, EIGRP_GR_FILTER, NULL);
+	   //TODO: check Graceful restart after 10sec
+
+	   /* check if there is already GR scheduled */
+	   if(e->t_distribute != NULL)
+	   {
+		   /* if is, cancel schedule */
+		   thread_cancel(e->t_distribute);
+	   }
+	   /* schedule Graceful restart for whole process in 10sec */
+	   e->t_distribute = thread_add_timer(master, eigrp_distribute_timer_process, e,(10));
+
 	  return;
     }
 
@@ -291,8 +300,16 @@ eigrp_distribute_update (struct distribute *dist)
 	  ei->list[EIGRP_FILTER_OUT] = NULL;
 	}
 
-  //TODO: call Graceful restart after 10sec
-  eigrp_update_send_interface_GR(ei, EIGRP_GR_FILTER, NULL);
+  //TODO: check Graceful restart after 10sec
+
+  /* check if there is already GR scheduled */
+  if(ei->t_distribute != NULL)
+  {
+	  /* if is, cancel schedule */
+	  thread_cancel(ei->t_distribute);
+  }
+  /* schedule Graceful restart for interface in 10sec */
+  e->t_distribute = thread_add_timer(master, eigrp_distribute_timer_interface, ei,(10));
 
   zlog_info("<DEBUG ACL end");
 }
@@ -332,3 +349,52 @@ eigrp_distribute_update_all_wrapper(struct access_list *notused)
         eigrp_distribute_update_all(NULL);
 }
 
+/*
+ * @fn eigrp_distribute_timer_process
+ *
+ * @param[in]	thread	current execution thread timer is associated with
+ *
+ * @return int	always returns 0
+ *
+ * @par
+ * Called when 10sec waiting time expire and
+ * executes Graceful restart for whole process
+ */
+int
+eigrp_distribute_timer_process (struct thread *thread)
+{
+	struct eigrp *eigrp;
+
+	eigrp = THREAD_ARG(thread);
+	eigrp->t_distribute = NULL;
+
+	/* execute GR for whole process */
+	eigrp_update_send_process_GR(eigrp, EIGRP_GR_FILTER, NULL);
+
+	return 0;
+}
+
+/*
+ * @fn eigrp_distribute_timer_interface
+ *
+ * @param[in]	thread	current execution thread timer is associated with
+ *
+ * @return int	always returns 0
+ *
+ * @par
+ * Called when 10sec waiting time expire and
+ * executes Graceful restart for interface
+ */
+int
+eigrp_distribute_timer_interface (struct thread *thread)
+{
+	struct eigrp_interface *ei;
+
+	ei = THREAD_ARG(thread);
+	ei->t_distribute = NULL;
+
+	/* execute GR for interface */
+	eigrp_update_send_interface_GR(ei, EIGRP_GR_FILTER, NULL);
+
+	return 0;
+}
