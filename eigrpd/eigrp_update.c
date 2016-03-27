@@ -105,7 +105,6 @@ remove_received_prefix_gr (struct list *nbr_prefixes, struct eigrp_prefix_entry 
 static void
 eigrp_update_receive_GR_ask (struct eigrp *eigrp, struct eigrp_neighbor *nbr, struct list *nbr_prefixes)
 {
-	//TODO: Needs implementation
 	struct listnode *node1;
 	struct eigrp_prefix_entry *prefix;
 	struct TLV_IPv4_Internal_type *tlv_max;
