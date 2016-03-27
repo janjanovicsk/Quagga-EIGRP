@@ -1414,9 +1414,6 @@ DEFUN (clear_ip_eigrp_neighbors_soft,
 	  "Resync with peers without adjacency reset\n")
 {
 	struct eigrp *eigrp;
-	struct eigrp_interface *ei;
-	struct listnode *node, *node2, *nnode2;
-	struct eigrp_neighbor *nbr;
 
 	/* Check if eigrp process is enabled */
 	eigrp = eigrp_lookup ();
@@ -1447,7 +1444,6 @@ DEFUN (clear_ip_eigrp_neighbors_int_soft,
 {
 	struct eigrp *eigrp;
 	struct eigrp_interface *ei;
-	struct listnode *node;
 
 	/* Check if eigrp process is enabled */
 	eigrp = eigrp_lookup ();
