@@ -171,6 +171,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
   struct prefix_list *plist;
   struct eigrp *e;
   u_char graceful_restart;
+  u_char graceful_restart_final;
   struct list *nbr_prefixes;
 
   /* increment statistics. */
@@ -191,6 +192,7 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
 
   same = 0;
   graceful_restart = 0;
+  graceful_restart_final = 0;
   if((nbr->recv_sequence_number) == (ntohl(eigrph->sequence)))
       same = 1;
 
@@ -201,16 +203,64 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
                inet_ntoa(nbr->src),
                nbr->recv_sequence_number, flags);
 
-  	/* Graceful restart Update received */
+
     if((flags == (EIGRP_INIT_FLAG+EIGRP_RS_FLAG+EIGRP_EOT_FLAG)) && (!same))
     {
+    	/* Graceful restart Update received with all routes */
+
 		zlog_info("Neighbor %s (%s) is resync: peer graceful-restart",
 				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
 		/* get all prefixes from neighbor from topology table */
     	nbr_prefixes = eigrp_neighbor_prefixes_lookup(eigrp, nbr);
     	graceful_restart = 1;
+    	graceful_restart_final = 1;
     }
+    else if((flags == (EIGRP_INIT_FLAG+EIGRP_RS_FLAG)) && (!same))
+    {
+    	/* Graceful restart Update received, routes also in next packet */
+
+		zlog_info("Neighbor %s (%s) is resync: peer graceful-restart",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+
+		/* get all prefixes from neighbor from topology table */
+    	nbr_prefixes = eigrp_neighbor_prefixes_lookup(eigrp, nbr);
+    	/* save prefixes to neighbor for later use */
+    	nbr->nbr_gr_prefixes = nbr_prefixes;
+    	graceful_restart = 1;
+    	graceful_restart_final = 0;
+    }
+    else if((flags == (EIGRP_EOT_FLAG)) && (!same))
+	{
+		/* If there was INIT+RS Update packet before,
+		 *  consider this as GR EOT */
+
+		if(nbr->nbr_gr_prefixes != NULL)
+		{
+			/* this is final packet of GR */
+			nbr_prefixes = nbr->nbr_gr_prefixes;
+			nbr->nbr_gr_prefixes = NULL;
+
+			graceful_restart = 1;
+			graceful_restart_final = 1;
+		}
+
+	}
+    else if((flags == (0)) && (!same))
+	{
+		/* If there was INIT+RS Update packet before,
+		 *  consider this as GR not final packet */
+
+		if(nbr->nbr_gr_prefixes != NULL)
+		{
+			/* this is GR not final route packet */
+			nbr_prefixes = nbr->nbr_gr_prefixes;
+
+			graceful_restart = 1;
+			graceful_restart_final = 0;
+		}
+
+	}
     else if((flags & EIGRP_INIT_FLAG) && (!same))
     {   /* When in pending state, send INIT update only if it wasn't
         already sent before (only if init_sequence is 0) */
@@ -401,8 +451,9 @@ eigrp_update_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *
         }
     }
 
-    /* ask about prefixes not present in GR update */
-    if(graceful_restart)
+    /* ask about prefixes not present in GR update,
+     * if this is final GR packet */
+    if(graceful_restart_final)
     {
     	eigrp_update_receive_GR_ask(eigrp, nbr, nbr_prefixes);
     }

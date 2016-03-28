@@ -266,6 +266,9 @@ struct eigrp_neighbor
   struct eigrp_fifo *multicast_queue;
 
   u_int32_t crypt_seqnum;           /* Cryptographic Sequence Number. */
+
+  /* prefixes not received from neighbor during Graceful restart */
+  struct list *nbr_gr_prefixes;
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
