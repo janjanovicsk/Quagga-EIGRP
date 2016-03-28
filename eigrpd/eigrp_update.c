@@ -789,9 +789,8 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 {
 	struct eigrp_packet *ep;
 	u_int16_t length = EIGRP_HEADER_LEN;
-	struct eigrp_neighbor_entry *te;
 	struct eigrp_prefix_entry *pe;
-	struct listnode *node, *node2, *nnode, *nnode2;
+	struct listnode *node, *nnode;
 	struct access_list *alist;
 	struct prefix_list *plist;
 	struct access_list *alist_i;
@@ -838,55 +837,47 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 	/* iterate over all prefixes in topology table */
 	for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node, nnode, pe))
 	{
-		/* iterate over all neighbor entries in prefix */
-		for (ALL_LIST_ELEMENTS(pe->entries, node2, nnode2, te))
+		/* Get destination address from prefix */
+		dest_addr = pe->destination_ipv4;
+
+		/*
+		* Filtering
+		*/
+
+		/* get list from eigrp process */
+		e = eigrp_lookup();
+		/* Get access-lists and prefix-lists from process and interface */
+		alist = e->list[EIGRP_FILTER_OUT];
+		plist = e->prefix[EIGRP_FILTER_OUT];
+		alist_i = nbr->ei->list[EIGRP_FILTER_OUT];
+		plist_i = nbr->ei->prefix[EIGRP_FILTER_OUT];
+
+		/* Check if any list fits */
+		if ((alist && access_list_apply (alist,
+				 (struct prefix *) dest_addr) == FILTER_DENY)||
+			  (plist && prefix_list_apply (plist,
+						(struct prefix *) dest_addr) == FILTER_DENY)||
+			  (alist_i && access_list_apply (alist,
+						(struct prefix *) dest_addr) == FILTER_DENY)||
+			  (plist_i && prefix_list_apply (plist,
+						(struct prefix *) dest_addr) == FILTER_DENY))
 		{
-			if ((te->ei == nbr->ei)
-			  && (te->prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE))
-				continue;
-
-			/* Get destination address from prefix */
-			dest_addr = pe->destination_ipv4;
-
-			/*
-			* Filtering
-			*/
-
-			/* get list from eigrp process */
-			e = eigrp_lookup();
-			/* Get access-lists and prefix-lists from process and interface */
-			alist = e->list[EIGRP_FILTER_OUT];
-			plist = e->prefix[EIGRP_FILTER_OUT];
-			alist_i = nbr->ei->list[EIGRP_FILTER_OUT];
-			plist_i = nbr->ei->prefix[EIGRP_FILTER_OUT];
-
-			/* Check if any list fits */
-			if ((alist && access_list_apply (alist,
-					 (struct prefix *) dest_addr) == FILTER_DENY)||
-				  (plist && prefix_list_apply (plist,
-							(struct prefix *) dest_addr) == FILTER_DENY)||
-				  (alist_i && access_list_apply (alist,
-							(struct prefix *) dest_addr) == FILTER_DENY)||
-				  (plist_i && prefix_list_apply (plist,
-							(struct prefix *) dest_addr) == FILTER_DENY))
-			{
-				/* do not send filtered route */
-				zlog_debug("Filtered prefix %s won't be sent out.",
-						inet_ntoa(dest_addr->prefix));
-			}
-			else
-			{
-				/* sending route which wasn't filtered */
-				length += eigrp_add_internalTLV_to_stream(ep->s, pe);
-			}
-			/*
-			* End of filtering
-			*/
-
-			/* NULL the pointer */
-			dest_addr = NULL;
-
+			/* do not send filtered route */
+			zlog_debug("Filtered prefix %s won't be sent out.",
+					inet_ntoa(dest_addr->prefix));
 		}
+		else
+		{
+			/* sending route which wasn't filtered */
+			length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+		}
+		/*
+		* End of filtering
+		*/
+
+		/* NULL the pointer */
+		dest_addr = NULL;
+
 	}
 
 	/* compute Auth digest */
