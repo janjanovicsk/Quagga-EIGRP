@@ -771,52 +771,76 @@ eigrp_update_send_all (struct eigrp *eigrp, struct eigrp_interface *exception)
 }
 
 /**
- * @fn eigrp_update_send_GR
+ * @fn eigrp_update_send_GR_part
  *
- * @param[in]		nbr			Neighbor who would receive Graceful restart
- * @param[in]		gr_type 	Who executed Graceful restart
- * @param[in]		vty 		Virtual terminal for log output
+ * @param[in]		nbr		contains neighbor who would receive Graceful restart
  *
  * @return void
  *
  * @par
- * Function used for sending Graceful restart Update packet:
- * Creates Update packet with INIT, RS, EOT flags and include
- * all route except those filtered
+ * Function used for sending Graceful restart Update packet
+ * and if there are multiple chunks, send only one of them.
+ * It is called from thread. Do not call it directly.
+ *
+ * Uses nbr_gr_packet_type from neighbor.
  */
-void
-eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct vty *vty)
+static void
+eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 {
 	struct eigrp_packet *ep;
 	u_int16_t length = EIGRP_HEADER_LEN;
-	struct eigrp_prefix_entry *pe;
 	struct listnode *node, *nnode;
-	struct access_list *alist;
-	struct prefix_list *plist;
-	struct access_list *alist_i;
-	struct prefix_list *plist_i;
-	struct eigrp *e;
+	struct eigrp_prefix_entry *pe;
 	struct prefix_ipv4 *dest_addr;
+	struct eigrp *e;
+	struct access_list *alist, *alist_i;
+	struct prefix_list *plist, *plist_i;
+	struct list *prefixes;
+	u_int32_t flags;
+	unsigned int send_prefixes;
 
-	if(gr_type == EIGRP_GR_FILTER)
-	{
-		/* function was called after applying filtration */
-		zlog_info("Neighbor %s (%s) is resync: route configuration changed",
-				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
-	}
-	else if(gr_type == EIGRP_GR_MANUAL)
-	{
-		/* Graceful restart was called manually */
-		zlog_info("Neighbor %s (%s) is resync: manually cleared",
-				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+	/* get prefixes to send to neighbor */
+	prefixes = nbr->nbr_gr_prefixes_send;
 
-		if(vty != NULL)
+	send_prefixes = 0;
+	length = EIGRP_HEADER_LEN;
+
+	/* if there already were last packet chunk, we won't continue */
+	if(nbr->nbr_gr_packet_type == EIGRP_PACKET_PART_LAST)
+		return;
+
+	/* if this is first packet chunk, we need to decide,
+	 * if there will be one or more chunks */
+	if(nbr->nbr_gr_packet_type == EIGRP_PACKET_PART_FIRST)
+	{
+		if(prefixes->count <= EIGRP_TLV_MAX_IPv4)
 		{
-			vty_time_print (vty, 0);
-			vty_out (vty, "Neighbor %s (%s) is resync: manually cleared%s",
-					inet_ntoa (nbr->src),
-					ifindex2ifname (nbr->ei->ifp->ifindex),
-					VTY_NEWLINE);
+			/* there will be only one chunk */
+			flags = EIGRP_INIT_FLAG + EIGRP_RS_FLAG + EIGRP_EOT_FLAG;
+			nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_LAST;
+		}
+		else
+		{
+			/* there will be more chunks */
+			flags = EIGRP_INIT_FLAG + EIGRP_RS_FLAG;
+			nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_NA;
+		}
+	}
+	else
+	{
+		/* this is not first chunk, and we need to decide,
+		 * if there will be more chunks */
+		if(prefixes->count <= EIGRP_TLV_MAX_IPv4)
+		{
+			/* this is last chunk */
+			flags = EIGRP_EOT_FLAG;
+			nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_LAST;
+		}
+		else
+		{
+			/* there will be more chunks */
+			flags = 0;
+			nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_NA;
 		}
 	}
 
@@ -824,9 +848,10 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 
 	/* Prepare EIGRP Graceful restart UPDATE header */
 	eigrp_packet_header_init(EIGRP_OPC_UPDATE, nbr->ei, ep->s,
-			EIGRP_INIT_FLAG + EIGRP_RS_FLAG + EIGRP_EOT_FLAG,
+			flags,
 			nbr->ei->eigrp->sequence_number,
-			nbr->recv_sequence_number);
+			//nbr->recv_sequence_number);
+			0);
 
 	// encode Authentication TLV, if needed
 	if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
@@ -834,8 +859,8 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 		length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
 	}
 
-	/* iterate over all prefixes in topology table */
-	for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node, nnode, pe))
+	/* iterate over all remaining prefixes */
+	for (ALL_LIST_ELEMENTS(prefixes, node, nnode, pe))
 	{
 		/* Get destination address from prefix */
 		dest_addr = pe->destination_ipv4;
@@ -870,6 +895,7 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 		{
 			/* sending route which wasn't filtered */
 			length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+			send_prefixes++;
 		}
 		/*
 		* End of filtering
@@ -878,6 +904,12 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 		/* NULL the pointer */
 		dest_addr = NULL;
 
+		/* delete processed prefix from list */
+		listnode_delete(prefixes, pe);
+
+		/* if there are enough prefixes, send packet */
+		if(send_prefixes >= EIGRP_TLV_MAX_IPv4)
+			break;
 	}
 
 	/* compute Auth digest */
@@ -899,6 +931,7 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 		zlog_debug("Enqueuing Update Init Len [%u] Seq [%u] Dest [%s]",
 			   ep->length, ep->sequence_number, inet_ntoa(ep->dst));
 
+
 	/*Put packet to retransmission queue*/
 	eigrp_fifo_push_head(nbr->retrans_queue, ep);
 
@@ -906,6 +939,105 @@ eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct v
 	{
 		eigrp_send_packet_reliably(nbr);
 	}
+}
+
+/**
+ * @fn eigrp_update_send_GR_thread
+ *
+ * @param[in]		thread		contains neighbor who would receive Graceful restart
+ *
+ * @return int      always 0
+ *
+ * @par
+ * Function used for sending Graceful restart Update packet
+ * in thread, it is prepared for multiple chunks of packet.
+ *
+ * Uses nbr_gr_packet_type and t_nbr_send_gr from neighbor.
+ */
+int
+eigrp_update_send_GR_thread(struct thread *thread)
+{
+	struct eigrp_neighbor *nbr;
+
+	/* get argument from thread */
+	nbr = THREAD_ARG(thread);
+	/* remove this thread pointer */
+	nbr->t_nbr_send_gr = NULL;
+
+	/* if there is packet waiting in queue,
+	 * schedule this thread again with small delay */
+	if(nbr->retrans_queue->count > 0)
+	{
+		nbr->t_nbr_send_gr = thread_add_timer_msec(master, eigrp_update_send_GR_thread, nbr, 10);
+		return 0;
+	}
+
+	/* send GR EIGRP packet chunk */
+	eigrp_update_send_GR_part(nbr);
+
+	/* if it wasn't last chunk, schedule this thread again */
+	if(nbr->nbr_gr_packet_type != EIGRP_PACKET_PART_LAST)
+		nbr->t_nbr_send_gr = thread_execute(master, eigrp_update_send_GR_thread, nbr, 0);
+
+	return 0;
+}
+
+/**
+ * @fn eigrp_update_send_GR
+ *
+ * @param[in]		nbr			Neighbor who would receive Graceful restart
+ * @param[in]		gr_type 	Who executed Graceful restart
+ * @param[in]		vty 		Virtual terminal for log output
+ *
+ * @return void
+ *
+ * @par
+ * Function used for sending Graceful restart Update packet:
+ * Creates Update packet with INIT, RS, EOT flags and include
+ * all route except those filtered
+ */
+void
+eigrp_update_send_GR (struct eigrp_neighbor *nbr, enum GR_type gr_type, struct vty *vty)
+{
+	struct eigrp_prefix_entry *pe2;
+	struct listnode *node2, *nnode2;
+	struct list *prefixes;
+
+	if(gr_type == EIGRP_GR_FILTER)
+	{
+		/* function was called after applying filtration */
+		zlog_info("Neighbor %s (%s) is resync: route configuration changed",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+	}
+	else if(gr_type == EIGRP_GR_MANUAL)
+	{
+		/* Graceful restart was called manually */
+		zlog_info("Neighbor %s (%s) is resync: manually cleared",
+				  inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
+
+		if(vty != NULL)
+		{
+			vty_time_print (vty, 0);
+			vty_out (vty, "Neighbor %s (%s) is resync: manually cleared%s",
+					inet_ntoa (nbr->src),
+					ifindex2ifname (nbr->ei->ifp->ifindex),
+					VTY_NEWLINE);
+		}
+	}
+
+	prefixes = list_new();
+	/* add all prefixes from topology table to list */
+	for (ALL_LIST_ELEMENTS(nbr->ei->eigrp->topology_table, node2, nnode2, pe2))
+	{
+		listnode_add(prefixes, pe2);
+	}
+
+	/* save prefixes to neighbor */
+	nbr->nbr_gr_prefixes_send = prefixes;
+	/* indicate, that this is first GR Update packet chunk */
+	nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_FIRST;
+	/* execute packet sending in thread */
+	nbr->t_nbr_send_gr = thread_execute(master, eigrp_update_send_GR_thread, nbr, 0);
 }
 
 /**

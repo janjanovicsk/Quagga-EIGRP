@@ -227,6 +227,17 @@ struct eigrp_if_info
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
+/* Determines if it is first or last packet
+ * when packet consists of multiple packet
+ * chunks because of many route TLV
+ * (all won't fit into one packet) */
+enum Packet_part_type
+{
+	EIGRP_PACKET_PART_NA,
+	EIGRP_PACKET_PART_FIRST,
+	EIGRP_PACKET_PART_LAST
+};
+
 /* Neighbor Data Structure */
 struct eigrp_neighbor
 {
@@ -261,6 +272,7 @@ struct eigrp_neighbor
 
   /* Threads. */
   struct thread *t_holddown;
+  struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet chunks */
 
   struct eigrp_fifo *retrans_queue;
   struct eigrp_fifo *multicast_queue;
@@ -269,6 +281,10 @@ struct eigrp_neighbor
 
   /* prefixes not received from neighbor during Graceful restart */
   struct list *nbr_gr_prefixes;
+  /* prefixes not yet send to neighbor during Graceful restart */
+  struct list *nbr_gr_prefixes_send;
+  /* if packet is first or last during Graceful restart */
+  enum Packet_part_type nbr_gr_packet_type;
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
