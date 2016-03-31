@@ -1315,12 +1315,12 @@ route_map_init_vty (void)
   install_element (RMAP_NODE, &no_rmap_onmatch_next_cmd);
   install_element (RMAP_NODE, &rmap_onmatch_goto_cmd);
   install_element (RMAP_NODE, &no_rmap_onmatch_goto_cmd);
-  
+
   /* Install the continue stuff (ALIAS of on-match). */
   install_element (RMAP_NODE, &rmap_continue_cmd);
   install_element (RMAP_NODE, &no_rmap_continue_cmd);
   install_element (RMAP_NODE, &rmap_continue_index_cmd);
-  
+
   /* Install the call stuff. */
   install_element (RMAP_NODE, &rmap_call_cmd);
   install_element (RMAP_NODE, &no_rmap_call_cmd);
@@ -1328,7 +1328,7 @@ route_map_init_vty (void)
   /* Install description commands. */
   install_element (RMAP_NODE, &rmap_description_cmd);
   install_element (RMAP_NODE, &no_rmap_description_cmd);
-   
+
   /* Install show command */
   install_element (ENABLE_NODE, &rmap_show_name_cmd);
 }

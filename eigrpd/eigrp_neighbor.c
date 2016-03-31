@@ -41,6 +41,7 @@
 #include "table.h"
 #include "log.h"
 #include "keychain.h"
+#include "vty.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -116,6 +117,18 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   return nbr;
 }
 
+/**
+ * @fn eigrp_nbr_lookup_by_addr
+ *
+ * @param[in]		ei			EIGRP interface
+ * @param[in]		nbr_addr 	Address of neighbor
+ *
+ * @return void
+ *
+ * @par
+ * Function is used for neighbor lookup by address
+ * in specified interface.
+ */
 struct eigrp_neighbor *
 eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
 {
@@ -131,6 +144,42 @@ eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
       }
 
   return NULL;
+}
+
+/**
+ * @fn eigrp_nbr_lookup_by_addr_process
+ *
+ * @param[in]		eigrp		EIGRP process
+ * @param[in]		nbr_addr 	Address of neighbor
+ *
+ * @return void
+ *
+ * @par
+ * Function is used for neighbor lookup by address
+ * in whole EIGRP process.
+ */
+struct eigrp_neighbor *
+eigrp_nbr_lookup_by_addr_process (struct eigrp *eigrp, struct in_addr nbr_addr)
+{
+	struct eigrp_interface *ei;
+	struct listnode *node, *node2, *nnode2;
+	struct eigrp_neighbor *nbr;
+
+  	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* iterate over all neighbors on eigrp interface */
+		for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+		{
+			/* compare if neighbor address is same as arg address */
+			if (nbr->src.s_addr == nbr_addr.s_addr)
+			{
+				return nbr;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 

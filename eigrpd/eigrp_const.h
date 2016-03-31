@@ -279,6 +279,9 @@
 #define EIGRP_TLV_IPv4_EXT              (EIGRP_TLV_IPv4 | EIGRP_TLV_EXTERNAL)
 #define EIGRP_TLV_IPv4_COM              (EIGRP_TLV_IPv4 | EIGRP_TLV_COMMUNITY)
 
+/* max number of TLV IPv4 prefixes in packet */
+#define EIGRP_TLV_MAX_IPv4				25
+
 /**
  *
  * extdata flag field definitions
