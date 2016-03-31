@@ -1198,12 +1198,12 @@ eigrp_route_map_init ()
   route_map_delete_hook (eigrp_route_map_update);
 
   /*route_map_install_match (&route_match_metric_cmd);
-  route_map_install_match (&route_match_interface_cmd);
-  route_map_install_match (&route_match_ip_next_hop_cmd);
+  route_map_install_match (&route_match_interface_cmd);*/
+  /*route_map_install_match (&route_match_ip_next_hop_cmd);
   route_map_install_match (&route_match_ip_next_hop_prefix_list_cmd);
   route_map_install_match (&route_match_ip_address_cmd);
-  route_map_install_match (&route_match_ip_address_prefix_list_cmd);
-  route_map_install_match (&route_match_tag_cmd);*/
+  route_map_install_match (&route_match_ip_address_prefix_list_cmd);*/
+  /*route_map_install_match (&route_match_tag_cmd);*/
 
   /*route_map_install_set (&route_set_metric_cmd);
   route_map_install_set (&route_set_ip_nexthop_cmd);
@@ -1221,12 +1221,12 @@ eigrp_route_map_init ()
   install_element (RMAP_NODE, &route_match_ip_next_hop_prefix_list_cmd);
   install_element (RMAP_NODE, &no_match_ip_next_hop_prefix_list_cmd);
   install_element (RMAP_NODE, &no_match_ip_next_hop_prefix_list_val_cmd);*/
-  install_element (RMAP_NODE, &route_match_ip_address_cmd);
+  /*install_element (RMAP_NODE, &route_match_ip_address_cmd);
   install_element (RMAP_NODE, &no_match_ip_address_cmd);
   install_element (RMAP_NODE, &no_match_ip_address_val_cmd);
   install_element (RMAP_NODE, &route_match_ip_address_prefix_list_cmd);
   install_element (RMAP_NODE, &no_match_ip_address_prefix_list_cmd);
-  install_element (RMAP_NODE, &no_match_ip_address_prefix_list_val_cmd);
+  install_element (RMAP_NODE, &no_match_ip_address_prefix_list_val_cmd);*/
   /*install_element (RMAP_NODE, &route_match_tag_cmd);
   install_element (RMAP_NODE, &no_match_tag_cmd);
   install_element (RMAP_NODE, &no_match_tag_val_cmd);*/
