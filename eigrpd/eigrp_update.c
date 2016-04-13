@@ -838,6 +838,7 @@ eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 	struct list *prefixes;
 	u_int32_t flags;
 	unsigned int send_prefixes;
+	struct TLV_IPv4_Internal_type *tlv_max;
 
 	/* get prefixes to send to neighbor */
 	prefixes = nbr->nbr_gr_prefixes_send;
@@ -904,7 +905,7 @@ eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 		/*
 		* Filtering
 		*/
-
+		dest_addr = pe->destination_ipv4;
 		/* get list from eigrp process */
 		e = eigrp_lookup();
 		/* Get access-lists and prefix-lists from process and interface */
@@ -912,6 +913,7 @@ eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 		plist = e->prefix[EIGRP_FILTER_OUT];
 		alist_i = nbr->ei->list[EIGRP_FILTER_OUT];
 		plist_i = nbr->ei->prefix[EIGRP_FILTER_OUT];
+
 
 		/* Check if any list fits */
 		if ((alist && access_list_apply (alist,
@@ -924,7 +926,7 @@ eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 						(struct prefix *) dest_addr) == FILTER_DENY))
 		{
 			/* do not send filtered route */
-			zlog_debug("Filtered prefix %s won't be sent out.",
+			zlog_info("Filtered prefix %s won't be sent out.",
 					inet_ntoa(dest_addr->prefix));
 		}
 		else
@@ -932,6 +934,62 @@ eigrp_update_send_GR_part(struct eigrp_neighbor *nbr)
 			/* sending route which wasn't filtered */
 			length += eigrp_add_internalTLV_to_stream(ep->s, pe);
 			send_prefixes++;
+		}
+
+
+
+		alist = e->list[EIGRP_FILTER_IN];
+		plist = e->prefix[EIGRP_FILTER_IN];
+		alist_i = nbr->ei->list[EIGRP_FILTER_IN];
+		plist_i = nbr->ei->prefix[EIGRP_FILTER_IN];
+
+
+		/* Check if any list fits */
+		if ((alist && access_list_apply (alist,
+				 (struct prefix *) dest_addr) == FILTER_DENY)||
+			  (plist && prefix_list_apply (plist,
+						(struct prefix *) dest_addr) == FILTER_DENY)||
+			  (alist_i && access_list_apply (alist_i,
+						(struct prefix *) dest_addr) == FILTER_DENY)||
+			  (plist_i && prefix_list_apply (plist_i,
+						(struct prefix *) dest_addr) == FILTER_DENY))
+		{
+			/* do not send filtered route */
+			zlog_info("Filtered prefix %s will be removed.",
+					inet_ntoa(dest_addr->prefix));
+
+			tlv_max = eigrp_IPv4_InternalTLV_new();
+			tlv_max->type = EIGRP_TLV_IPv4_INT;
+			tlv_max->length = 28U;
+			tlv_max->metric = pe->reported_metric;
+			/* set delay to MAX */
+			tlv_max->metric.delay = EIGRP_MAX_METRIC;
+			tlv_max->destination = pe->destination_ipv4->prefix;
+			tlv_max->prefix_length = pe->destination_ipv4->prefixlen;
+
+
+			/* prepare message for FSM */
+			struct eigrp_fsm_action_message *fsm_msg;
+			fsm_msg = XCALLOC(MTYPE_EIGRP_FSM_MSG,
+			  sizeof(struct eigrp_fsm_action_message));
+
+			struct eigrp_neighbor_entry *entry =
+			  eigrp_prefix_entry_lookup(pe->entries, nbr);
+
+			fsm_msg->packet_type = EIGRP_OPC_UPDATE;
+			fsm_msg->eigrp = e;
+			fsm_msg->data_type = EIGRP_TLV_IPv4_INT;
+			fsm_msg->adv_router = nbr;
+			fsm_msg->data.ipv4_int_type = tlv_max;
+			fsm_msg->entry = entry;
+			fsm_msg->prefix = pe;
+
+			/* send message to FSM */
+			int event = eigrp_get_fsm_event(fsm_msg);
+			eigrp_fsm_event(fsm_msg, event);
+
+			/* free memory used by TLV */
+			eigrp_IPv4_InternalTLV_free (tlv_max);
 		}
 		/*
 		* End of filtering
