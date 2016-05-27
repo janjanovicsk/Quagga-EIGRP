@@ -62,6 +62,7 @@ static const struct message eigrp_general_tlv_type_str[] =
   { EIGRP_TLV_PEER_TERMINATION,	"PEER_TERMINATION"	},
   { EIGRP_TLV_PEER_MTRLIST,	"PEER_MTRLIST"		},
   { EIGRP_TLV_PEER_TIDLIST,	"PEER_TIDLIST"		},
+  { EIGRP_TLV_HUB_AND_SPOKE, "HUB_AND_SPOKE" },
 };
 
 static const size_t eigrp_general_tlv_type_str_max = sizeof(eigrp_general_tlv_type_str) /
@@ -145,36 +146,36 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
     {
 
       if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN)
-	{
-	  zlog_info("Neighbor %s (%s) is pending: new adjacency",
+	    {
+	      zlog_info("Neighbor %s (%s) is pending: new adjacency",
 		    inet_ntoa(nbr->src), ifindex2ifname(nbr->ei->ifp->ifindex));
 
-	  /* Expedited hello sent */
-	    eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL);
+	      /* Expedited hello sent */
+	      eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL);
 
-//	  if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr))
+	      /* if(ntohl(nbr->ei->address->u.prefix4.s_addr) > ntohl(nbr->src.s_addr)) */
 	      eigrp_update_send_init(nbr);
 
-	  eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
-	}
+	      eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
+	   }
     }
   else
     {
       if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN)
-	{
-	  if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5) == 255)
 	    {
+	      if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5) == 255)
+	        {
               zlog_info ("Neighbor %s (%s) going down: Peer Termination",
                          inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
               eigrp_nbr_delete (nbr);
-	    }
-	  else
-	    {
+	        }
+	      else
+	        {
               zlog_info ("Neighbor %s (%s) going down: Kvalue mismatch",
                          inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex));
               eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+	        }
 	    }
-	}
     }
 }
 
@@ -197,7 +198,7 @@ eigrp_hello_authentication_decode(struct stream *s, struct eigrp_tlv_hdr_type *t
 /**
  * @fn eigrp_sw_version_decode
  *
- * @param[in]		nbr	neighbor the ACK shoudl be sent to
+ * @param[in]		nbr	neighbor the ACK should be sent to
  * @param[in]		param	pointer to TLV software version information
  *
  * @return void
@@ -223,7 +224,7 @@ eigrp_sw_version_decode (struct eigrp_neighbor *nbr,
 /**
  * @fn eigrp_peer_termination_decode
  *
- * @param[in]		nbr	neighbor the ACK shoudl be sent to
+ * @param[in]		nbr	neighbor the ACK should be sent to
  * @param[in]		param	pointer to TLV software version information
  *
  * @return void
@@ -274,9 +275,9 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
   uint16_t	length;
 
   /* get neighbor struct */
-  nbr = eigrp_nbr_get(ei, eigrph, iph);
+  nbr = eigrp_nbr_get_or_create(ei, eigrph, iph);
 
-  /* neighbor must be valid, eigrp_nbr_get creates if none existed */
+  /* neighbor must be valid */
   assert(nbr);
   
   if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV))
@@ -546,16 +547,46 @@ eigrp_hello_parameter_encode (struct eigrp_interface *ei, struct stream *s, u_ch
 }
 
 /**
+ * @fn eigrp_hub_and_spoke_TLV_encode
+ *
+ * @param[in]		ei	pointer to interface hello packet came in on
+ * @param[in,out]	s	packet stream TLV is stored to
+ *
+ * @return u_int16_t	number of bytes added to packet stream
+ *
+ * @par
+ * Encode Parameter TLV, used to determine Hub-and-Spoke role.
+ */
+static u_int16_t
+eigrp_hub_and_spoke_TLV_encode (struct eigrp_interface *ei, struct stream *s)
+{
+  /* Don't add TLV if not point-to-multipoint network type */
+  if (ei->type != EIGRP_IFTYPE_POINTOMULTIPOINT)
+	return 0;
+
+  /* add TLV */
+  u_int16_t length = EIGRP_TLV_HUB_AND_SPOKE_LEN;
+
+  stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE);
+  stream_putw(s, EIGRP_TLV_HUB_AND_SPOKE_LEN);
+  stream_putc(s, IF_DEF_PARAMS(ei->ifp)->hs_role);
+
+  zlog_info("H&S TLVs --> Net: %d, Role: %d", ei->type, IF_DEF_PARAMS(ei->ifp)->hs_role);
+
+  return length;
+}
+
+/**
  * @fn eigrp_hello_encode
  *
  * @param[in]		ei	pointer to interface hello packet came in on
  * @param[in]		s	packet stream TLV is stored to
- * @param[in]		ack	if non-zero, neigbors sequence packet to ack
+ * @param[in]		ack	if non-zero, neighbors sequence packet to ack
  *
  * @return eigrp_packet		pointer initialize hello packet
  *
  * @par
- * Allocate an EIGRP hello packet, and add in the the approperate TLVs
+ * Allocate an EIGRP hello packet, and add in the the appropriate TLVs
  *
  */
 static struct eigrp_packet *
@@ -569,7 +600,7 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
 
   if (ep)
     {
-      // encode common header feilds
+      // encode common header fields
       eigrp_packet_header_init(EIGRP_OPC_HELLO, ei, ep->s, 0, 0, ack);
 
       // encode Authentication TLV
@@ -582,7 +613,7 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
           length += eigrp_add_authTLV_SHA256_to_stream(ep->s,ei);
         }
 
-      // encode Hello packet with approperate TLVs
+      // encode Hello packet with appropriate TLVs
       if(flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN)
         length += eigrp_hello_parameter_encode(ei, ep->s, EIGRP_HELLO_GRACEFUL_SHUTDOWN);
       else
@@ -600,10 +631,13 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
       // add in the TID list if doing multi-topology
       length += eigrp_tidlist_encode(ep->s);
 
+      // add Hub-and-Spoke role TLV
+      length += eigrp_hub_and_spoke_TLV_encode(ei, ep->s);
+
       // Set packet length
       ep->length = length;
 
-      // set soruce address for the hello packet
+      // set source address for the hello packet
       ep->dst.s_addr = addr;
 
       if((IF_DEF_PARAMS (ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (ei->ifp)->auth_keychain != NULL))
@@ -631,8 +665,8 @@ eigrp_hello_encode (struct eigrp_interface *ei, in_addr_t addr, u_int32_t ack, u
  *
  * @par
  *  Send (unicast) a hello packet with the destination address
- *  associated with the neighbor.  The eigrp header ACK feild will be
- *  updated to the neighbor's sequence number to acknolodge any
+ *  associated with the neighbor.  The eigrp header ACK field will be
+ *  updated to the neighbor's sequence number to acknowledge any
  *  outstanding packets
  */
 void
@@ -667,14 +701,14 @@ eigrp_hello_send_ack (struct eigrp_neighbor *nbr)
 /**
  * @fn eigrp_hello_send
  *
- * @param[in]		ei	pointer to interface hello shoudl be sent
+ * @param[in]		ei	pointer to interface hello should be sent
  *
  * @return void
  *
  * @par
  * Build and enqueue a generic (multicast) periodic hello packet for
  * sending.  If no packets are currently queues, the packet will be
- * sent immadiatly
+ * sent immediately
  */
 void
 eigrp_hello_send (struct eigrp_interface *ei, u_char flags)

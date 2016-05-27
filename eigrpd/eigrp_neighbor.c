@@ -106,8 +106,27 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
         }
     }
 
+  /* DO not create neighbor, if not found
   nbr = eigrp_nbr_add (ei, eigrph, iph);
-  listnode_add (ei->nbrs, nbr);
+  listnode_add (ei->nbrs, nbr);*/
+
+  return NULL;
+}
+
+struct eigrp_neighbor *
+eigrp_nbr_get_or_create (struct eigrp_interface *ei, struct eigrp_header *eigrph,
+              struct ip *iph)
+{
+  struct eigrp_neighbor *nbr;
+
+  nbr = eigrp_nbr_get(ei, eigrph, iph);
+
+  if (nbr == NULL)
+    {
+	  /* create neighbor, if not found */
+	  nbr = eigrp_nbr_add (ei, eigrph, iph);
+	  listnode_add (ei->nbrs, nbr);
+    }
 
   return nbr;
 }
