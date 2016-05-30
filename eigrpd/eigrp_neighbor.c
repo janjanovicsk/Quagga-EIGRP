@@ -62,6 +62,7 @@ eigrp_nbr_new (struct eigrp_interface *ei)
   nbr->ei = ei;
 
   /* Set default values. */
+  int srtt = 1;		//Initial value of SRTT is 1ms
 
   eigrp_nbr_state_set (nbr, EIGRP_NEIGHBOR_DOWN);
 

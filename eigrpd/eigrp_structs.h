@@ -192,7 +192,12 @@ struct eigrp_if_params
   DECLARE_IF_PARAM (u_int32_t, delay);
   DECLARE_IF_PARAM (u_char, reliability);
   DECLARE_IF_PARAM (u_char, load);
-
+  DECLARE_IF_PARAM (int , v_uppt);	/*Unrealiable Packet Pacing Time*/
+  DECLARE_IF_PARAM (int , v_rppt);	/*Reliable Packet Pacing Time*/
+  //DECLARE_IF_PARAM (int , v_mft);   /*TODO: => No Info...Multicast Flow Timer*/
+  DECLARE_IF_PARAM (int , v_srtt);  /*Smooth Round Trip Time*/
+  DECLARE_IF_PARAM (int , v_rtt);   /*Round Trip Time*/
+  DECLARE_IF_PARAM (int , v_rto);   /*Retransmit Time Out*/
   DECLARE_IF_PARAM (char *, auth_keychain );    /* Associated keychain with interface*/
   DECLARE_IF_PARAM (int, auth_type);         /* EIGRP authentication type */
 };
@@ -227,7 +232,7 @@ struct eigrp_neighbor
   /*If packet is unacknowledged, we try to send it again 16 times*/
   u_char retrans_counter;
 
-  struct in_addr src; /* Neighbor Src address. */
+  struct in_addr src; 		/* Neighbor Src address. */
 
   u_char os_rel_major;		// system version - just for show
   u_char os_rel_minor;		// system version - just for show
@@ -467,7 +472,7 @@ struct eigrp_neighbor_entry
 struct eigrp_fsm_action_message
 {
   u_char packet_type; 					//UPDATE, QUERY, SIAQUERY, SIAREPLY
-  struct eigrp *eigrp;					// which thread sent mesg
+  struct eigrp *eigrp;					//which thread sent mesg
   struct eigrp_neighbor *adv_router; 	//advertising neighbor
   struct eigrp_neighbor_entry *entry;
   struct eigrp_prefix_entry *prefix;

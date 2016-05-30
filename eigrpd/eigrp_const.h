@@ -35,15 +35,15 @@
 
 #define FALSE 0
 
-#define EIGRP_NEIGHBOR_DOWN           0
-#define EIGRP_NEIGHBOR_PENDING        1
-#define EIGRP_NEIGHBOR_UP             2
-#define EIGRP_NEIGHBOR_STATE_MAX      3
+#define EIGRP_NEIGHBOR_DOWN           		0
+#define EIGRP_NEIGHBOR_PENDING        		1
+#define EIGRP_NEIGHBOR_UP             		2
+#define EIGRP_NEIGHBOR_STATE_MAX      		3
 
 /*Packet requiring ack will be retransmitted again after this time*/
-#define EIGRP_PACKET_RETRANS_TIME        2 /* in seconds */
-#define EIGRP_PACKET_RETRANS_MAX         16 /* number of retrans attempts */
-#define PLAINTEXT_LENGTH                 81
+#define EIGRP_PACKET_RETRANS_TIME        	2 /* in seconds */
+#define EIGRP_PACKET_RETRANS_MAX         	16 /* number of retrans attempts */
+#define PLAINTEXT_LENGTH                 	81
 
 /*Metric variance multiplier*/
 #define EIGRP_VARIANCE_DEFAULT  1
@@ -54,35 +54,35 @@
 #define MSG_OK    0
 #define MSG_NG    1
 
-#define EIGRP_HEADER_VERSION            2
+#define EIGRP_HEADER_VERSION            	2
 
 /* Default protocol, port number. */
 #ifndef IPPROTO_EIGRPIGP
-#define IPPROTO_EIGRPIGP         88
+#define IPPROTO_EIGRPIGP         			88
 #endif /* IPPROTO_EIGRPIGP */
 
-#define EIGRP_AUTH_MD5_TLV_SIZE          40
+#define EIGRP_AUTH_MD5_TLV_SIZE          	40
 #define EIGRP_AUTH_SHA256_TLV_SIZE          56
 
 /*Cisco routers use only first 44 bytes of basic hello for their MD5 calculations*/
-#define EIGRP_MD5_BASIC_COMPUTE       44
+#define EIGRP_MD5_BASIC_COMPUTE       		44
 #define EIGRP_MD5_UPDATE_INIT_COMPUTE       40
 
 
 
-#define EIGRP_AUTH_BASIC_HELLO_FLAG       0x01
-#define EIGRP_AUTH_TID_HELLO_FLAG       0x02
-#define EIGRP_AUTH_UPDATE_INIT_FLAG       0x04
-#define EIGRP_AUTH_UPDATE_FLAG            0x08
-#define EIGRP_AUTH_EXTRA_SALT_FLAG        0x10
+#define EIGRP_AUTH_BASIC_HELLO_FLAG       	0x01
+#define EIGRP_AUTH_TID_HELLO_FLAG       	0x02
+#define EIGRP_AUTH_UPDATE_INIT_FLAG       	0x04
+#define EIGRP_AUTH_UPDATE_FLAG            	0x08
+#define EIGRP_AUTH_EXTRA_SALT_FLAG        	0x10
 
-#define EIGRP_NEXT_SEQUENCE_TLV_SIZE     8
+#define EIGRP_NEXT_SEQUENCE_TLV_SIZE     	8
 
 /* IP TTL for EIGRP protocol. */
-#define EIGRP_IP_TTL             1
+#define EIGRP_IP_TTL             			1
 
 /* VTY port number. */
-#define EIGRP_VTY_PORT          2609
+#define EIGRP_VTY_PORT          			2609
 
 /* Default configuration file name for eigrp. */
 #define EIGRP_DEFAULT_CONFIG   "eigrpd.conf"
@@ -94,31 +94,31 @@
 #define EIGRP_RELIABILITY_DEFAULT           255
 #define EIGRP_LOAD_DEFAULT                  1
 
-#define EIGRP_MULTICAST_ADDRESS            0xe000000A /*224.0.0.10*/
+#define EIGRP_MULTICAST_ADDRESS            	0xe000000A /*224.0.0.10*/
 
-#define EIGRP_MAX_METRIC                   0xffffffffU    /*4294967295*/
+#define EIGRP_MAX_METRIC                   	0xffffffffU    /*4294967295*/
 
-#define DEFAULT_ROUTE               ZEBRA_ROUTE_MAX
+#define DEFAULT_ROUTE               		ZEBRA_ROUTE_MAX
 #define DEFAULT_ROUTE_TYPE(T) ((T) == DEFAULT_ROUTE)
 
-#define INTERFACE_DOWN_BY_ZEBRA       1
-#define INTERFACE_DOWN_BY_VTY         2
+#define INTERFACE_DOWN_BY_ZEBRA       		1
+#define INTERFACE_DOWN_BY_VTY         		2
 
-#define EIGRP_HELLO_NORMAL                    0x00
-#define EIGRP_HELLO_GRACEFUL_SHUTDOWN         0x01
-#define EIGRP_HELLO_ADD_SEQUENCE              0x02
+#define EIGRP_HELLO_NORMAL                  0x00
+#define EIGRP_HELLO_GRACEFUL_SHUTDOWN       0x01
+#define EIGRP_HELLO_ADD_SEQUENCE            0x02
 
     /* EIGRP Network Type. */
- #define EIGRP_IFTYPE_NONE                0
- #define EIGRP_IFTYPE_POINTOPOINT         1
- #define EIGRP_IFTYPE_BROADCAST           2
- #define EIGRP_IFTYPE_NBMA                3
- #define EIGRP_IFTYPE_POINTOMULTIPOINT    4
- #define EIGRP_IFTYPE_LOOPBACK            5
- #define EIGRP_IFTYPE_MAX                 6
+ #define EIGRP_IFTYPE_NONE                	0
+ #define EIGRP_IFTYPE_POINTOPOINT         	1
+ #define EIGRP_IFTYPE_BROADCAST           	2
+ #define EIGRP_IFTYPE_NBMA                	3
+ #define EIGRP_IFTYPE_POINTOMULTIPOINT    	4
+ #define EIGRP_IFTYPE_LOOPBACK            	5
+ #define EIGRP_IFTYPE_MAX                 	6
 
-#define EIGRP_IF_ACTIVE                  0
-#define EIGRP_IF_PASSIVE                 1
+#define EIGRP_IF_ACTIVE                  	0
+#define EIGRP_IF_PASSIVE                 	1
 
 /* EIGRP TT destination type */
 #define EIGRP_TOPOLOGY_TYPE_CONNECTED           0 // Connected network
@@ -132,19 +132,19 @@
 #define EIGRP_NEIGHBOR_ENTRY_EXTERNAL_FLAG		8
 
 /*EIGRP FSM state count, event count*/
-#define EIGRP_FSM_STATE_MAX                  5
-#define EIGRP_FSM_EVENT_MAX                  16
+#define EIGRP_FSM_STATE_MAX                  	5
+#define EIGRP_FSM_EVENT_MAX                  	16
 
 /*EGRP FSM states*/
-#define EIGRP_FSM_STATE_PASSIVE              0
-#define EIGRP_FSM_STATE_ACTIVE_0             1
-#define EIGRP_FSM_STATE_ACTIVE_1             2
-#define EIGRP_FSM_STATE_ACTIVE_2             3
-#define EIGRP_FSM_STATE_ACTIVE_3             4
+#define EIGRP_FSM_STATE_PASSIVE              	0
+#define EIGRP_FSM_STATE_ACTIVE_0             	1
+#define EIGRP_FSM_STATE_ACTIVE_1             	2
+#define EIGRP_FSM_STATE_ACTIVE_2             	3
+#define EIGRP_FSM_STATE_ACTIVE_3            	4
 
 /*EIGRP FSM events return values*/
-#define EIGRP_FSM_NEED_UPDATE				1
-#define EIGRP_FSM_NEED_QUERY				2
+#define EIGRP_FSM_NEED_UPDATE					1
+#define EIGRP_FSM_NEED_QUERY					2
 
 /*EIGRP FSM events*/
 #define EIGRP_FSM_EVENT_NQ_FCN                  0 /*input event other than query from succ, FC not satisfied*/

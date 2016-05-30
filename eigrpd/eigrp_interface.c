@@ -38,6 +38,8 @@
 #include "stream.h"
 #include "log.h"
 #include "keychain.h"
+#include "eigrp_const.h"
+#include "eigrp_packet.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -48,6 +50,7 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_neighbor.h"
 
 static void
 eigrp_delete_from_if (struct interface *, struct eigrp_interface *);
@@ -153,6 +156,7 @@ int
 eigrp_if_new_hook (struct interface *ifp)
 {
   int rc = 0;
+  int srtt = 1;
 
   ifp->info = XCALLOC (MTYPE_EIGRP_IF_INFO, sizeof (struct eigrp_if_info));
 
@@ -184,6 +188,41 @@ eigrp_if_new_hook (struct interface *ifp)
 
   SET_IF_PARAM (IF_DEF_PARAMS (ifp), auth_keychain);
   IF_DEF_PARAMS (ifp)->auth_keychain= NULL;
+
+  /*UPTT - Unreliable Packet Pacing Timer*/
+  /*TODO - UPPT - unreliable packet header size -> network layer protocol header instead of 20 */
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), v_uppt);
+  IF_DEF_PARAMS (ifp)->v_uppt = ((EIGRP_HEADER_LEN + 20) / EIGRP_BANDWIDTH_DEFAULT);
+  //UPPT = Unreliable_Packet_Size / EIGRP_Bandwidth
+  //where Unreliable_Packet_Size is the size of network layer protocol
+  //header plus the size of EIGRP fixed packet header, and EIGRP_Bandwidth
+
+  /*RPTT - Reliable Packet Pacing Timer*/
+  SET_IF_PARAM (IF_DEF_PARAMS (ifp), v_rppt);
+  IF_DEF_PARAMS (ifp)->v_uppt = EIGRP_PACKET_MAX_LEN / EIGRP_BANDWIDTH_DEFAULT;
+  //RPPT is computed assuming that the reliable packets are of maximum allowed size,
+  //that is, the total packet size is equal to the MTU of the interface:
+  //RPPT = Interface_MTU / EIGRP_Bandwidth
+
+  /*SRTT - Smooth Round Trip Time*/
+  SET_IF_PARAM (IF_DEF_PARAMS(ifp), v_srtt);
+  IF_DEF_PARAMS (ifp)->v_srtt = 0.8 * srtt  + 0.2 * rtt;
+
+  //For a newly detected neighbor, the initial SRTT value is 1 millisecond.
+  //Each time a reliable packet is sent toward a neighbor, the time of sending the packet is recorded.
+  //When an acknowledgment for this packet is received, the RTT is computed as
+  //the difference between the time of receiving the acknowledgment and the
+  //recorded time of sending the related reliable packet,
+  //and then the SRTT is updated according to the following formula:
+  //SRTTnew = 0.8 * SRTTcurrent + 0.2 * RTT
+
+  /*RTT - Round Trip Time*/
+  /*SET_IF_PARAM (IF_DEF_PARAMS(ifp), v_rtt);
+  IF_DEF_PARAMS (ifp)->v_rtt = 0;*/
+
+  /*RTO - Retransmission time-out*/
+  /*SET_IF_PARAM (IF_DEF_PARAMS(ifp), v_rto);
+  IF_DEF_PARAMS (ifp)->v_rto = 0;*/
 
   return rc;
 }

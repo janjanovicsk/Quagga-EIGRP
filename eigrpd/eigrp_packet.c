@@ -633,7 +633,7 @@ eigrp_read (struct thread *thread)
       return ret;
     }
 
-  /* calcualte the eigrp packet length, and move the pounter to the
+  /* calculate the eigrp packet length, and move the pointer to the
      start of the eigrp TLVs */
   opcode = eigrph->opcode;
 
