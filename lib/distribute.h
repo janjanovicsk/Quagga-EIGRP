@@ -43,9 +43,6 @@ struct distribute
 
   /* prefix-list name of `in' and `out' */
   char *prefix[DISTRIBUTE_MAX];
-
-  /* route-map name of `in' and `out' */
-  char *route[DISTRIBUTE_MAX];
 };
 
 /* Prototypes for distribute-list. */

@@ -57,9 +57,7 @@
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_filter.h"
 
-/*
- * Distribute-list update functions.
- */
+/* Distribute-list update functions. */
 void
 eigrp_distribute_update (struct distribute *dist)
 {
@@ -70,12 +68,16 @@ eigrp_distribute_update (struct distribute *dist)
   struct eigrp *e;
 
   zlog_info("<DEBUG ACL start");
-  /* if no interface address is present, set list to eigrp process struct */
+  zlog_info("Supposed to set on interface: %s",dist->ifname);
   e = eigrp_lookup();
 
-  /* Check if distribute-list was set for process or interface */
+  /* if no interface address is present, set list to eigrp process struct */
   if (! dist->ifname)
     {
+	  /* FIXME: set to all processes */
+	  //e = eigrp_get("1");
+	  zlog_info("<DEBUG GOT IT - AS: %d", (e->AS));
+
 	  /* distribute list IN for whole process */
 	  if (dist->list[DISTRIBUTE_IN])
 	    {
@@ -89,6 +91,7 @@ eigrp_distribute_update (struct distribute *dist)
 	  else
 	    {
 	      e->list[EIGRP_FILTER_IN] = NULL;
+	  	  zlog_info("<DEBUG ACL ALL in else");
 	    }
 
 	  /* distribute list OUT for whole process */
@@ -104,41 +107,13 @@ eigrp_distribute_update (struct distribute *dist)
 	  else
 		{
 		  e->list[EIGRP_FILTER_OUT] = NULL;
+		  zlog_info("<DEBUG ACL ALL out else");
 		}
-
-	  /* PREFIX_LIST IN for process */
-	  if (dist->prefix[DISTRIBUTE_IN])
-		 {
-		   plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
-		   if (plist)
-			{
-			  e->prefix[EIGRP_FILTER_IN] = plist;
-			}
-			else
-			  e->prefix[EIGRP_FILTER_IN] = NULL;
-		  } else
-		      e->prefix[EIGRP_FILTER_IN] = NULL;
-
-	   /* PREFIX_LIST OUT for process */
-	   if (dist->prefix[DISTRIBUTE_OUT])
-		  {
-			plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_OUT]);
-			if (plist)
-			{
-			  e->prefix[EIGRP_FILTER_OUT] = plist;
-
-			}
-			else
-			  e->prefix[EIGRP_FILTER_OUT] = NULL;
-		  }
-		else
-		  e->prefix[EIGRP_FILTER_OUT] = NULL;
-
 	  return;
     }
 
   zlog_info("<DEBUG ACL 1");
-  zlog_info("DEBUG int name: %d",dist->ifname);
+
   ifp = if_lookup_by_name (dist->ifname);
   if (ifp == NULL)
     return;
@@ -149,8 +124,8 @@ eigrp_distribute_update (struct distribute *dist)
   ei = info->eigrp_interface;*/
   struct listnode *node, *nnode;
   struct eigrp_interface *ei2;
+  //e = eigrp_get("1");
   zlog_info("Looking for eigrp interface %s",ifp->name);
-  /* Find proper interface */
   for (ALL_LIST_ELEMENTS (e->eiflist, node, nnode, ei2))
   {
 	  zlog_info("Checking eigrp interface %s",ei2->ifp->name);
@@ -166,7 +141,6 @@ eigrp_distribute_update (struct distribute *dist)
 	  zlog_info("Not Found eigrp interface %s",ifp->name);
   }
 
-  /* Access-list for interface in */
   if (dist->list[DISTRIBUTE_IN])
     {
 	  zlog_info("<DEBUG ACL in");
@@ -177,6 +151,9 @@ eigrp_distribute_update (struct distribute *dist)
       }
       else
 	    ei->list[EIGRP_FILTER_IN] = NULL;
+
+
+	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_IN] == NULL);
     }
   else
   {
@@ -184,15 +161,14 @@ eigrp_distribute_update (struct distribute *dist)
 	  zlog_info("<DEBUG ACL in else");
   }
 
-  /* Access-list for interface in */
   if (dist->list[DISTRIBUTE_OUT])
     {
 	  zlog_info("<DEBUG ACL out");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_OUT]);
       if (alist)
-    	ei->list[EIGRP_FILTER_OUT] = alist;
+	ei->list[EIGRP_FILTER_OUT] = alist;
       else
-    	ei->list[EIGRP_FILTER_OUT] = NULL;
+	ei->list[EIGRP_FILTER_OUT] = NULL;
 
 	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_OUT] == NULL);
     }
@@ -201,39 +177,33 @@ eigrp_distribute_update (struct distribute *dist)
     ei->list[EIGRP_FILTER_OUT] = NULL;
 	  zlog_info("<DEBUG ACL out else");
   }
-
-  zlog_info("<DEBUG PREFIX INTERFACE");
-  /* Prefix-list for interface in */
+/*
   if (dist->prefix[DISTRIBUTE_IN])
     {
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
       if (plist)
-    	  ei->prefix[EIGRP_FILTER_IN] = plist;
+	ei->prefix[EIGRP_FILTER_IN] = plist;
       else
-    	  ei->prefix[EIGRP_FILTER_IN] = NULL;
+	ei->prefix[EIGRP_FILTER_IN] = NULL;
     }
   else
     ei->prefix[EIGRP_FILTER_IN] = NULL;
 
-  /* Prefix-list for interface out */
   if (dist->prefix[DISTRIBUTE_OUT])
     {
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_OUT]);
       if (plist)
-    	  ei->prefix[EIGRP_FILTER_OUT] = plist;
+	ei->prefix[EIGRP_FILTER_OUT] = plist;
       else
-    	  ei->prefix[EIGRP_FILTER_OUT] = NULL;
+	ei->prefix[EIGRP_FILTER_OUT] = NULL;
     }
   else
     ei->prefix[EIGRP_FILTER_OUT] = NULL;
-
+*/
 
   zlog_info("<DEBUG ACL end");
 }
 
-/*
- * Function called by prefix-list and access-list update
- */
 void
 eigrp_distribute_update_interface (struct interface *ifp)
 {
@@ -244,9 +214,8 @@ eigrp_distribute_update_interface (struct interface *ifp)
     eigrp_distribute_update (dist);
 }
 
-/* Update all interface's distribute list.
- * Function used in hook for prefix-list
- */
+/* Update all interface's distribute list. */
+/* ARGSUSED */
 void
 eigrp_distribute_update_all (struct prefix_list *notused)
 {
@@ -257,9 +226,7 @@ eigrp_distribute_update_all (struct prefix_list *notused)
     eigrp_distribute_update_interface (ifp);
 }
 
-/*
- * Function used in hook for acces-list
- */
+/* ARGSUSED */
 void
 eigrp_distribute_update_all_wrapper(struct access_list *notused)
 {
