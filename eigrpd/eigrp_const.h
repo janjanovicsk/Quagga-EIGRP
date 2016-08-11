@@ -259,8 +259,6 @@
 #define EIGRP_TLV_NEXT_MCAST_SEQ        (EIGRP_TLV_GENERAL | 0x0005)    /*!< sequence number */
 #define EIGRP_TLV_PEER_TERMINATION      (EIGRP_TLV_GENERAL | 0x0007)    /*!< peer termination */
 #define EIGRP_TLV_PEER_TIDLIST          (EIGRP_TLV_GENERAL | 0x0008)    /*!< peer sub-topology list */
-#define EIGRP_TLV_HUB_AND_SPOKE         (EIGRP_TLV_GENERAL | 0x0031)    /*!< eigrp Hub-and-Spoke TLV */
-#define EIGRP_TLV_HUB_AND_SPOKE_LEN     (5U)
 
 /* Older cisco routers send TIDLIST value wrong, adding for backwards compatabily */
 #define EIGRP_TLV_PEER_MTRLIST          (EIGRP_TLV_GENERAL | 0x00f5)
@@ -425,11 +423,5 @@
 #define EIGRP_FILTER_IN  0
 #define EIGRP_FILTER_OUT 1
 #define EIGRP_FILTER_MAX 2
-/*
- * EIGRP Filter constants
- */
-#define EIGRP_HSROLE_DEFAULT  	EIGRP_HSROLE_SPOKE
-#define EIGRP_HSROLE_HUB 		0x01
-#define EIGRP_HSROLE_SPOKE 		0x02
 
 #endif /* _ZEBRA_EIGRP_CONST_H_ */

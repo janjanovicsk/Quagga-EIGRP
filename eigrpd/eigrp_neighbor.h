@@ -33,9 +33,6 @@
 extern struct eigrp_neighbor *eigrp_nbr_get(struct eigrp_interface *,
 					    struct eigrp_header *,
 					    struct ip *);
-extern struct eigrp_neighbor *eigrp_nbr_get_or_create(struct eigrp_interface *,
-					    struct eigrp_header *,
-					    struct ip *);
 extern struct eigrp_neighbor *eigrp_nbr_new (struct eigrp_interface *);
 extern void eigrp_nbr_delete(struct eigrp_neighbor *);
 

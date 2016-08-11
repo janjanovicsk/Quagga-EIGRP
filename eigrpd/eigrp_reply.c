@@ -113,8 +113,8 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
   /* get neighbor struct */
   nbr = eigrp_nbr_get(ei, eigrph, iph);
 
-  /* neighbor must be valid */
-  if (nbr == NULL) return;
+  /* neighbor must be valid, eigrp_nbr_get creates if none existed */
+  assert(nbr);
 
   nbr->recv_sequence_number = ntohl(eigrph->sequence);
 

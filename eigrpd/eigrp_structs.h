@@ -117,8 +117,6 @@ struct eigrp
   struct eigrp_metrics dmetric[ZEBRA_ROUTE_MAX + 1];
   int redistribute;           /* Num of redistributed protocols. */
 
-  /* Access-list. */
-  struct access_list *list[EIGRP_FILTER_MAX];
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -156,6 +154,15 @@ struct eigrp_interface
 
   int on_write_q;
 
+  /* Access-list. */
+  struct access_list *list[EIGRP_FILTER_MAX];
+
+  /* Prefix-list. */
+  struct prefix_list *prefix[EIGRP_FILTER_MAX];
+
+  /* Route-map. */
+  struct route_map *routemap[EIGRP_FILTER_MAX];
+
   /* Statistics fields. */
   u_int32_t hello_in; /* Hello message input count. */
   u_int32_t update_in; /* Update message input count. */
@@ -173,14 +180,6 @@ struct eigrp_interface
   u_int32_t ack_in;
 
   u_int32_t crypt_seqnum;             /* Cryptographic Sequence Number */
-
-  /* Access-list. */
-  struct access_list *list[EIGRP_FILTER_MAX];
-  /* Prefix-list. */
-  struct prefix_list *prefix[EIGRP_FILTER_MAX];
-  /* Route-map. */
-  struct route_map *routemap[EIGRP_FILTER_MAX];
-
 };
 
 struct eigrp_if_params
@@ -196,8 +195,6 @@ struct eigrp_if_params
 
   DECLARE_IF_PARAM (char *, auth_keychain );    /* Associated keychain with interface*/
   DECLARE_IF_PARAM (int, auth_type);         /* EIGRP authentication type */
-
-  DECLARE_IF_PARAM (u_char, hs_role); /* Type of Hub-and-Spoke role */
 };
 
 enum

@@ -1,5 +1,5 @@
 /*
- * EIGRP Filter Functions.
+ * EIGRP Interface Functions.
  * Copyright (C) 2013-2015
  * Authors:
  *   Donnie Savage
@@ -33,6 +33,10 @@
 
 #include <zebra.h>
 
+//#include "filter.h"
+//#include "plist.h"
+//#include "distribute.h"
+
 #include "if.h"
 #include "command.h"
 #include "prefix.h"
@@ -65,119 +69,38 @@ eigrp_distribute_update (struct distribute *dist)
   struct eigrp_interface *ei;
   struct access_list *alist;
   struct prefix_list *plist;
-  struct eigrp *e;
 
-  zlog_info("<DEBUG ACL start");
-  zlog_info("Supposed to set on interface: %s",dist->ifname);
-  e = eigrp_lookup();
-
-  /* if no interface address is present, set list to eigrp process struct */
   if (! dist->ifname)
-    {
-	  /* FIXME: set to all processes */
-	  //e = eigrp_get("1");
-	  zlog_info("<DEBUG GOT IT - AS: %d", (e->AS));
-
-	  /* distribute list IN for whole process */
-	  if (dist->list[DISTRIBUTE_IN])
-	    {
-	  	  zlog_info("<DEBUG ACL ALL in");
-	      alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_IN]);
-	      if (alist)
-	        e->list[EIGRP_FILTER_IN] = alist;
-	      else
-	        e->list[EIGRP_FILTER_IN] = NULL;
-	    }
-	  else
-	    {
-	      e->list[EIGRP_FILTER_IN] = NULL;
-	  	  zlog_info("<DEBUG ACL ALL in else");
-	    }
-
-	  /* distribute list OUT for whole process */
-	  if (dist->list[DISTRIBUTE_OUT])
-		{
-		  zlog_info("<DEBUG ACL ALL out");
-		  alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_OUT]);
-		  if (alist)
-			e->list[EIGRP_FILTER_OUT] = alist;
-		  else
-			e->list[EIGRP_FILTER_OUT] = NULL;
-		}
-	  else
-		{
-		  e->list[EIGRP_FILTER_OUT] = NULL;
-		  zlog_info("<DEBUG ACL ALL out else");
-		}
-	  return;
-    }
-
-  zlog_info("<DEBUG ACL 1");
+    return;
 
   ifp = if_lookup_by_name (dist->ifname);
   if (ifp == NULL)
     return;
 
-  zlog_info("<DEBUG ACL 2");
-
-  /*struct eigrp_if_info * info = ifp->info;
-  ei = info->eigrp_interface;*/
-  struct listnode *node, *nnode;
-  struct eigrp_interface *ei2;
-  //e = eigrp_get("1");
-  zlog_info("Looking for eigrp interface %s",ifp->name);
-  for (ALL_LIST_ELEMENTS (e->eiflist, node, nnode, ei2))
-  {
-	  zlog_info("Checking eigrp interface %s",ei2->ifp->name);
-	  if(strcmp(ei2->ifp->name,ifp->name) == 0){
-		  zlog_info("Found eigrp interface %s",ifp->name);
-		  ei = ei2;
-		  break;
-	  }
-  }
-
-  if(ei == NULL)
-  {
-	  zlog_info("Not Found eigrp interface %s",ifp->name);
-  }
+  ei = ifp->info;
 
   if (dist->list[DISTRIBUTE_IN])
     {
-	  zlog_info("<DEBUG ACL in");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_IN]);
-      if (alist){
-        ei->list[EIGRP_FILTER_IN] = alist;
-        zlog_info("Setting interface acl");
-      }
+      if (alist)
+	ei->list[EIGRP_FILTER_IN] = alist;
       else
-	    ei->list[EIGRP_FILTER_IN] = NULL;
-
-
-	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_IN] == NULL);
+	ei->list[EIGRP_FILTER_IN] = NULL;
     }
   else
-  {
     ei->list[EIGRP_FILTER_IN] = NULL;
-	  zlog_info("<DEBUG ACL in else");
-  }
 
   if (dist->list[DISTRIBUTE_OUT])
     {
-	  zlog_info("<DEBUG ACL out");
       alist = access_list_lookup (AFI_IP, dist->list[DISTRIBUTE_OUT]);
       if (alist)
 	ei->list[EIGRP_FILTER_OUT] = alist;
       else
 	ei->list[EIGRP_FILTER_OUT] = NULL;
-
-	  zlog_info("<DEBUG ACL is null: %d", ei->list[EIGRP_FILTER_OUT] == NULL);
     }
   else
-  {
     ei->list[EIGRP_FILTER_OUT] = NULL;
-	  zlog_info("<DEBUG ACL out else");
-  }
-/*
+
   if (dist->prefix[DISTRIBUTE_IN])
     {
       plist = prefix_list_lookup (AFI_IP, dist->prefix[DISTRIBUTE_IN]);
@@ -199,9 +122,6 @@ eigrp_distribute_update (struct distribute *dist)
     }
   else
     ei->prefix[EIGRP_FILTER_OUT] = NULL;
-*/
-
-  zlog_info("<DEBUG ACL end");
 }
 
 void
