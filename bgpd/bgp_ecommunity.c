@@ -31,7 +31,7 @@ Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 
 /* Hash of community attribute. */
 static struct hash *ecomhash;
-
+
 /* Allocate a new ecommunities.  */
 static struct ecommunity *
 ecommunity_new (void)
@@ -277,7 +277,7 @@ ecommunity_finish (void)
   hash_free (ecomhash);
   ecomhash = NULL;
 }
-
+
 /* Extended Communities token enum. */
 enum ecommunity_token
 {
@@ -688,7 +688,7 @@ ecommunity_ecom2str (struct ecommunity *ecom, int format)
 	  eas.val = (*pnt++ << 8);
 	  eas.val |= (*pnt++);
 
-	  len = sprintf( str_buf + str_pnt, "%s%u:%d", prefix,
+	  len = sprintf( str_buf + str_pnt, "%s%u:%u", prefix,
                         eas.as, eas.val );
 	  str_pnt += len;
 	  first = 0;
@@ -703,7 +703,7 @@ ecommunity_ecom2str (struct ecommunity *ecom, int format)
 	  eas.val |= (*pnt++ << 8);
 	  eas.val |= (*pnt++);
 
-	  len = sprintf (str_buf + str_pnt, "%s%u:%d", prefix,
+	  len = sprintf (str_buf + str_pnt, "%s%u:%u", prefix,
 			 eas.as, eas.val);
 	  str_pnt += len;
 	  first = 0;
@@ -715,7 +715,7 @@ ecommunity_ecom2str (struct ecommunity *ecom, int format)
 	  eip.val = (*pnt++ << 8);
 	  eip.val |= (*pnt++);
 
-	  len = sprintf (str_buf + str_pnt, "%s%s:%d", prefix,
+	  len = sprintf (str_buf + str_pnt, "%s%s:%u", prefix,
 			 inet_ntoa (eip.ip), eip.val);
 	  str_pnt += len;
 	  first = 0;

@@ -22,17 +22,11 @@
 #ifndef OSPF6_NETWORK_H
 #define OSPF6_NETWORK_H
 
-
+
 
 extern int ospf6_sock;
 extern struct in6_addr allspfrouters6;
 extern struct in6_addr alldrouters6;
-
-/* Function Prototypes */
-extern void ospf6_set_reuseaddr (void);
-extern void ospf6_reset_mcastloop (void);
-extern void ospf6_set_pktinfo (void);
-extern void ospf6_set_checksum (void);
 
 extern int ospf6_serv_sock (void);
 extern void ospf6_sso (u_int ifindex, struct in6_addr *group, int option);

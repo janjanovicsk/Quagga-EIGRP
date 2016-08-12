@@ -59,6 +59,8 @@ struct vtysh_client
   { .fd = -1, .name = "bgpd", .flag = VTYSH_BGPD, .path = BGP_VTYSH_PATH},
   { .fd = -1, .name = "isisd", .flag = VTYSH_ISISD, .path = ISIS_VTYSH_PATH},
   { .fd = -1, .name = "babeld", .flag = VTYSH_BABELD, .path = BABEL_VTYSH_PATH},
+  { .fd = -1, .name = "pimd", .flag = VTYSH_PIMD, .path = PIM_VTYSH_PATH},
+  { .fd = -1, .name = "eigrpd", .flag = VTYSH_EIGRPD, .path = EIGRP_VTYSH_PATH},
 };
 
 
@@ -554,7 +556,7 @@ vtysh_rl_describe (void)
   vector vline;
   vector describe;
   int width;
-  struct desc *desc;
+  struct cmd_token *token;
 
   vline = cmd_make_strvec (rl_line_buffer);
 
@@ -592,15 +594,15 @@ vtysh_rl_describe (void)
   /* Get width of command string. */
   width = 0;
   for (i = 0; i < vector_active (describe); i++)
-    if ((desc = vector_slot (describe, i)) != NULL)
+    if ((token = vector_slot (describe, i)) != NULL)
       {
 	int len;
 
-	if (desc->cmd[0] == '\0')
+	if (token->cmd[0] == '\0')
 	  continue;
 
-	len = strlen (desc->cmd);
-	if (desc->cmd[0] == '.')
+	len = strlen (token->cmd);
+	if (token->cmd[0] == '.')
 	  len--;
 
 	if (width < len)
@@ -608,19 +610,19 @@ vtysh_rl_describe (void)
       }
 
   for (i = 0; i < vector_active (describe); i++)
-    if ((desc = vector_slot (describe, i)) != NULL)
+    if ((token = vector_slot (describe, i)) != NULL)
       {
-	if (desc->cmd[0] == '\0')
+	if (token->cmd[0] == '\0')
 	  continue;
 
-	if (! desc->str)
+	if (! token->desc)
 	  fprintf (stdout,"  %-s\n",
-		   desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd);
+		   token->cmd[0] == '.' ? token->cmd + 1 : token->cmd);
 	else
 	  fprintf (stdout,"  %-*s  %s\n",
 		   width,
-		   desc->cmd[0] == '.' ? desc->cmd + 1 : desc->cmd,
-		   desc->str);
+		   token->cmd[0] == '.' ? token->cmd + 1 : token->cmd,
+		   token->desc);
       }
 
   cmd_free_strvec (vline);
@@ -783,6 +785,12 @@ static struct cmd_node bgp_ipv6m_node =
 static struct cmd_node ospf_node =
 {
   OSPF_NODE,
+  "%s(config-router)# "
+};
+
+static struct cmd_node eigrp_node =
+{
+  EIGRP_NODE,
   "%s(config-router)# "
 };
 
@@ -1005,6 +1013,17 @@ DEFUNSH (VTYSH_OSPFD,
   return CMD_SUCCESS;
 }
 
+DEFUNSH (VTYSH_EIGRPD,
+         router_eigrp,
+         router_eigrp_cmd,
+         "router eigrp",
+         "Enable a routing process\n"
+         "Start EIGRP configuration\n")
+{
+  vty->node = EIGRP_NODE;
+  return CMD_SUCCESS;
+}
+
 DEFUNSH (VTYSH_OSPF6D,
 	 router_ospf6,
 	 router_ospf6_cmd,
@@ -1115,6 +1134,7 @@ vtysh_exit (struct vty *vty)
     case RIPNG_NODE:
     case OSPF_NODE:
     case OSPF6_NODE:
+    case EIGRP_NODE:
     case BABEL_NODE:
     case ISIS_NODE:
     case MASC_NODE:
@@ -1254,6 +1274,20 @@ ALIAS (vtysh_exit_ospfd,
        "quit",
        "Exit current mode and down to previous mode\n")
 
+DEFUNSH (VTYSH_EIGRPD,
+         vtysh_exit_eigrpd,
+         vtysh_exit_eigrpd_cmd,
+         "exit",
+         "Exit current mode and down to previous mode\n")
+{
+  return vtysh_exit (vty);
+}
+
+ALIAS (vtysh_exit_eigrpd,
+       vtysh_quit_eigrpd_cmd,
+       "quit",
+       "Exit current mode and down to previous mode\n")
+
 DEFUNSH (VTYSH_OSPF6D,
 	 vtysh_exit_ospf6d,
 	 vtysh_exit_ospf6d_cmd,
@@ -1308,7 +1342,7 @@ DEFUNSH (VTYSH_INTERFACE,
 }
 
 /* TODO Implement "no interface command in isisd. */
-DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D,
+DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_EIGRPD,
        vtysh_no_interface_cmd,
        "no interface IFNAME",
        NO_STR
@@ -1317,13 +1351,13 @@ DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D,
 
 /* TODO Implement interface description commands in ripngd, ospf6d
  * and isisd. */
-DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_OSPFD,
+DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_OSPFD|VTYSH_EIGRPD,
        interface_desc_cmd,
        "description .LINE",
        "Interface specific description\n"
        "Characters describing this interface\n")
        
-DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_OSPFD,
+DEFSH (VTYSH_ZEBRA|VTYSH_RIPD|VTYSH_OSPFD|VTYSH_EIGRPD,
        no_interface_desc_cmd,
        "no description",
        NO_STR
@@ -2212,9 +2246,9 @@ void
 vtysh_readline_init (void)
 {
   /* readline related settings. */
-  rl_bind_key ('?', (Function *) vtysh_rl_describe);
+  rl_bind_key ('?', (rl_command_func_t *) vtysh_rl_describe);
   rl_completion_entry_function = vtysh_completion_entry_function;
-  rl_attempted_completion_function = (CPPFunction *)new_completion;
+  rl_attempted_completion_function = (rl_completion_func_t *)new_completion;
 }
 
 char *
@@ -2264,6 +2298,7 @@ vtysh_init_vty (void)
   install_node (&bgp_ipv6m_node, NULL);
 /* #endif */
   install_node (&ospf_node, NULL);
+  install_node (&eigrp_node, NULL);
 /* #ifdef HAVE_IPV6 */
   install_node (&ripng_node, NULL);
   install_node (&ospf6_node, NULL);
@@ -2288,6 +2323,7 @@ vtysh_init_vty (void)
   vtysh_install_default (BGP_IPV6_NODE);
   vtysh_install_default (BGP_IPV6M_NODE);
   vtysh_install_default (OSPF_NODE);
+  vtysh_install_default (EIGRP_NODE);
   vtysh_install_default (RIPNG_NODE);
   vtysh_install_default (OSPF6_NODE);
   vtysh_install_default (BABEL_NODE);
@@ -2313,6 +2349,8 @@ vtysh_init_vty (void)
   install_element (RIPNG_NODE, &vtysh_quit_ripngd_cmd);
   install_element (OSPF_NODE, &vtysh_exit_ospfd_cmd);
   install_element (OSPF_NODE, &vtysh_quit_ospfd_cmd);
+  install_element (EIGRP_NODE, &vtysh_exit_eigrpd_cmd);
+  install_element (EIGRP_NODE, &vtysh_quit_eigrpd_cmd);
   install_element (OSPF6_NODE, &vtysh_exit_ospf6d_cmd);
   install_element (OSPF6_NODE, &vtysh_quit_ospf6d_cmd);
   install_element (BGP_NODE, &vtysh_exit_bgpd_cmd);

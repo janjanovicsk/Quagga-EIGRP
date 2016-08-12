@@ -47,10 +47,16 @@ struct key
   struct key_range accept;
 };
 
+#define KEYCHAIN_KEY_VALID        1
+#define KEYCHAIN_KEY_INVALID      0
+
+
 extern void keychain_init (void);
 extern struct keychain *keychain_lookup (const char *);
 extern struct key *key_lookup_for_accept (const struct keychain *, u_int32_t);
 extern struct key *key_match_for_accept (const struct keychain *, const char *);
 extern struct key *key_lookup_for_send (const struct keychain *);
+extern struct list *keychain_list_get (void);
+extern void keychain_dump (struct vty *, const struct keychain *);
 
 #endif /* _ZEBRA_KEYCHAIN_H */

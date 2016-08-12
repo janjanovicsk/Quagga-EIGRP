@@ -52,6 +52,7 @@ struct prefix
       struct in_addr adv_router;
     } lp;
     u_char val[8];
+    uintptr_t ptr;
   } u __attribute__ ((aligned (8)));
 };
 
@@ -88,6 +89,33 @@ struct prefix_rd
   u_char prefixlen;
   u_char val[8] __attribute__ ((aligned (8)));
 };
+
+/* Prefix for a generic pointer */
+struct prefix_ptr
+{
+  u_char family;
+  u_char prefixlen;
+  uintptr_t prefix __attribute__ ((aligned (8)));
+};
+
+/* helper to get type safety/avoid casts on calls
+ * (w/o this, functions accepting all prefix types need casts on the caller
+ * side, which strips type safety since the cast will accept any pointer
+ * type.)
+ */
+union prefix46ptr
+{
+  struct prefix *p;
+  struct prefix_ipv4 *p4;
+  struct prefix_ipv6 *p6;
+} __attribute__ ((transparent_union));
+
+union prefix46constptr
+{
+  const struct prefix *p;
+  const struct prefix_ipv4 *p4;
+  const struct prefix_ipv6 *p6;
+} __attribute__ ((transparent_union));
 
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
@@ -158,6 +186,7 @@ extern struct prefix_ipv4 *prefix_ipv4_new (void);
 extern void prefix_ipv4_free (struct prefix_ipv4 *);
 extern int str2prefix_ipv4 (const char *, struct prefix_ipv4 *);
 extern void apply_mask_ipv4 (struct prefix_ipv4 *);
+extern int prefix_ipv4_same (const struct prefix_ipv4 *, const struct prefix_ipv4 *);
 
 #define PREFIX_COPY_IPV4(DST, SRC)	\
 	*((struct prefix_ipv4 *)(DST)) = *((const struct prefix_ipv4 *)(SRC));
@@ -195,5 +224,15 @@ extern const char *inet6_ntoa (struct in6_addr);
 #endif /* HAVE_IPV6 */
 
 extern int all_digit (const char *);
+
+static inline int ipv4_martian (struct in_addr *addr)
+{
+  in_addr_t ip = addr->s_addr;
+
+  if (IPV4_NET0(ip) || IPV4_NET127(ip) || IPV4_CLASS_DE(ip)) {
+    return 1;
+  }
+  return 0;
+}
 
 #endif /* _ZEBRA_PREFIX_H */

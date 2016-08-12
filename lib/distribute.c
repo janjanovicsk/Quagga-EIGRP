@@ -34,7 +34,7 @@ struct hash *disthash;
 /* Hook functions. */
 void (*distribute_add_hook) (struct distribute *);
 void (*distribute_delete_hook) (struct distribute *);
-
+
 static struct distribute *
 distribute_new (void)
 {
@@ -133,7 +133,7 @@ distribute_cmp (const struct distribute *dist1, const struct distribute *dist2)
     return 1;
   return 0;
 }
-
+
 /* Set access-list name to the distribute list. */
 static struct distribute *
 distribute_list_set (const char *ifname, enum distribute_type type, 
@@ -778,5 +778,14 @@ distribute_list_init (int node)
     install_element (node, &no_ipv6_distribute_list_prefix_all_cmd);
     install_element (node, &ipv6_distribute_list_prefix_cmd);
     install_element (node, &no_ipv6_distribute_list_prefix_cmd);
+  } else if(node==EIGRP_NODE) {
+	install_element (node, &distribute_list_all_cmd);
+	install_element (node, &no_distribute_list_all_cmd);
+	install_element (node, &distribute_list_cmd);
+	install_element (node, &no_distribute_list_cmd);
+	install_element (node, &distribute_list_prefix_all_cmd);
+	install_element (node, &no_distribute_list_prefix_all_cmd);
+	install_element (node, &distribute_list_prefix_cmd);
+	install_element (node, &no_distribute_list_prefix_cmd);
   }
 }

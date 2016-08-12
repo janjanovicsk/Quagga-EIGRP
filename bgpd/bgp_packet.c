@@ -49,7 +49,7 @@ Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 #include "bgpd/bgp_vty.h"
 
 int stream_put_prefix (struct stream *, struct prefix *);
-
+
 /* Set up BGP packet marker and packet type. */
 static int
 bgp_packet_set_marker (struct stream *s, u_char type)
@@ -142,18 +142,23 @@ static struct stream *
 bgp_update_packet (struct peer *peer, afi_t afi, safi_t safi)
 {
   struct stream *s;
+  struct stream *snlri;
   struct bgp_adj_out *adj;
   struct bgp_advertise *adv;
   struct stream *packet;
   struct bgp_node *rn = NULL;
   struct bgp_info *binfo = NULL;
   bgp_size_t total_attr_len = 0;
-  unsigned long pos;
+  unsigned long attrlen_pos = 0;
+  size_t mpattrlen_pos = 0;
+  size_t mpattr_pos = 0;
 
   s = peer->work;
   stream_reset (s);
+  snlri = peer->scratch;
+  stream_reset (snlri);
 
-  adv = FIFO_HEAD (&peer->sync[afi][safi]->update);
+  adv = BGP_ADV_FIFO_HEAD (&peer->sync[afi][safi]->update);
 
   while (adv)
     {
@@ -164,39 +169,61 @@ bgp_update_packet (struct peer *peer, afi_t afi, safi_t safi)
         binfo = adv->binfo;
 
       /* When remaining space can't include NLRI and it's length.  */
-      if (STREAM_REMAIN (s) <= BGP_NLRI_LENGTH + PSIZE (rn->p.prefixlen))
+      if (STREAM_CONCAT_REMAIN (s, snlri, STREAM_SIZE(s)) <=
+	  (BGP_NLRI_LENGTH + PSIZE (rn->p.prefixlen)))
 	break;
 
       /* If packet is empty, set attribute. */
       if (stream_empty (s))
 	{
-	  struct prefix_rd *prd = NULL;
-	  u_char *tag = NULL;
 	  struct peer *from = NULL;
-	  
-	  if (rn->prn)
-	    prd = (struct prefix_rd *) &rn->prn->p;
+
           if (binfo)
-            {
-              from = binfo->peer;
-              if (binfo->extra)
-                tag = binfo->extra->tag;
-            }
-          
+	    from = binfo->peer;
+
+	  /* 1: Write the BGP message header - 16 bytes marker, 2 bytes length,
+	   * one byte message type.
+	   */
 	  bgp_packet_set_marker (s, BGP_MSG_UPDATE);
-	  stream_putw (s, 0);		
-	  pos = stream_get_endp (s);
+
+	  /* 2: withdrawn routes length */
 	  stream_putw (s, 0);
-	  total_attr_len = bgp_packet_attribute (NULL, peer, s, 
+
+	  /* 3: total attributes length - attrlen_pos stores the position */
+	  attrlen_pos = stream_get_endp (s);
+	  stream_putw (s, 0);
+
+	  /* 4: if there is MP_REACH_NLRI attribute, that should be the first
+	   * attribute, according to draft-ietf-idr-error-handling. Save the
+	   * position.
+	   */
+	  mpattr_pos = stream_get_endp(s);
+
+	  /* 5: Encode all the attributes, except MP_REACH_NLRI attr. */
+	  total_attr_len = bgp_packet_attribute (NULL, peer, s,
 	                                         adv->baa->attr,
-	                                         &rn->p, afi, safi, 
-	                                         from, prd, tag);
-	  stream_putw_at (s, pos, total_attr_len);
+	                                         NULL, afi, safi,
+	                                         from, NULL, NULL);
 	}
 
       if (afi == AFI_IP && safi == SAFI_UNICAST)
 	stream_put_prefix (s, &rn->p);
-      
+      else
+	{
+	  /* Encode the prefix in MP_REACH_NLRI attribute */
+	  struct prefix_rd *prd = NULL;
+	  u_char *tag = NULL;
+
+	  if (rn->prn)
+	    prd = (struct prefix_rd *) &rn->prn->p;
+	  if (binfo && binfo->extra)
+	    tag = binfo->extra->tag;
+
+	  if (stream_empty(snlri))
+	    mpattrlen_pos = bgp_packet_mpattr_start(snlri, afi, safi,
+						    adv->baa->attr);
+	  bgp_packet_mpattr_prefix(snlri, afi, safi, &rn->p, prd, tag);
+	}
       if (BGP_DEBUG (update, UPDATE_OUT))
         {
           char buf[INET6_BUFSIZ];
@@ -216,18 +243,28 @@ bgp_update_packet (struct peer *peer, afi_t afi, safi_t safi)
       adj->attr = bgp_attr_intern (adv->baa->attr);
 
       adv = bgp_advertise_clean (peer, adj, afi, safi);
-
-      if (! (afi == AFI_IP && safi == SAFI_UNICAST))
-	break;
     }
-	 
+
   if (! stream_empty (s))
     {
-      bgp_packet_set_size (s);
-      packet = stream_dup (s);
+      if (!stream_empty(snlri))
+	{
+	  bgp_packet_mpattr_end(snlri, mpattrlen_pos);
+	  total_attr_len += stream_get_endp(snlri);
+	}
+
+      /* set the total attribute length correctly */
+      stream_putw_at (s, attrlen_pos, total_attr_len);
+
+      if (!stream_empty(snlri))
+	packet = stream_dupcat(s, snlri, mpattr_pos);
+      else
+	packet = stream_dup (s);
+      bgp_packet_set_size (packet);
       bgp_packet_add (peer, packet);
       BGP_WRITE_ON (peer->t_write, bgp_write, peer->fd);
       stream_reset (s);
+      stream_reset (snlri);
       return packet;
     }
   return NULL;
@@ -277,6 +314,15 @@ bgp_update_packet_eor (struct peer *peer, afi_t afi, safi_t safi)
 }
 
 /* Make BGP withdraw packet.  */
+/* For ipv4 unicast:
+   16-octet marker | 2-octet length | 1-octet type |
+    2-octet withdrawn route length | withdrawn prefixes | 2-octet attrlen (=0)
+*/
+/* For other afi/safis:
+   16-octet marker | 2-octet length | 1-octet type |
+    2-octet withdrawn route length (=0) | 2-octet attrlen |
+     mp_unreach attr type | attr len | afi | safi | withdrawn prefixes
+*/
 static struct stream *
 bgp_withdraw_packet (struct peer *peer, afi_t afi, safi_t safi)
 {
@@ -285,44 +331,54 @@ bgp_withdraw_packet (struct peer *peer, afi_t afi, safi_t safi)
   struct bgp_adj_out *adj;
   struct bgp_advertise *adv;
   struct bgp_node *rn;
-  unsigned long pos;
   bgp_size_t unfeasible_len;
   bgp_size_t total_attr_len;
+  size_t mp_start = 0;
+  size_t attrlen_pos = 0;
+  size_t mplen_pos = 0;
+  u_char first_time = 1;
 
   s = peer->work;
   stream_reset (s);
 
-  while ((adv = FIFO_HEAD (&peer->sync[afi][safi]->withdraw)) != NULL)
+  while ((adv = BGP_ADV_FIFO_HEAD (&peer->sync[afi][safi]->withdraw)) != NULL)
     {
       assert (adv->rn);
       adj = adv->adj;
       rn = adv->rn;
 
-      if (STREAM_REMAIN (s) 
+      if (STREAM_REMAIN (s)
 	  < (BGP_NLRI_LENGTH + BGP_TOTAL_ATTR_LEN + PSIZE (rn->p.prefixlen)))
 	break;
 
       if (stream_empty (s))
 	{
 	  bgp_packet_set_marker (s, BGP_MSG_UPDATE);
-	  stream_putw (s, 0);
+	  stream_putw (s, 0); /* unfeasible routes length */
 	}
+      else
+	first_time = 0;
 
       if (afi == AFI_IP && safi == SAFI_UNICAST)
 	stream_put_prefix (s, &rn->p);
       else
 	{
 	  struct prefix_rd *prd = NULL;
-	  
+
 	  if (rn->prn)
 	    prd = (struct prefix_rd *) &rn->prn->p;
-	  pos = stream_get_endp (s);
-	  stream_putw (s, 0);
-	  total_attr_len
-	    = bgp_packet_withdraw (peer, s, &rn->p, afi, safi, prd, NULL);
-      
-	  /* Set total path attribute length. */
-	  stream_putw_at (s, pos, total_attr_len);
+
+	  /* If first time, format the MP_UNREACH header */
+	  if (first_time)
+	    {
+	      attrlen_pos = stream_get_endp (s);
+	      /* total attr length = 0 for now. reevaluate later */
+	      stream_putw (s, 0);
+	      mp_start = stream_get_endp (s);
+	      mplen_pos = bgp_packet_mpunreach_start(s, afi, safi);
+	    }
+
+	  bgp_packet_mpunreach_prefix(s, &rn->p, afi, safi, prd, NULL);
 	}
 
       if (BGP_DEBUG (update, UPDATE_OUT))
@@ -339,19 +395,25 @@ bgp_withdraw_packet (struct peer *peer, afi_t afi, safi_t safi)
 
       bgp_adj_out_remove (rn, adj, peer, afi, safi);
       bgp_unlock_node (rn);
-
-      if (! (afi == AFI_IP && safi == SAFI_UNICAST))
-	break;
     }
 
   if (! stream_empty (s))
     {
       if (afi == AFI_IP && safi == SAFI_UNICAST)
 	{
-	  unfeasible_len 
+	  unfeasible_len
 	    = stream_get_endp (s) - BGP_HEADER_SIZE - BGP_UNFEASIBLE_LEN;
 	  stream_putw_at (s, BGP_HEADER_SIZE, unfeasible_len);
 	  stream_putw (s, 0);
+	}
+      else
+	{
+	  /* Set the mp_unreach attr's length */
+	  bgp_packet_mpunreach_end(s, mplen_pos);
+
+	  /* Set total path attribute length. */
+	  total_attr_len = stream_get_endp(s) - mp_start;
+	  stream_putw_at (s, attrlen_pos, total_attr_len);
 	}
       bgp_packet_set_size (s);
       packet = stream_dup (s);
@@ -439,10 +501,12 @@ bgp_default_withdraw_send (struct peer *peer, afi_t afi, safi_t safi)
   struct stream *s;
   struct stream *packet;
   struct prefix p;
-  unsigned long pos;
+  unsigned long attrlen_pos = 0;
   unsigned long cp;
   bgp_size_t unfeasible_len;
   bgp_size_t total_attr_len;
+  size_t mp_start = 0;
+  size_t mplen_pos = 0;
 
   if (DISABLE_BGP_ANNOUNCE)
     return;
@@ -455,7 +519,6 @@ bgp_default_withdraw_send (struct peer *peer, afi_t afi, safi_t safi)
 #endif /* HAVE_IPV6 */
 
   total_attr_len = 0;
-  pos = 0;
 
   if (BGP_DEBUG (update, UPDATE_OUT))
     {
@@ -490,12 +553,18 @@ bgp_default_withdraw_send (struct peer *peer, afi_t afi, safi_t safi)
     }
   else
     {
-      pos = stream_get_endp (s);
+      attrlen_pos = stream_get_endp (s);
       stream_putw (s, 0);
-      total_attr_len = bgp_packet_withdraw (peer, s, &p, afi, safi, NULL, NULL);
+      mp_start = stream_get_endp (s);
+      mplen_pos = bgp_packet_mpunreach_start(s, afi, safi);
+      bgp_packet_mpunreach_prefix(s, &p, afi, safi, NULL, NULL);
+
+      /* Set the mp_unreach attr's length */
+      bgp_packet_mpunreach_end(s, mplen_pos);
 
       /* Set total path attribute length. */
-      stream_putw_at (s, pos, total_attr_len);
+      total_attr_len = stream_get_endp(s) - mp_start;
+      stream_putw_at (s, attrlen_pos, total_attr_len);
     }
 
   bgp_packet_set_size (s);
@@ -525,7 +594,7 @@ bgp_write_packet (struct peer *peer)
   for (afi = AFI_IP; afi < AFI_MAX; afi++)
     for (safi = SAFI_UNICAST; safi < SAFI_MAX; safi++)
       {
-	adv = FIFO_HEAD (&peer->sync[afi][safi]->withdraw);
+	adv = BGP_ADV_FIFO_HEAD (&peer->sync[afi][safi]->withdraw);
 	if (adv)
 	  {
 	    s = bgp_withdraw_packet (peer, afi, safi);
@@ -537,13 +606,17 @@ bgp_write_packet (struct peer *peer)
   for (afi = AFI_IP; afi < AFI_MAX; afi++)
     for (safi = SAFI_UNICAST; safi < SAFI_MAX; safi++)
       {
-	adv = FIFO_HEAD (&peer->sync[afi][safi]->update);
+	adv = BGP_ADV_FIFO_HEAD (&peer->sync[afi][safi]->update);
 	if (adv)
 	  {
             if (adv->binfo && adv->binfo->uptime < peer->synctime)
 	      {
 		if (CHECK_FLAG (adv->binfo->peer->cap, PEER_CAP_RESTART_RCV)
 		    && CHECK_FLAG (adv->binfo->peer->cap, PEER_CAP_RESTART_ADV)
+		    && ! (CHECK_FLAG (adv->binfo->peer->cap,
+                                      PEER_CAP_RESTART_BIT_RCV) &&
+		          CHECK_FLAG (adv->binfo->peer->cap,
+                                      PEER_CAP_RESTART_BIT_ADV))
 		    && ! CHECK_FLAG (adv->binfo->flags, BGP_INFO_STALE)
 		    && safi != SAFI_MPLS_VPN)
 		  {
@@ -593,7 +666,7 @@ bgp_write_proceed (struct peer *peer)
 
   for (afi = AFI_IP; afi < AFI_MAX; afi++)
     for (safi = SAFI_UNICAST; safi < SAFI_MAX; safi++)
-      if ((adv = FIFO_HEAD (&peer->sync[afi][safi]->update)) != NULL)
+      if ((adv = BGP_ADV_FIFO_HEAD (&peer->sync[afi][safi]->update)) != NULL)
 	if (adv->binfo->uptime < peer->synctime)
 	  return 1;
 
@@ -1096,7 +1169,7 @@ bgp_capability_send (struct peer *peer, afi_t afi, safi_t safi,
 
   BGP_WRITE_ON (peer->t_write, bgp_write, peer->fd);
 }
-
+
 /* RFC1771 6.8 Connection collision detection. */
 static int
 bgp_collision_detect (struct peer *new, struct in_addr remote_id)
@@ -1650,7 +1723,10 @@ bgp_update_receive (struct peer *peer, bgp_size_t size)
       attr_parse_ret = bgp_attr_parse (peer, &attr, attribute_len, 
 			    &mp_update, &mp_withdraw);
       if (attr_parse_ret == BGP_ATTR_PARSE_ERROR)
-	return -1;
+	{
+	  bgp_attr_unintern_sub (&attr);
+	  return -1;
+	}
     }
   
   /* Logging the attribute. */
@@ -1703,18 +1779,7 @@ bgp_update_receive (struct peer *peer, bgp_size_t size)
 	bgp_nlri_parse (peer, NULL, &withdraw);
 
       if (update.length)
-	{
-	  /* We check well-known attribute only for IPv4 unicast
-	     update. */
-	  ret = bgp_attr_check (peer, &attr);
-	  if (ret < 0)
-	    {
-	      bgp_attr_unintern_sub (&attr);
-	      return -1;
-            }
-
 	  bgp_nlri_parse (peer, NLRI_ATTR_ARG, &update);
-	}
 
       if (mp_update.length
 	  && mp_update.afi == AFI_IP 
@@ -1963,7 +2028,6 @@ bgp_route_refresh_receive (struct peer *peer, bgp_size_t size)
 {
   afi_t afi;
   safi_t safi;
-  u_char reserved;
   struct stream *s;
 
   /* If peer does not have the capability, send notification. */
@@ -1991,7 +2055,8 @@ bgp_route_refresh_receive (struct peer *peer, bgp_size_t size)
   
   /* Parse packet. */
   afi = stream_getw (s);
-  reserved = stream_getc (s);
+  /* reserved byte */
+  stream_getc (s);
   safi = stream_getc (s);
 
   if (BGP_DEBUG (normal, NORMAL))
@@ -2043,8 +2108,8 @@ bgp_route_refresh_receive (struct peer *peer, bgp_size_t size)
 	  if (orf_type == ORF_TYPE_PREFIX
 	      || orf_type == ORF_TYPE_PREFIX_OLD)
 	    {
-	      u_char *p_pnt = stream_pnt (s);
-	      u_char *p_end = stream_pnt (s) + orf_len;
+	      uint8_t *p_pnt = stream_pnt (s);
+	      uint8_t *p_end = stream_pnt (s) + orf_len;
 	      struct orf_prefix orfp;
 	      u_char common = 0;
 	      u_int32_t seq;
@@ -2084,7 +2149,7 @@ bgp_route_refresh_receive (struct peer *peer, bgp_size_t size)
 		      prefix_bgp_orf_remove_all (name);
 		      break;
 		    }
-		  ok = ((p_end - p_pnt) >= sizeof(u_int32_t)) ;
+		  ok = ((size_t)(p_end - p_pnt) >= sizeof(u_int32_t)) ;
 		  if (ok)
 		    {
 		      memcpy (&seq, p_pnt, sizeof (u_int32_t));
@@ -2136,8 +2201,8 @@ bgp_route_refresh_receive (struct peer *peer, bgp_size_t size)
 		    ret = prefix_bgp_orf_set (name, afi, &orfp,
 				   (common & ORF_COMMON_PART_DENY ? 0 : 1 ),
 				   (common & ORF_COMMON_PART_REMOVE ? 0 : 1));
-
-		  if (!ok || (ret != CMD_SUCCESS))
+                  
+		  if (!ok || (ok && ret != CMD_SUCCESS))
 		    {
 		      if (BGP_DEBUG (normal, NORMAL))
 			zlog_debug ("%s Received misformatted prefixlist ORF."
@@ -2173,11 +2238,9 @@ bgp_capability_msg_parse (struct peer *peer, u_char *pnt, bgp_size_t length)
   struct capability_mp_data mpc;
   struct capability_header *hdr;
   u_char action;
-  struct bgp *bgp;
   afi_t afi;
   safi_t safi;
 
-  bgp = peer->bgp;
   end = pnt + length;
 
   while (pnt < end)
@@ -2311,7 +2374,7 @@ bgp_capability_receive (struct peer *peer, bgp_size_t size)
   /* Parse packet. */
   return bgp_capability_msg_parse (peer, pnt, size);
 }
-
+
 /* BGP read utility function. */
 static int
 bgp_read_packet (struct peer *peer)

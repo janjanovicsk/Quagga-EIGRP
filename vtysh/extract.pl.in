@@ -41,6 +41,8 @@ $ignore{'"router babel"'} = "ignore";
 $ignore{'"router bgp " "<1-4294967295>"'} = "ignore";
 $ignore{'"router bgp " "<1-4294967295>" " view WORD"'} = "ignore";
 $ignore{'"router isis WORD"'} = "ignore";
+$ignore{'"router eigrp"'} = "ignore";
+$ignore{'"router eigrp " "<1-65535>"'} = "ignore";
 $ignore{'"router zebra"'} = "ignore";
 $ignore{'"address-family ipv4"'} = "ignore";
 $ignore{'"address-family ipv4 (unicast|multicast)"'} = "ignore";
@@ -91,10 +93,10 @@ foreach (@ARGV) {
 
         # $protocol is VTYSH_PROTO format for redirection of user input
         if ($file =~ /lib\/keychain\.c$/) {
-            $protocol = "VTYSH_RIPD";
+            $protocol = "VTYSH_RIPD|VTYSH_EIGRPD";
         }
         elsif ($file =~ /lib\/routemap\.c$/) {
-            $protocol = "VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA";
+            $protocol = "VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_EIGRPD";
         }
         elsif ($file =~ /lib\/filter\.c$/) {
             $protocol = "VTYSH_ALL";
@@ -103,21 +105,21 @@ foreach (@ARGV) {
             if ($defun_array[1] =~ m/ipv6/) {
                 $protocol = "VTYSH_RIPNGD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA";
             } else {
-                $protocol = "VTYSH_RIPD|VTYSH_OSPFD|VTYSH_BGPD|VTYSH_ZEBRA";
+                $protocol = "VTYSH_RIPD|VTYSH_OSPFD|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_EIGRPD";
             }
         }
         elsif ($file =~ /lib\/distribute\.c$/) {
             if ($defun_array[1] =~ m/ipv6/) {
                 $protocol = "VTYSH_RIPNGD";
             } else {
-                $protocol = "VTYSH_RIPD";
+                $protocol = "VTYSH_RIPD|VTYSH_EIGRPD";
             }
         }
         elsif ($file =~ /lib\/if_rmap\.c$/) {
             if ($defun_array[1] =~ m/ipv6/) {
                 $protocol = "VTYSH_RIPNGD";
             } else {
-                $protocol = "VTYSH_RIPD";
+                $protocol = "VTYSH_RIPD|VTYSH_EIGRPD";
             }
         }
         elsif ($file =~ /lib\/vty\.c$/) {

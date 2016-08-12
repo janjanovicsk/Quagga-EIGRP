@@ -136,6 +136,9 @@ typedef enum {
  BGP_ATTR_PARSE_PROCEED = 0,
  BGP_ATTR_PARSE_ERROR = -1,
  BGP_ATTR_PARSE_WITHDRAW = -2,
+
+ /* only used internally, send notify + convert to BGP_ATTR_PARSE_ERROR */
+ BGP_ATTR_PARSE_ERROR_NOTIFYPLS = -3,
 } bgp_attr_parse_ret_t;
 
 /* Prototypes. */
@@ -144,7 +147,6 @@ extern void bgp_attr_finish (void);
 extern bgp_attr_parse_ret_t bgp_attr_parse (struct peer *, struct attr *,
                                            bgp_size_t, struct bgp_nlri *,
                                            struct bgp_nlri *);
-extern int bgp_attr_check (struct peer *, struct attr *);
 extern struct attr_extra *bgp_attr_extra_get (struct attr *);
 extern void bgp_attr_extra_free (struct attr *);
 extern void bgp_attr_dup (struct attr *, struct attr *);
@@ -157,13 +159,11 @@ extern struct attr *bgp_attr_default_intern (u_char);
 extern struct attr *bgp_attr_aggregate_intern (struct bgp *, u_char,
                                         struct aspath *, 
                                         struct community *, int as_set);
-extern bgp_size_t bgp_packet_attribute (struct bgp *bgp, struct peer *, 
-                                 struct stream *, struct attr *, 
-                                 struct prefix *, afi_t, safi_t, 
-                                 struct peer *, struct prefix_rd *, u_char *);
-extern bgp_size_t bgp_packet_withdraw (struct peer *peer, struct stream *s, 
-                                struct prefix *p, afi_t, safi_t, 
-                                struct prefix_rd *, u_char *);
+extern bgp_size_t bgp_packet_attribute (struct bgp *bgp, struct peer *,
+					struct stream *, struct attr *,
+					struct prefix *, afi_t, safi_t,
+					struct peer *, struct prefix_rd *,
+					u_char *);
 extern void bgp_dump_routes_attr (struct stream *, struct attr *,
 				  struct prefix *);
 extern int attrhash_cmp (const void *, const void *);
@@ -193,5 +193,25 @@ extern int bgp_mp_reach_parse (struct bgp_attr_parser_args *args,
 			       struct bgp_nlri *);
 extern int bgp_mp_unreach_parse (struct bgp_attr_parser_args *args,
                                  struct bgp_nlri *);
+
+/**
+ * Set of functions to encode MP_REACH_NLRI and MP_UNREACH_NLRI attributes.
+ * Typical call sequence is to call _start(), followed by multiple _prefix(),
+ * one for each NLRI that needs to be encoded into the UPDATE message, and
+ * finally the _end() function.
+ */
+extern size_t bgp_packet_mpattr_start(struct stream *s, afi_t afi, safi_t safi,
+				      struct attr *attr);
+extern void bgp_packet_mpattr_prefix(struct stream *s, afi_t afi, safi_t safi,
+				     struct prefix *p, struct prefix_rd *prd,
+				     u_char *tag);
+extern void bgp_packet_mpattr_end(struct stream *s, size_t sizep);
+
+extern size_t bgp_packet_mpunreach_start (struct stream *s, afi_t afi,
+					  safi_t safi);
+extern void bgp_packet_mpunreach_prefix (struct stream *s, struct prefix *p,
+			     afi_t afi, safi_t safi, struct prefix_rd *prd,
+			     u_char *tag);
+extern void bgp_packet_mpunreach_end (struct stream *s, size_t attrlen_pnt);
 
 #endif /* _QUAGGA_BGP_ATTR_H */

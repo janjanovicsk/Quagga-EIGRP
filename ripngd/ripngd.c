@@ -95,7 +95,7 @@ ripng_info_free (struct ripng_info *rinfo)
 {
   XFREE (MTYPE_RIPNG_ROUTE, rinfo);
 }
-
+
 /* Create ripng socket. */
 static int 
 ripng_make_socket (void)
@@ -717,7 +717,7 @@ ripng_route_process (struct rte *rte, struct sockaddr_in6 *from,
   /* If offset-list does not modify the metric use interface's
    * one. */
   if (! ret)
-    rte->metric += ifp->metric;
+    rte->metric += ifp->metric ? ifp->metric : 1;
 
   if (rte->metric > RIPNG_METRIC_INFINITY)
     rte->metric = RIPNG_METRIC_INFINITY;
@@ -928,15 +928,6 @@ ripng_redistribute_add (int type, int sub_type, struct prefix_ipv6 *p,
     return;
   if (IN6_IS_ADDR_LOOPBACK (&p->prefix))
     return;
-#if defined (MUSICA) || defined (LINUX)
-  /* XXX As long as the RIPng redistribution is applied to all the connected
-   *     routes, one needs to filter the ::/96 prefixes.
-   *     However it could be a wanted case, it will be removed soon.
-   */
-  if ((IN6_IS_ADDR_V4COMPAT(&p->prefix)) ||
-      (IN6_IS_ADDR_UNSPECIFIED (&p->prefix) && (p->prefixlen == 96)))
-    return;
-#endif /* MUSICA or LINUX */
 
   rp = route_node_get (ripng->table, (struct prefix *) p);
   rinfo = rp->info;
@@ -1025,15 +1016,6 @@ ripng_redistribute_delete (int type, int sub_type, struct prefix_ipv6 *p,
     return;
   if (IN6_IS_ADDR_LOOPBACK (&p->prefix))
     return;
-#if defined (MUSICA) || defined (LINUX)
-  /* XXX As long as the RIPng redistribution is applied to all the connected
-   *     routes, one needs to filter the ::/96 prefixes.
-   *     However it could be a wanted case, it will be removed soon.
-   */
-  if ((IN6_IS_ADDR_V4COMPAT(&p->prefix)) ||
-      (IN6_IS_ADDR_UNSPECIFIED (&p->prefix) && (p->prefixlen == 96)))
-    return;
-#endif /* MUSICA or LINUX */
 
   rp = route_node_lookup (ripng->table, (struct prefix *) p);
 
@@ -1886,7 +1868,7 @@ ripng_request (struct interface *ifp)
 			    NULL, ifp);
 }
 
-
+
 static int
 ripng_update_jitter (int time)
 {
@@ -1928,7 +1910,7 @@ ripng_event (enum ripng_event event, int sock)
       break;
     }
 }
-
+
 
 /* Print out routes update time. */
 static void
@@ -2767,7 +2749,7 @@ ripng_distribute_update_all_wrapper (struct access_list *notused)
 {
   ripng_distribute_update_all(NULL);
 }
-
+
 /* delete all the added ripng routes. */
 void
 ripng_clean()

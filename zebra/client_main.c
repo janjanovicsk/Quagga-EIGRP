@@ -118,6 +118,7 @@ struct zebra_info
   { "babel",  ZEBRA_ROUTE_BABEL },
   { "ospf",   ZEBRA_ROUTE_OSPF },
   { "ospf6",  ZEBRA_ROUTE_OSPF6 },
+  { "eigrp",  ZEBRA_ROUTE_EIGRP },
   { "bgp",    ZEBRA_ROUTE_BGP },
   { NULL,     0 }
 };
