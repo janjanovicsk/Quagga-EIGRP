@@ -1,12 +1,16 @@
 /*
  * EIGRP Topology Table.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -368,6 +372,35 @@ eigrp_prefix_entry_lookup(struct list *entries, struct eigrp_neighbor *nbr)
     }
 
   return NULL;
+}
+
+/* Lookup all prefixes from specified neighbor */
+struct list *
+eigrp_neighbor_prefixes_lookup(struct eigrp *eigrp, struct eigrp_neighbor *nbr)
+{
+  struct listnode *node1, *node11, *node2, *node22;
+  struct eigrp_prefix_entry *prefix;
+  struct eigrp_neighbor_entry *entry;
+
+  /* create new empty list for prefixes storage */
+  struct list *prefixes = list_new();
+
+  /* iterate over all prefixes in topology table */
+  for (ALL_LIST_ELEMENTS(eigrp->topology_table, node1, node11, prefix))
+    {
+	  /* iterate over all neighbor entry in prefix */
+      for (ALL_LIST_ELEMENTS(prefix->entries, node2, node22, entry))
+        {
+    	  /* if entry is from specified neighbor, add to list */
+          if (entry->adv_router == nbr)
+            {
+        	  listnode_add(prefixes, prefix);
+            }
+        }
+    }
+
+  /* return list of prefixes from specified neighbor */
+  return prefixes;
 }
 
 int

@@ -326,5 +326,8 @@ if_rmap_init (int node)
   } else if (node == RIP_NODE) {
     install_element (RIP_NODE, &if_rmap_cmd);
     install_element (RIP_NODE, &no_if_rmap_cmd);
+  }else if (node == EIGRP_NODE) {
+	install_element (EIGRP_NODE, &if_rmap_cmd);
+	install_element (EIGRP_NODE, &no_if_rmap_cmd);
   }
 }

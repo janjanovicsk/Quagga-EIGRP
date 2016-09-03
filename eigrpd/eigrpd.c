@@ -193,6 +193,15 @@ eigrp_new (const char *AS)
   new->topology_changes_externalIPV4 = list_new ();
   new->topology_changes_internalIPV4 = list_new ();
 
+  new->list[EIGRP_FILTER_IN] = NULL;
+  new->list[EIGRP_FILTER_OUT] = NULL;
+
+  new->prefix[EIGRP_FILTER_IN] = NULL;
+  new->prefix[EIGRP_FILTER_OUT] = NULL;
+
+  new->routemap[EIGRP_FILTER_IN] = NULL;
+  new->routemap[EIGRP_FILTER_OUT] = NULL;
+
   return new;
 }
 

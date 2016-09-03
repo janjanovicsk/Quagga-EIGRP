@@ -49,6 +49,9 @@
 #include "sigevent.h"
 #include "zclient.h"
 #include "keychain.h"
+#include "distribute.h"
+//#include "routemap.h"
+//#include "if_rmap.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -61,6 +64,7 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_snmp.h"
 #include "eigrpd/eigrp_filter.h"
+//#include "eigrpd/eigrp_routemap.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p [] = 
@@ -309,10 +313,18 @@ main (int argc, char **argv)
   prefix_list_add_hook (eigrp_distribute_update_all);
   prefix_list_delete_hook (eigrp_distribute_update_all);
 
+  /*eigrp_route_map_init();
+  route_map_add_hook (eigrp_rmap_update);
+  route_map_delete_hook (eigrp_rmap_update);*/
+  /*if_rmap_init (EIGRP_NODE);
+  if_rmap_hook_add (eigrp_if_rmap_update);
+  if_rmap_hook_delete (eigrp_if_rmap_update);*/
+
   /* Distribute list install. */
   distribute_list_init (EIGRP_NODE);
   distribute_list_add_hook (eigrp_distribute_update);
   distribute_list_delete_hook (eigrp_distribute_update);
+
 
   vty_read_config (config_file, config_default);
 
