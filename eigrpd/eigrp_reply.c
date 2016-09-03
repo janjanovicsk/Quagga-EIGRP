@@ -1,12 +1,16 @@
 /*
  * EIGRP Sending and Receiving EIGRP Reply Packets.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -60,6 +64,46 @@ eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
   struct eigrp_packet *ep;
   u_int16_t length = EIGRP_HEADER_LEN;
 
+  struct access_list *alist;
+  struct prefix_list *plist;
+  struct access_list *alist_i;
+  struct prefix_list *plist_i;
+  struct eigrp *e;
+  struct prefix_ipv4 *dest_addr;
+  struct eigrp_prefix_entry *pe2;
+
+  //TODO: Work in progress
+  /* Filtering */
+  /* get list from eigrp process */
+  e = eigrp_lookup();
+  pe2 = XCALLOC(MTYPE_EIGRP_PREFIX_ENTRY, sizeof(struct eigrp_prefix_entry));
+  memcpy(pe2,pe,sizeof(struct eigrp_prefix_entry));
+  /* Get access-lists and prefix-lists from process and interface */
+  alist = e->list[EIGRP_FILTER_OUT];
+  plist = e->prefix[EIGRP_FILTER_OUT];
+  alist_i = nbr->ei->list[EIGRP_FILTER_OUT];
+  plist_i = nbr->ei->prefix[EIGRP_FILTER_OUT];
+  zlog_info("REPLY Send: Filtering");
+
+  zlog_info("REPLY SEND Prefix: %s", inet_ntoa(nbr->src));
+  /* Check if any list fits */
+  if ((alist && access_list_apply (alist, (struct prefix *) pe2->destination_ipv4) == FILTER_DENY)||
+	  (plist && prefix_list_apply (plist, (struct prefix *) pe2->destination_ipv4) == FILTER_DENY)||
+	  (alist_i && access_list_apply (alist_i, (struct prefix *) pe2->destination_ipv4) == FILTER_DENY)||
+	  (plist_i && prefix_list_apply (plist_i, (struct prefix *) pe2->destination_ipv4) == FILTER_DENY))
+  {
+    zlog_info("REPLY SEND: Setting Metric to max");
+    pe2->reported_metric.delay = EIGRP_MAX_METRIC;
+
+  } else {
+    zlog_info("REPLY SEND: Not setting metric");
+  }
+
+
+  /*
+   * End of filtering
+   */
+
   ep = eigrp_packet_new(nbr->ei->ifp->mtu);
 
   /* Prepare EIGRP INIT UPDATE header */
@@ -72,7 +116,8 @@ eigrp_send_reply (struct eigrp_neighbor *nbr, struct eigrp_prefix_entry *pe)
       length += eigrp_add_authTLV_MD5_to_stream(ep->s,nbr->ei);
     }
 
-  length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+
+  length += eigrp_add_internalTLV_to_stream(ep->s, pe2);
 
   if((IF_DEF_PARAMS (nbr->ei->ifp)->auth_type == EIGRP_AUTH_TYPE_MD5) && (IF_DEF_PARAMS (nbr->ei->ifp)->auth_keychain != NULL))
     {
@@ -104,6 +149,12 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
 {
   struct eigrp_neighbor *nbr;
   struct TLV_IPv4_Internal_type *tlv;
+
+  struct access_list *alist;
+  struct prefix_list *plist;
+  struct access_list *alist_i;
+  struct prefix_list *plist_i;
+  struct eigrp *e;
 
   u_int16_t type;
 
@@ -144,17 +195,49 @@ eigrp_reply_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
           struct eigrp_neighbor_entry *entry = eigrp_prefix_entry_lookup(
               dest->entries, nbr);
 
-          assert(entry); //testing
+          /*
+           * Filtering
+           */
+          //TODO: Work in progress
+          /* get list from eigrp process */
+          e = eigrp_lookup();
+          /* Get access-lists and prefix-lists from process and interface */
+          alist = e->list[EIGRP_FILTER_IN];
+          plist = e->prefix[EIGRP_FILTER_IN];
+          alist_i = ei->list[EIGRP_FILTER_IN];
+          plist_i = ei->prefix[EIGRP_FILTER_IN];
+          zlog_info("REPLY Receive: Filtering");
+          zlog_info("REPLY RECEIVE Prefix: %s", inet_ntoa(dest_addr->prefix));
+		  /* Check if any list fits */
+		  if ((alist && access_list_apply (alist,
+					 (struct prefix *) dest_addr) == FILTER_DENY)||
+				  (plist && prefix_list_apply (plist,
+							(struct prefix *) dest_addr) == FILTER_DENY)||
+				  (alist_i && access_list_apply (alist_i,
+							(struct prefix *) dest_addr) == FILTER_DENY)||
+				  (plist_i && prefix_list_apply (plist_i,
+							(struct prefix *) dest_addr) == FILTER_DENY))
+		  {
+			  zlog_info("REPLY RECEIVE: Setting metric to max");
+			  tlv->metric.delay = EIGRP_MAX_METRIC;
+			  zlog_info("REPLY RECEIVE Prefix: %s", inet_ntoa(dest_addr->prefix));
+		  } else {
+			  zlog_info("REPLY RECEIVE: Not setting metric");
+		  }
+		  /*
+		   * End of filtering
+		   */
 
-          msg->packet_type = EIGRP_OPC_REPLY;
-          msg->eigrp = eigrp;
-          msg->data_type = EIGRP_TLV_IPv4_INT;
-          msg->adv_router = nbr;
-          msg->data.ipv4_int_type = tlv;
-          msg->entry = entry;
-          msg->prefix = dest;
-          int event = eigrp_get_fsm_event(msg);
-          eigrp_fsm_event(msg, event);
+		  msg->packet_type = EIGRP_OPC_REPLY;
+		  msg->eigrp = eigrp;
+		  msg->data_type = EIGRP_TLV_IPv4_INT;
+		  msg->adv_router = nbr;
+		  msg->data.ipv4_int_type = tlv;
+		  msg->entry = entry;
+		  msg->prefix = dest;
+		  int event = eigrp_get_fsm_event(msg);
+		  eigrp_fsm_event(msg, event);
+
 
           eigrp_IPv4_InternalTLV_free (tlv);
         }

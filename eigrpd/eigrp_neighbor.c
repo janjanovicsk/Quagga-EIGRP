@@ -1,12 +1,16 @@
 /*
  * EIGRP Neighbor Handling.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -37,6 +41,7 @@
 #include "table.h"
 #include "log.h"
 #include "keychain.h"
+#include "vty.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -112,6 +117,18 @@ eigrp_nbr_get (struct eigrp_interface *ei, struct eigrp_header *eigrph,
   return nbr;
 }
 
+/**
+ * @fn eigrp_nbr_lookup_by_addr
+ *
+ * @param[in]		ei			EIGRP interface
+ * @param[in]		nbr_addr 	Address of neighbor
+ *
+ * @return void
+ *
+ * @par
+ * Function is used for neighbor lookup by address
+ * in specified interface.
+ */
 struct eigrp_neighbor *
 eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
 {
@@ -127,6 +144,42 @@ eigrp_nbr_lookup_by_addr (struct eigrp_interface *ei, struct in_addr *addr)
       }
 
   return NULL;
+}
+
+/**
+ * @fn eigrp_nbr_lookup_by_addr_process
+ *
+ * @param[in]		eigrp		EIGRP process
+ * @param[in]		nbr_addr 	Address of neighbor
+ *
+ * @return void
+ *
+ * @par
+ * Function is used for neighbor lookup by address
+ * in whole EIGRP process.
+ */
+struct eigrp_neighbor *
+eigrp_nbr_lookup_by_addr_process (struct eigrp *eigrp, struct in_addr nbr_addr)
+{
+	struct eigrp_interface *ei;
+	struct listnode *node, *node2, *nnode2;
+	struct eigrp_neighbor *nbr;
+
+  	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* iterate over all neighbors on eigrp interface */
+		for (ALL_LIST_ELEMENTS (ei->nbrs, node2, nnode2, nbr))
+		{
+			/* compare if neighbor address is same as arg address */
+			if (nbr->src.s_addr == nbr_addr.s_addr)
+			{
+				return nbr;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 
@@ -291,4 +344,44 @@ int eigrp_nbr_count_get(void){
 	      }
 	  }
 	return counter;
+}
+
+/**
+ * @fn eigrp_nbr_hard_restart
+ *
+ * @param[in]		nbr	Neighbor who would receive hard restart
+ * @param[in]		vty Virtual terminal for log output
+ * @return void
+ *
+ * @par
+ * Function used for executing hard restart for neighbor:
+ * Send Hello packet with Peer Termination TLV with
+ * neighbor's address, set it's state to DOWN and delete the neighbor
+ */
+void eigrp_nbr_hard_restart(struct eigrp_neighbor *nbr, struct vty *vty)
+{
+	if(nbr == NULL)
+	{
+		zlog_err("Nbr Hard restart: Neighbor not specified.");
+		return;
+	}
+
+	zlog_debug ("Neighbor %s (%s) is down: manually cleared",
+			inet_ntoa (nbr->src),
+			ifindex2ifname (nbr->ei->ifp->ifindex));
+	if(vty != NULL)
+	{
+		vty_time_print (vty, 0);
+		vty_out (vty, "Neighbor %s (%s) is down: manually cleared%s",
+				inet_ntoa (nbr->src),
+				ifindex2ifname (nbr->ei->ifp->ifindex),
+				VTY_NEWLINE);
+	}
+
+	/* send Hello with Peer Termination TLV */
+	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR, &(nbr->src));
+	/* set neighbor to DOWN */
+	nbr->state = EIGRP_NEIGHBOR_DOWN;
+	/* delete neighbor */
+	eigrp_nbr_delete (nbr);
 }

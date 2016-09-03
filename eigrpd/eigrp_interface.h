@@ -1,12 +1,16 @@
 /*
  * EIGRP Interface Functions.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -53,6 +57,7 @@ extern void eigrp_if_stream_unset (struct eigrp_interface *);
 extern struct eigrp_interface *eigrp_if_lookup_by_local_addr (struct eigrp *,
                                                               struct interface *,
                                                               struct in_addr);
+extern struct eigrp_interface *eigrp_if_lookup_by_name (struct eigrp *, const char *);
 struct eigrp_interface * eigrp_if_lookup_recv_if (struct eigrp *, struct in_addr,
                                                   struct interface *);
 

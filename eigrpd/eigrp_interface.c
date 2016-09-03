@@ -1,12 +1,16 @@
 /*
  * EIGRP Interface Functions.
- * Copyright (C) 2013-2014
+ * Copyright (C) 2013-2016
  * Authors:
  *   Donnie Savage
  *   Jan Janovic
  *   Matej Perina
  *   Peter Orsag
  *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
  *
  * This file is part of GNU Zebra.
  *
@@ -73,6 +77,7 @@ struct eigrp_interface *
 eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
 {
   struct eigrp_interface *ei;
+  int i;
 
   if ((ei = eigrp_if_table_lookup (ifp, p)) == NULL)
     {
@@ -95,6 +100,14 @@ eigrp_if_new (struct eigrp *eigrp, struct interface *ifp, struct prefix *p)
   ei->nbrs = list_new ();
 
   ei->crypt_seqnum = time (NULL);
+
+  /* Initialize lists */
+  for (i = 0; i < EIGRP_FILTER_MAX; i++)
+    {
+	  ei->list[i] = NULL;
+	  ei->prefix[i] = NULL;
+	  ei->routemap[i] = NULL;
+    }
 
   return ei;
 }
@@ -426,7 +439,7 @@ eigrp_if_free (struct eigrp_interface *ei, int source)
   if (source == INTERFACE_DOWN_BY_VTY)
     {
       THREAD_OFF (ei->t_hello);
-      eigrp_hello_send(ei,EIGRP_HELLO_GRACEFUL_SHUTDOWN);
+      eigrp_hello_send(ei,EIGRP_HELLO_GRACEFUL_SHUTDOWN, NULL);
     }
 
   eigrp_if_down (ei);
@@ -494,6 +507,36 @@ eigrp_if_lookup_by_local_addr (struct eigrp *eigrp, struct interface *ifp,
     }
 
   return NULL;
+}
+
+/**
+ * @fn eigrp_if_lookup_by_name
+ *
+ * @param[in]		eigrp		EIGRP process
+ * @param[in]		if_name 	Name of the interface
+ *
+ * @return struct eigrp_interface *
+ *
+ * @par
+ * Function is used for lookup interface by name.
+ */
+struct eigrp_interface *
+eigrp_if_lookup_by_name (struct eigrp *eigrp, const char *if_name)
+{
+	struct eigrp_interface *ei;
+	struct listnode *node;
+
+	/* iterate over all eigrp interfaces */
+	for (ALL_LIST_ELEMENTS_RO (eigrp->eiflist, node, ei))
+	{
+		/* compare int name with eigrp interface's name */
+		if(strcmp(ei->ifp->name, if_name) == 0)
+		{
+			return ei;
+		}
+	}
+
+	return NULL;
 }
 
 /* determine receiving interface by ifp and source address */

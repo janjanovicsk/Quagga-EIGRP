@@ -203,7 +203,9 @@ distribute_list_unset (const char *ifname, enum distribute_type type,
   if (dist->list[DISTRIBUTE_IN] == NULL &&
       dist->list[DISTRIBUTE_OUT] == NULL &&
       dist->prefix[DISTRIBUTE_IN] == NULL &&
-      dist->prefix[DISTRIBUTE_OUT] == NULL)
+      dist->prefix[DISTRIBUTE_OUT] == NULL &&
+      dist->route[DISTRIBUTE_IN] == NULL &&
+      dist->route[DISTRIBUTE_OUT] == NULL)
     {
       hash_release (disthash, dist);
       distribute_free (dist);
@@ -281,7 +283,89 @@ distribute_list_prefix_unset (const char *ifname, enum distribute_type type,
   if (dist->list[DISTRIBUTE_IN] == NULL &&
       dist->list[DISTRIBUTE_OUT] == NULL &&
       dist->prefix[DISTRIBUTE_IN] == NULL &&
-      dist->prefix[DISTRIBUTE_OUT] == NULL)
+      dist->prefix[DISTRIBUTE_OUT] == NULL &&
+      dist->route[DISTRIBUTE_IN] == NULL &&
+      dist->route[DISTRIBUTE_OUT] == NULL)
+    {
+      hash_release (disthash, dist);
+      distribute_free (dist);
+    }
+
+  return 1;
+}
+
+/* Set route-map name to the distribute list. */
+static struct distribute *
+distribute_list_route_set (const char *ifname, enum distribute_type type,
+                     const char *route_name)
+{
+  struct distribute *dist;
+
+  dist = distribute_get (ifname);
+
+  if (type == DISTRIBUTE_IN)
+    {
+      if (dist->route[DISTRIBUTE_IN])
+	free (dist->route[DISTRIBUTE_IN]);
+      dist->route[DISTRIBUTE_IN] = strdup (route_name);
+    }
+  if (type == DISTRIBUTE_OUT)
+    {
+      if (dist->route[DISTRIBUTE_OUT])
+	free (dist->route[DISTRIBUTE_OUT]);
+      dist->route[DISTRIBUTE_OUT] = strdup (route_name);
+    }
+
+  /* Apply this distribute-list to the interface. */
+  (*distribute_add_hook) (dist);
+
+  return dist;
+}
+
+/* Unset distribute-list.  If matched distribute-list exist then
+   return 1. */
+static int
+distribute_list_route_unset (const char *ifname, enum distribute_type type,
+		       const char *route_name)
+{
+  struct distribute *dist;
+
+  dist = distribute_lookup (ifname);
+  if (!dist)
+    return 0;
+
+  if (type == DISTRIBUTE_IN)
+    {
+      if (!dist->route[DISTRIBUTE_IN])
+	return 0;
+      if (strcmp (dist->route[DISTRIBUTE_IN], route_name) != 0)
+	return 0;
+
+      free (dist->route[DISTRIBUTE_IN]);
+      dist->route[DISTRIBUTE_IN] = NULL;
+    }
+
+  if (type == DISTRIBUTE_OUT)
+    {
+      if (!dist->route[DISTRIBUTE_OUT])
+	return 0;
+      if (strcmp (dist->route[DISTRIBUTE_OUT], route_name) != 0)
+	return 0;
+
+      free (dist->route[DISTRIBUTE_OUT]);
+      dist->route[DISTRIBUTE_OUT] = NULL;
+    }
+
+  /* Apply this distribute-list to the interface. */
+  (*distribute_delete_hook) (dist);
+
+  /* If both out and in is NULL then free distribute list. */
+  if (dist->list[DISTRIBUTE_IN] == NULL &&
+      dist->list[DISTRIBUTE_OUT] == NULL &&
+      dist->prefix[DISTRIBUTE_IN] == NULL &&
+      dist->prefix[DISTRIBUTE_OUT] == NULL &&
+      dist->route[DISTRIBUTE_IN] == NULL &&
+      dist->route[DISTRIBUTE_OUT] == NULL)
     {
       hash_release (disthash, dist);
       distribute_free (dist);
@@ -610,6 +694,172 @@ ALIAS (no_distribute_list_prefix, no_ipv6_distribute_list_prefix_cmd,
        "Filter outgoing routing updates\n"
        "Interface name\n")
 
+/* Add route-map support to distribute-list */
+DEFUN (distribute_list_route_all,
+       distribute_list_route_all_cmd,
+       "distribute-list route-map WORD (in|out)",
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n")
+{
+  enum distribute_type type;
+
+  /* Check of distribute list type. */
+  if (strncmp (argv[1], "i", 1) == 0)
+    type = DISTRIBUTE_IN;
+  else if (strncmp (argv[1], "o", 1) == 0)
+    type = DISTRIBUTE_OUT;
+  else
+    {
+      vty_out (vty, "distribute list direction must be [in|out]%s",
+	       VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  /* Get interface name corresponding distribute list. */
+  distribute_list_route_set (NULL, type, argv[0]);
+
+  return CMD_SUCCESS;
+}
+
+ALIAS (distribute_list_route_all,
+       ipv6_distribute_list_route_all_cmd,
+       "distribute-list route_map WORD (in|out)",
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n")
+
+DEFUN (no_distribute_list_route_all,
+       no_distribute_list_route_all_cmd,
+       "no distribute-list route-map WORD (in|out)",
+       NO_STR
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n")
+{
+  int ret;
+  enum distribute_type type;
+
+  /* Check of distribute list type. */
+  if (strncmp (argv[1], "i", 1) == 0)
+    type = DISTRIBUTE_IN;
+  else if (strncmp (argv[1], "o", 1) == 0)
+    type = DISTRIBUTE_OUT;
+  else
+    {
+      vty_out (vty, "distribute list direction must be [in|out]%s",
+	       VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ret = distribute_list_route_unset (NULL, type, argv[0]);
+  if (! ret)
+    {
+      vty_out (vty, "distribute list doesn't exist%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+  return CMD_SUCCESS;
+}
+
+ALIAS (no_distribute_list_route_all,
+       no_ipv6_distribute_list_route_all_cmd,
+       "no distribute-list route-map WORD (in|out)",
+       NO_STR
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n")
+
+DEFUN (distribute_list_route,
+       distribute_list_route_cmd,
+       "distribute-list route-map WORD (in|out) WORD",
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n"
+       "Interface name\n")
+{
+  enum distribute_type type;
+
+  /* Check of distribute list type. */
+  if (strncmp (argv[1], "i", 1) == 0)
+    type = DISTRIBUTE_IN;
+  else if (strncmp (argv[1], "o", 1) == 0)
+    type = DISTRIBUTE_OUT;
+  else
+    {
+      vty_out (vty, "distribute list direction must be [in|out]%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  /* Get interface name corresponding distribute list. */
+  zlog_info("Distribute list on interface:", argv[2]);
+  distribute_list_route_set (argv[2], type, argv[0]);
+
+  return CMD_SUCCESS;
+}
+
+ALIAS (distribute_list_route,
+       ipv6_distribute_list_route_cmd,
+       "distribute-list route-map WORD (in|out) WORD",
+       "Filter networks in routing updates\n"
+       "Filter prefixes based on the route-map\n"
+	   "Name of a route-map\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n"
+       "Interface name\n")
+
+DEFUN (no_distribute_list_route, no_distribute_list_route_cmd,
+       "no distribute-list route-map WORD (in|out) WORD",
+       NO_STR
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n"
+       "Interface name\n")
+{
+  int ret;
+  enum distribute_type type;
+
+  /* Check of distribute list type. */
+  if (strncmp (argv[1], "i", 1) == 0)
+    type = DISTRIBUTE_IN;
+  else if (strncmp (argv[1], "o", 1) == 0)
+    type = DISTRIBUTE_OUT;
+  else
+    {
+      vty_out (vty, "distribute list direction must be [in|out]%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+
+  ret = distribute_list_route_unset (argv[2], type, argv[0]);
+  if (! ret)
+    {
+      vty_out (vty, "distribute list doesn't exist%s", VTY_NEWLINE);
+      return CMD_WARNING;
+    }
+  return CMD_SUCCESS;
+}
+
+ALIAS (no_distribute_list_route, no_ipv6_distribute_list_route_cmd,
+       "no distribute-list route-map WORD (in|out) WORD",
+       NO_STR
+       "Filter networks in routing updates\n"
+	   "Filter prefixes based on the route-map\n"
+       "Route-map name\n"
+       "Filter incoming routing updates\n"
+       "Filter outgoing routing updates\n"
+       "Interface name\n")
+
 int
 config_show_distribute (struct vty *vty)
 {
@@ -787,5 +1037,9 @@ distribute_list_init (int node)
 	install_element (node, &no_distribute_list_prefix_all_cmd);
 	install_element (node, &distribute_list_prefix_cmd);
 	install_element (node, &no_distribute_list_prefix_cmd);
+	install_element (node, &distribute_list_route_all_cmd);
+	install_element (node, &no_distribute_list_route_all_cmd);
+	install_element (node, &distribute_list_route_cmd);
+	install_element (node, &no_distribute_list_route_cmd);
   }
 }
