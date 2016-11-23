@@ -437,7 +437,7 @@ u_char
 eigrp_metrics_is_same(struct eigrp_metrics *metric1,
     struct eigrp_metrics *metric2)
 {
-  if ((metric1->bandwith = metric2->bandwith)
+  if ((metric1->bandwith == metric2->bandwith)
       && (metric1->delay == metric2->delay)
       && (metric1->hop_count == metric2->hop_count)
       && (metric1->load == metric2->load)
